@@ -7,6 +7,11 @@ A person confirms every job.
 
 Full context: [docs/HANDOFF.md](docs/HANDOFF.md).
 
+## Hackathon
+
+See [the hackathon guide](docs/HACKATHON.md) for event requirements, deadlines,
+resources, and a proposed team plan (not yet agreed).
+
 ## Layout
 
 - `apps/api` — Hono server (WhatsApp webhook, jobs, voice, studio) + worker
@@ -19,5 +24,6 @@ Full context: [docs/HANDOFF.md](docs/HANDOFF.md).
 ## Checks
 
 ```sh
-node --test packages/shared/test/
+npm test
+npm run typecheck
 ```
