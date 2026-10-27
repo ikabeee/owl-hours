@@ -1,0 +1,8 @@
+{
+  "name": "Zukki Owner",
+  "slug": "zukki-owner",
+  "scheme": "zukki-owner",
+  "web": {
+    "bundler": "metro"
+  }
+}
