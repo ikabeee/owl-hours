@@ -1,0 +1,353 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Two Agents Architecture</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one reading column for text, full-width figures that scroll sideways on phones */
+:root {
+  --bg: #f6f7f9; --surface: #ffffff; --ink: #0c0e12; --muted: #5a606c; --line: #c4c9d2; --edge: #7b828f; --accent: #0074e2;
+  --sans: 'Figtree', -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #0e1116; --surface: #161a21; --ink: #edf0f4; --muted: #9aa2b0; --line: #3a414d; --edge: #8a93a2; --accent: #5b9dff; color-scheme: dark } }
+:root[data-theme="dark"] { --bg: #0e1116; --surface: #161a21; --ink: #edf0f4; --muted: #9aa2b0; --line: #3a414d; --edge: #8a93a2; --accent: #5b9dff; color-scheme: dark }
+body { background: var(--bg); color: var(--ink); font-family: var(--sans); font-size: 16px; line-height: 1.55; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 40px 64px; }
+.wrap { max-width: 1080px; margin: 0 auto; display: flex; flex-direction: column; gap: 56px; }
+header { display: flex; flex-direction: column; gap: 12px; max-width: 68ch; }
+.eyebrow { font: 600 12px var(--sans); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+h1 { margin: 0; font-size: clamp(28px, 4vw, 40px); line-height: 1.15; font-weight: 700; text-wrap: balance; letter-spacing: -0.01em; }
+h2 { margin: 0; font-size: 22px; line-height: 1.25; font-weight: 700; text-wrap: balance; }
+p { margin: 0; color: var(--muted); max-width: 68ch; }
+section { display: flex; flex-direction: column; gap: 16px; }
+.num { font: 500 13px var(--mono); color: var(--muted); }
+figure { margin: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; overflow-x: auto; padding: 8px; }
+.dg { display: block; width: 100%; min-width: 820px; height: auto; }
+ul.notes { margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px 32px; }
+ul.notes li { min-width: 0; font-size: 15px; color: var(--ink); padding-left: 16px; position: relative; }
+ul.notes li::before { content: ""; position: absolute; left: 0; top: 0.7em; width: 6px; height: 1px; background: var(--muted); }
+code { font: 500 13.5px var(--mono); }
+footer { color: var(--muted); font-size: 14px; border-top: 1px solid var(--line); padding-top: 16px; }
+/* diagram ink */
+.box { fill: var(--surface); stroke: var(--line); stroke-width: 1.25; }
+.frame { fill: none; stroke: var(--line); stroke-width: 1.25; }
+.key { stroke: var(--accent); stroke-width: 2; }
+.n { fill: var(--ink); font: 600 13px var(--sans); }
+.sub { fill: var(--muted); font: 400 11.5px var(--sans); }
+.m { font-family: var(--mono); font-size: 12px; font-weight: 500; }
+.lbl { fill: var(--muted); font: 500 11.5px var(--sans); }
+.lbl.hot { fill: var(--accent); font-weight: 600; }
+.band { fill: var(--muted); font: 600 11px var(--sans); letter-spacing: .08em; }
+.edge { fill: none; stroke: var(--edge); stroke-width: 1.25; }
+.dash { stroke-dasharray: 5 4; }
+.edge.hot { stroke: var(--accent); stroke-width: 1.75; }
+.life { stroke: var(--line); stroke-width: 1; stroke-dasharray: 3 4; }
+.mk { fill: var(--edge); }
+.mk-hot { fill: var(--accent); }
+.title { fill: var(--ink); font: 600 15px var(--sans); }
+</style>
+
+<svg width="0" height="0" style="position: absolute" aria-hidden="true">
+<defs>
+<marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="mk" d="M0 0L10 5L0 10z"/></marker>
+<marker id="ahh" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="mk-hot" d="M0 0L10 5L0 10z"/></marker>
+</defs>
+</svg>
+
+<div class="wrap">
+<header>
+<span class="eyebrow">Meta Global AI Developer Hackathon · architecture</span>
+<h1>How the pieces talk to each other</h1>
+<p>Six views of the same system: what the parts are, how each kind of input is understood, what happens when a video arrives, how a job gets confirmed and approved, which states a job moves through, and what the agent can and cannot do. The demo story runs through all of them: Ana's leaking toilet at 12:04 AM, Northside Plumbing, and Mario the technician.</p>
+</header>
+
+<!-- 1. Components -->
+<section>
+<span class="num">1 / 6</span>
+<h2>Components</h2>
+<p>The customer never installs anything; everything reaches them through WhatsApp. The business uses one Expo app for owner and technician. Every model call and every state change goes through our backend.</p>
+<figure>
+<svg class="dg" viewBox="0 0 1040 640" role="img" aria-label="Component diagram: customer, Marketplace and business app connect through WhatsApp Cloud API and our API and worker to the Meta Model API and Supabase">
+<text class="band" x="40" y="52">PEOPLE AND SURFACES</text>
+<g><rect class="box" x="40" y="60" width="200" height="80" rx="8"/><text class="n" x="140" y="94" text-anchor="middle">Customer</text><text class="sub" x="140" y="113" text-anchor="middle">WhatsApp on Android</text></g>
+<g><rect class="box" x="280" y="60" width="200" height="80" rx="8"/><text class="n" x="380" y="94" text-anchor="middle">Facebook Marketplace</text><text class="sub" x="380" y="113" text-anchor="middle">finds the business</text></g>
+<g><rect class="box" x="560" y="60" width="440" height="80" rx="8"/><text class="n" x="780" y="94" text-anchor="middle">Business app (Expo)</text><text class="sub" x="780" y="113" text-anchor="middle">owner: inbox, quotes, map, ads · technician: location</text></g>
+
+<text class="band" x="560" y="242">CHANNELS AND OUR BACKEND</text>
+<g><rect class="box" x="40" y="250" width="200" height="120" rx="8"/><text class="n" x="140" y="282" text-anchor="middle">WhatsApp Cloud API</text><text class="sub" x="140" y="304" text-anchor="middle">webhooks in</text><text class="sub" x="140" y="322" text-anchor="middle">messages, buttons, Flows out</text></g>
+<g><rect class="box key" x="300" y="250" width="200" height="120" rx="8"/><text class="n" x="400" y="282" text-anchor="middle">API · Node + Hono</text><text class="sub m" x="400" y="306" text-anchor="middle">/webhook/whatsapp</text><text class="sub m" x="400" y="326" text-anchor="middle">/jobs  /voice  /studio</text></g>
+<g><rect class="box key" x="560" y="250" width="200" height="120" rx="8"/><text class="n" x="660" y="282" text-anchor="middle">Worker + agent</text><text class="sub" x="660" y="304" text-anchor="middle">media, models, tools</text><text class="sub" x="660" y="322" text-anchor="middle">job state validator</text></g>
+<g><rect class="box" x="800" y="250" width="200" height="50" rx="8"/><text class="n" x="900" y="280" text-anchor="middle">Expo push</text></g>
+<g><rect class="box" x="800" y="315" width="200" height="55" rx="8"/><text class="n" x="900" y="338" text-anchor="middle">Pages / Graph API</text><text class="sub" x="900" y="356" text-anchor="middle">publishes the ad</text></g>
+
+<text class="band" x="40" y="472">SERVICES</text>
+<g><rect class="frame" x="40" y="480" width="330" height="120" rx="10"/><text class="n" x="56" y="503">Supabase</text>
+<rect class="box" x="56" y="516" width="91" height="66" rx="8"/><text class="n" x="101.5" y="545" text-anchor="middle">Postgres</text><text class="sub" x="101.5" y="563" text-anchor="middle">jobs, events</text>
+<rect class="box" x="159" y="516" width="91" height="66" rx="8"/><text class="n" x="204.5" y="545" text-anchor="middle">Storage</text><text class="sub" x="204.5" y="563" text-anchor="middle">video, audio</text>
+<rect class="box" x="262" y="516" width="91" height="66" rx="8"/><text class="n" x="307.5" y="545" text-anchor="middle">Realtime</text><text class="sub" x="307.5" y="563" text-anchor="middle">live updates</text></g>
+<g><rect class="frame" x="400" y="480" width="600" height="120" rx="10"/><text class="n" x="416" y="503">Meta Model API</text>
+<rect class="box" x="416" y="516" width="133" height="66" rx="8"/><text class="n" x="482.5" y="545" text-anchor="middle">Voice Transcribe</text><text class="sub" x="482.5" y="563" text-anchor="middle">speech to text</text>
+<rect class="box" x="557" y="516" width="133" height="66" rx="8"/><text class="n" x="623.5" y="545" text-anchor="middle">SAM 3.1</text><text class="sub" x="623.5" y="563" text-anchor="middle">valve, puddle</text>
+<rect class="box" x="698" y="516" width="133" height="66" rx="8"/><text class="n" x="764.5" y="545" text-anchor="middle">Muse Spark 1.3</text><text class="sub" x="764.5" y="563" text-anchor="middle">agent + vision</text>
+<rect class="box" x="839" y="516" width="145" height="66" rx="8"/><text class="n" x="911.5" y="545" text-anchor="middle">Muse Image</text><text class="sub" x="911.5" y="563" text-anchor="middle">ad image only</text></g>
+
+<path class="edge hot" d="M140 140V250" marker-start="url(#ahh)" marker-end="url(#ahh)"/>
+<text class="lbl hot" x="130" y="200" text-anchor="end">chat, video, voice</text>
+<path class="edge dash" d="M380 140V196H200V250" marker-end="url(#ah)"/>
+<text class="lbl" x="290" y="188" text-anchor="middle">click-to-WhatsApp</text>
+<path class="edge hot" d="M240 290H300" marker-end="url(#ahh)"/>
+<text class="lbl hot" x="270" y="283" text-anchor="middle">webhook</text>
+<path class="edge" d="M300 335H240" marker-end="url(#ah)"/>
+<text class="lbl" x="270" y="352" text-anchor="middle">send</text>
+<path class="edge hot" d="M500 310H560" marker-end="url(#ahh)"/>
+<text class="lbl hot" x="530" y="302" text-anchor="middle">enqueue</text>
+<path class="edge hot" d="M680 370V480" marker-end="url(#ahh)"/>
+<text class="lbl hot" x="690" y="432">transcribe · segment · reason</text>
+<path class="edge" d="M600 370V430H350V480" marker-end="url(#ah)"/>
+<text class="lbl" x="470" y="422" text-anchor="middle">media, tickets, events</text>
+<path class="edge" d="M320 370V480" marker-start="url(#ah)" marker-end="url(#ah)"/>
+<text class="lbl" x="310" y="432" text-anchor="end">read / write</text>
+<path class="edge" d="M640 140V200H450V250" marker-start="url(#ah)" marker-end="url(#ah)"/>
+<text class="lbl" x="545" y="192" text-anchor="middle">confirm, voice, location</text>
+<path class="edge" d="M760 275H800" marker-end="url(#ah)"/>
+<path class="edge" d="M900 250V140" marker-end="url(#ah)"/>
+<text class="lbl" x="910" y="200">urgent request</text>
+<path class="edge" d="M760 342H800" marker-end="url(#ah)"/>
+<path class="edge dash" d="M40 550H20V30H780V60" marker-end="url(#ah)"/>
+<text class="lbl" x="400" y="22" text-anchor="middle">Realtime: new jobs and status changes</text>
+</svg>
+</figure>
+<ul class="notes">
+<li>The webhook answers <code>200</code> at once and hands the work to the worker. WhatsApp retries slow webhooks, and a video plus three model calls takes several seconds.</li>
+<li>The business app never calls a model directly. It talks to our API, and it listens to Supabase Realtime for new jobs and status changes.</li>
+<li>Muse Image only makes ads. Safety instructions use a real video frame with an overlay that our code draws from SAM's box.</li>
+<li>Blue marks the path of the urgent request, from Ana's video to the models.</li>
+</ul>
+</section>
+
+<!-- 2. Multimodal -->
+<section>
+<span class="num">2 / 6</span>
+<h2>Multimodal pipeline</h2>
+<p>Four kinds of input come in: video, voice, text and photos. Each is prepared differently, and they meet in one place, Muse Spark, as text, a few frames and SAM's detections. What leaves is text, a marked frame, structured JSON or an ad image. There is no spoken output.</p>
+<figure>
+<svg class="dg" viewBox="0 0 1040 560" role="img" aria-label="Multimodal pipeline: video, voice, text and photos are prepared, understood by SAM and Muse Spark, and turned into replies, a marked frame, a ticket and an ad image">
+<text class="band" x="30" y="40">INPUTS</text><text class="band" x="260" y="40">PREPARE</text><text class="band" x="500" y="40">UNDERSTAND</text><text class="band" x="750" y="40">OUTPUTS</text>
+
+<g><rect class="box" x="30" y="60" width="180" height="60" rx="8"/><text class="n" x="46" y="85">Video, 0:14</text><text class="sub" x="46" y="104">customer, WhatsApp</text></g>
+<g><rect class="box" x="30" y="160" width="180" height="60" rx="8"/><text class="n" x="46" y="185">Voice note</text><text class="sub" x="46" y="204">customer, WhatsApp</text></g>
+<g><rect class="box" x="30" y="240" width="180" height="60" rx="8"/><text class="n" x="46" y="265">Owner's voice</text><text class="sub" x="46" y="284">hold to talk, live</text></g>
+<g><rect class="box" x="30" y="320" width="180" height="60" rx="8"/><text class="n" x="46" y="345">Text and taps</text><text class="sub" x="46" y="364">replies, button presses</text></g>
+<g><rect class="box" x="30" y="470" width="180" height="60" rx="8"/><text class="n" x="46" y="495">Job photos</text><text class="sub" x="46" y="514">before and after</text></g>
+
+<g><rect class="box" x="260" y="60" width="190" height="60" rx="8"/><text class="n" x="276" y="85">Frame sampler</text><text class="sub" x="276" y="104">key frames from the video</text></g>
+<g><rect class="box" x="260" y="160" width="190" height="140" rx="8"/><text class="n" x="276" y="185">Voice Transcribe</text><text class="sub" x="276" y="206">voice note: whole file</text><text class="sub" x="276" y="224">owner: realtime stream</text><text class="sub" x="276" y="264">speech to text only;</text><text class="sub" x="276" y="282">no Swahili</text></g>
+<g><rect class="box" x="260" y="395" width="190" height="56" rx="8"/><text class="n" x="276" y="418">Business rules</text><text class="sub" x="276" y="437">prices, hours, van stock</text></g>
+<g><rect class="box" x="260" y="470" width="190" height="60" rx="8"/><text class="n" x="276" y="495">Consent check</text><text class="sub" x="276" y="514">customer said yes in review</text></g>
+
+<g><rect class="box" x="500" y="60" width="190" height="70" rx="8"/><text class="n" x="516" y="85">SAM 3.1</text><text class="sub m" x="516" y="104">"shut-off valve"</text><text class="sub m" x="516" y="120">"water puddle"</text></g>
+<g><rect class="box key" x="500" y="180" width="190" height="190" rx="10"/><text class="title" x="595" y="214" text-anchor="middle">Muse Spark 1.3</text><text class="sub" x="595" y="240" text-anchor="middle">where the inputs meet:</text><text class="sub" x="595" y="260" text-anchor="middle">text, key frames,</text><text class="sub" x="595" y="278" text-anchor="middle">SAM detections, rules</text><text class="sub" x="595" y="314" text-anchor="middle">reasons, then calls tools</text><text class="sub" x="595" y="332" text-anchor="middle">never gets raw audio</text></g>
+<g><rect class="box" x="500" y="470" width="190" height="60" rx="8"/><text class="n" x="516" y="495">Muse Image</text><text class="sub" x="516" y="514">edits the real photos</text></g>
+
+<g><rect class="box" x="750" y="60" width="260" height="70" rx="8"/><text class="n" x="766" y="85">Marked frame</text><text class="sub" x="766" y="104">real frame + valve circle and arrow,</text><text class="sub" x="766" y="120">drawn by our code → WhatsApp</text></g>
+<g><rect class="box" x="750" y="180" width="260" height="60" rx="8"/><text class="n" x="766" y="205">Text reply</text><text class="sub" x="766" y="224">safety questions, buttons → WhatsApp</text></g>
+<g><rect class="box" x="750" y="260" width="260" height="60" rx="8"/><text class="n" x="766" y="285">Ticket JSON</text><text class="sub" x="766" y="304">diagnosis, quote → Postgres → app</text></g>
+<g><rect class="box" x="750" y="340" width="260" height="50" rx="8"/><text class="n" x="766" y="370">Question for the owner</text></g>
+<g><rect class="box" x="750" y="470" width="260" height="60" rx="8"/><text class="n" x="766" y="495">Ad image</text><text class="sub" x="766" y="514">→ Page, Marketplace</text></g>
+
+<path class="edge hot" d="M210 90H260" marker-end="url(#ahh)"/>
+<path class="edge hot" d="M450 80H500" marker-end="url(#ahh)"/>
+<text class="lbl hot" x="475" y="72" text-anchor="middle">frames</text>
+<path class="edge" d="M450 110H475V200H500" marker-end="url(#ah)"/>
+<text class="lbl" x="468" y="158" text-anchor="end">key frames</text>
+<path class="edge hot" d="M210 190H260" marker-end="url(#ahh)"/>
+<path class="edge" d="M210 270H260" marker-end="url(#ah)"/>
+<path class="edge hot" d="M450 230H500" marker-end="url(#ahh)"/>
+<text class="lbl hot" x="475" y="250" text-anchor="middle">text</text>
+<path class="edge" d="M210 350H500" marker-end="url(#ah)"/>
+<path class="edge" d="M450 423H595V370" marker-end="url(#ah)"/>
+<path class="edge hot" d="M595 130V180" marker-end="url(#ahh)"/>
+<text class="lbl hot" x="603" y="160">boxes, puddle signal</text>
+<path class="edge hot" d="M690 95H750" marker-end="url(#ahh)"/>
+<text class="lbl hot" x="720" y="87" text-anchor="middle">valve box</text>
+<path class="edge hot" d="M690 210H750" marker-end="url(#ahh)"/>
+<path class="edge" d="M690 290H750" marker-end="url(#ah)"/>
+<path class="edge" d="M690 362H750" marker-end="url(#ah)"/>
+<path class="edge dash" d="M210 500H260" marker-end="url(#ah)"/>
+<path class="edge dash" d="M450 500H500" marker-end="url(#ah)"/>
+<path class="edge dash" d="M690 500H750" marker-end="url(#ah)"/>
+<text class="sub" x="30" y="456">Next morning, separate from the urgent path:</text>
+</svg>
+</figure>
+<ul class="notes">
+<li>Blue is the urgent path at 12:04 AM: video and voice in, a marked frame and a safety question out.</li>
+<li>Two image paths, never mixed. Safety uses a real frame with a circle and arrow drawn by our code at SAM's coordinates. Muse Image only touches the ad, and only after the customer's consent.</li>
+<li>The customer's voice note is transcribed as a whole file; the owner's hold-to-talk is streamed for a fast answer. Replies go out as text because there is no text-to-speech.</li>
+<li>Voice Transcribe has no Swahili, so the Nairobi demo should run in English. The puddle signal sorts urgency; it is never shown as an exact number.</li>
+</ul>
+</section>
+
+<!-- 2. Request sequence -->
+<section>
+<span class="num">3 / 6</span>
+<h2>From a video to a quote</h2>
+<p>What happens between 12:04 and 12:05 AM: Ana sends a 14-second video and a voice note, and the owner's phone shows an urgent job with a ready quote.</p>
+<figure>
+<svg class="dg" viewBox="0 0 1040 760" role="img" aria-label="Sequence diagram of an incoming request from WhatsApp to the business app">
+<g>
+<rect class="box" x="16" y="20" width="128" height="40" rx="8"/><text class="n" x="80" y="45" text-anchor="middle">Customer</text>
+<rect class="box" x="163" y="20" width="128" height="40" rx="8"/><text class="n" x="227" y="45" text-anchor="middle">WhatsApp</text>
+<rect class="box key" x="310" y="20" width="128" height="40" rx="8"/><text class="n" x="374" y="45" text-anchor="middle">API</text>
+<rect class="box key" x="457" y="20" width="128" height="40" rx="8"/><text class="n" x="521" y="45" text-anchor="middle">Worker + agent</text>
+<rect class="box" x="604" y="20" width="128" height="40" rx="8"/><text class="n" x="668" y="45" text-anchor="middle">Meta models</text>
+<rect class="box" x="751" y="20" width="128" height="40" rx="8"/><text class="n" x="815" y="45" text-anchor="middle">Supabase</text>
+<rect class="box" x="898" y="20" width="128" height="40" rx="8"/><text class="n" x="962" y="45" text-anchor="middle">Business app</text>
+</g>
+<g><path class="life" d="M80 60V740M227 60V740M374 60V740M521 60V740M668 60V740M815 60V740M962 60V740"/></g>
+<path class="edge hot" d="M80 100H227" marker-end="url(#ahh)"/><text class="lbl hot" x="153" y="92" text-anchor="middle">video + voice note</text>
+<path class="edge hot" d="M227 140H374" marker-end="url(#ahh)"/><text class="lbl hot" x="300" y="132" text-anchor="middle">webhook (media IDs)</text>
+<path class="edge dash" d="M374 180H227" marker-end="url(#ah)"/><text class="lbl" x="300" y="172" text-anchor="middle">200 OK right away</text>
+<path class="edge hot" d="M374 220H521" marker-end="url(#ahh)"/><text class="lbl hot" x="447" y="212" text-anchor="middle">enqueue</text>
+<path class="edge" d="M521 260H227" marker-end="url(#ah)"/><text class="lbl" x="374" y="252" text-anchor="middle">download media</text>
+<path class="edge" d="M521 300H815" marker-end="url(#ah)"/><text class="lbl" x="668" y="292" text-anchor="middle">save video + audio</text>
+<path class="edge hot" d="M521 340H668" marker-end="url(#ahh)"/><text class="lbl hot" x="594" y="332" text-anchor="middle">transcribe voice</text>
+<path class="edge dash" d="M668 380H521" marker-end="url(#ah)"/><text class="lbl" x="594" y="372" text-anchor="middle">transcript</text>
+<path class="edge hot" d="M521 420H668" marker-end="url(#ahh)"/><text class="lbl hot" x="594" y="412" text-anchor="middle">SAM: valve, puddle</text>
+<path class="edge dash" d="M668 460H521" marker-end="url(#ah)"/><text class="lbl" x="594" y="452" text-anchor="middle">boxes, puddle grows</text>
+<path class="edge hot" d="M521 500H668" marker-end="url(#ahh)"/><text class="lbl hot" x="594" y="492" text-anchor="middle">Muse Spark + tools</text>
+<path class="edge dash" d="M668 540H521" marker-end="url(#ah)"/><text class="lbl" x="594" y="532" text-anchor="middle">tool calls, ticket JSON</text>
+<path class="edge" d="M521 580H815" marker-end="url(#ah)"/><text class="lbl" x="668" y="572" text-anchor="middle">save job: proposed</text>
+<path class="edge hot" d="M521 620H227" marker-end="url(#ahh)"/><text class="lbl hot" x="374" y="612" text-anchor="middle">safety question + valve frame</text>
+<path class="edge hot" d="M227 660H80" marker-end="url(#ahh)"/><text class="lbl hot" x="153" y="652" text-anchor="middle">message + buttons</text>
+<path class="edge" d="M815 700H962" marker-end="url(#ah)"/><text class="lbl" x="888" y="692" text-anchor="middle">new urgent job</text>
+</svg>
+</figure>
+<ul class="notes">
+<li>Voice goes through Voice Transcribe first; Muse Spark gets text, frames and the SAM signals, never raw audio.</li>
+<li>SAM tracks the puddle across frames. "Puddle grows" is a signal for sorting, not a measured number.</li>
+<li>Muse Spark fills the ticket through tool calls (<code>get_price_rules</code>, <code>create_or_update_ticket</code>). The output is checked against the zod schema before it is saved.</li>
+<li>The valve frame Ana receives is drawn by our code from SAM's box. No generated image touches a safety instruction.</li>
+</ul>
+</section>
+
+<!-- 3. Confirm and approve -->
+<section>
+<span class="num">4 / 6</span>
+<h2>The owner confirms, the customer approves</h2>
+<p>Two people have to say yes before Mario drives anywhere. The blue arrows are those two human decisions; everything else prepares or records them.</p>
+<figure>
+<svg class="dg" viewBox="0 0 1040 800" role="img" aria-label="Sequence diagram of owner confirmation and customer approval">
+<g>
+<rect class="box" x="16" y="20" width="128" height="40" rx="8"/><text class="n" x="80" y="45" text-anchor="middle">Customer</text>
+<rect class="box" x="163" y="20" width="128" height="40" rx="8"/><text class="n" x="227" y="45" text-anchor="middle">WhatsApp</text>
+<rect class="box" x="310" y="20" width="128" height="40" rx="8"/><text class="n" x="374" y="45" text-anchor="middle">API</text>
+<rect class="box" x="457" y="20" width="128" height="40" rx="8"/><text class="n" x="521" y="45" text-anchor="middle">Worker + agent</text>
+<rect class="box" x="604" y="20" width="128" height="40" rx="8"/><text class="n" x="668" y="45" text-anchor="middle">Meta models</text>
+<rect class="box" x="751" y="20" width="128" height="40" rx="8"/><text class="n" x="815" y="45" text-anchor="middle">Supabase</text>
+<rect class="box" x="898" y="20" width="128" height="40" rx="8"/><text class="n" x="962" y="45" text-anchor="middle">Business app</text>
+</g>
+<g><path class="life" d="M80 60V780M227 60V780M374 60V780M521 60V780M668 60V780M815 60V780M962 60V780"/></g>
+<path class="edge" d="M962 100H374" marker-end="url(#ah)"/><text class="lbl" x="668" y="92" text-anchor="middle">open job, see the assistant's question</text>
+<path class="edge" d="M962 140H374" marker-end="url(#ah)"/><text class="lbl" x="668" y="132" text-anchor="middle">hold to talk (audio stream)</text>
+<path class="edge" d="M374 180H668" marker-end="url(#ah)"/><text class="lbl" x="521" y="172" text-anchor="middle">realtime transcribe</text>
+<path class="edge dash" d="M668 220H374" marker-end="url(#ah)"/><text class="lbl" x="521" y="212" text-anchor="middle">"Yes, pick one up"</text>
+<path class="edge" d="M374 260H521" marker-end="url(#ah)"/><text class="lbl" x="447" y="252" text-anchor="middle">interpret reply</text>
+<path class="edge" d="M521 300H815" marker-end="url(#ah)"/><text class="lbl" x="668" y="292" text-anchor="middle">quote: arrive 12:55 AM</text>
+<path class="edge hot" d="M962 340H374" marker-end="url(#ahh)"/><text class="lbl hot" x="668" y="332" text-anchor="middle">owner taps Confirm and send</text>
+<path class="edge" d="M374 380H815" marker-end="url(#ah)"/><text class="lbl" x="594" y="372" text-anchor="middle">proposed → owner_confirmed</text>
+<path class="edge" d="M374 420H227" marker-end="url(#ah)"/><text class="lbl" x="300" y="412" text-anchor="middle">visit request</text>
+<path class="edge" d="M227 460H80" marker-end="url(#ah)"/><text class="lbl" x="153" y="452" text-anchor="middle">card + buttons</text>
+<path class="edge hot" d="M80 500H227" marker-end="url(#ahh)"/><text class="lbl hot" x="153" y="492" text-anchor="middle">Ana taps Approve</text>
+<path class="edge" d="M227 540H374" marker-end="url(#ah)"/><text class="lbl" x="300" y="532" text-anchor="middle">webhook (reply)</text>
+<path class="edge" d="M374 580H815" marker-end="url(#ah)"/><text class="lbl" x="594" y="572" text-anchor="middle">→ customer_approved, address unlocked</text>
+<path class="edge" d="M815 620H962" marker-end="url(#ah)"/><text class="lbl" x="888" y="612" text-anchor="middle">approved: send Mario</text>
+<path class="edge" d="M962 660H374" marker-end="url(#ah)"/><text class="lbl" x="668" y="652" text-anchor="middle">technician location every few seconds</text>
+<path class="edge" d="M374 700H227" marker-end="url(#ah)"/><text class="lbl" x="300" y="692" text-anchor="middle">location / tracking</text>
+<path class="edge" d="M227 740H80" marker-end="url(#ah)"/><text class="lbl" x="153" y="732" text-anchor="middle">Mario is on the way</text>
+</svg>
+</figure>
+<ul class="notes">
+<li>The API, not the model, moves the job to <code>owner_confirmed</code>, and only after the owner's tap. A voice "yes" only answers the assistant's question.</li>
+<li>Ana's exact address is stored but hidden until <code>customer_approved</code>. Before that the business sees only the distance.</li>
+<li>The WhatsApp API sends static locations. Check the docs for live location; the fallback is periodic updates or a tracking link.</li>
+</ul>
+</section>
+
+<!-- 4. States -->
+<section>
+<span class="num">5 / 6</span>
+<h2>Job states</h2>
+<p>Eight states, two human gates. The model can propose any move, but code accepts only the transitions drawn here, and only from the actor named on the arrow.</p>
+<figure>
+<svg class="dg" viewBox="0 0 1040 300" role="img" aria-label="State machine of a job from requested to done, with owner and customer gates">
+<g>
+<rect class="box" x="45" y="50" width="170" height="48" rx="8"/><text class="n m" x="130" y="79" text-anchor="middle">requested</text>
+<rect class="box" x="305" y="50" width="170" height="48" rx="8"/><text class="n m" x="390" y="79" text-anchor="middle">triaged</text>
+<rect class="box" x="565" y="50" width="170" height="48" rx="8"/><text class="n m" x="650" y="79" text-anchor="middle">proposed</text>
+<rect class="box key" x="825" y="50" width="170" height="48" rx="8"/><text class="n m" x="910" y="79" text-anchor="middle">owner_confirmed</text>
+<rect class="box key" x="45" y="190" width="170" height="48" rx="8"/><text class="n m" x="130" y="219" text-anchor="middle">customer_approved</text>
+<rect class="box" x="305" y="190" width="170" height="48" rx="8"/><text class="n m" x="390" y="219" text-anchor="middle">en_route</text>
+<rect class="box" x="565" y="190" width="170" height="48" rx="8"/><text class="n m" x="650" y="219" text-anchor="middle">on_site</text>
+<rect class="box" x="825" y="190" width="170" height="48" rx="8"/><text class="n m" x="910" y="219" text-anchor="middle">done</text>
+</g>
+<path class="edge" d="M215 74H305" marker-end="url(#ah)"/><text class="lbl" x="260" y="66" text-anchor="middle">agent</text>
+<path class="edge" d="M475 74H565" marker-end="url(#ah)"/><text class="lbl" x="520" y="66" text-anchor="middle">agent</text>
+<path class="edge hot" d="M735 74H825" marker-end="url(#ahh)"/><text class="lbl hot" x="780" y="66" text-anchor="middle">owner</text>
+<path class="edge hot" d="M910 98V144H130V190" marker-end="url(#ahh)"/><text class="lbl hot" x="520" y="136" text-anchor="middle">customer, in WhatsApp</text>
+<path class="edge" d="M215 214H305" marker-end="url(#ah)"/><text class="lbl" x="260" y="206" text-anchor="middle">technician</text>
+<path class="edge" d="M475 214H565" marker-end="url(#ah)"/><text class="lbl" x="520" y="206" text-anchor="middle">technician</text>
+<path class="edge" d="M735 214H825" marker-end="url(#ah)"/><text class="lbl" x="780" y="206" text-anchor="middle">technician</text>
+<text class="sub" x="45" y="276">Before on_site, a job can also end as cancelled (customer or owner) or declined (owner). Every move is written to job_events with its actor.</text>
+</svg>
+</figure>
+</section>
+
+<!-- 5. Agent -->
+<section>
+<span class="num">6 / 6</span>
+<h2>Inside the agent</h2>
+<p>Muse Spark sees the evidence and the business's own rules, and acts only through seven tools. Reading is free; writing passes a validator; talking reaches people through WhatsApp or the business app.</p>
+<figure>
+<svg class="dg" viewBox="0 0 1040 440" role="img" aria-label="Agent diagram: inputs feed Muse Spark, which calls read, write and talk tools; writes pass a code validator">
+<text class="band" x="30" y="44">INPUTS</text>
+<g><rect class="box" x="30" y="60" width="210" height="52" rx="8"/><text class="n" x="46" y="82">Transcript</text><text class="sub" x="46" y="100">from Voice Transcribe</text></g>
+<g><rect class="box" x="30" y="130" width="210" height="52" rx="8"/><text class="n" x="46" y="152">Video frames</text><text class="sub" x="46" y="170">from the WhatsApp media</text></g>
+<g><rect class="box" x="30" y="200" width="210" height="52" rx="8"/><text class="n" x="46" y="222">SAM signals</text><text class="sub" x="46" y="240">valve box, puddle growing</text></g>
+<g><rect class="box" x="30" y="270" width="210" height="52" rx="8"/><text class="n" x="46" y="292">Business context</text><text class="sub" x="46" y="310">prices, hours, van stock</text></g>
+
+<g><rect class="box key" x="320" y="120" width="220" height="150" rx="10"/><text class="title" x="430" y="156" text-anchor="middle">Muse Spark 1.3</text><text class="sub" x="430" y="184" text-anchor="middle">one business, its customers only</text><text class="sub" x="430" y="204" text-anchor="middle">tool calling</text><text class="sub" x="430" y="224" text-anchor="middle">ticket as structured output</text></g>
+<text class="sub" x="430" y="304" text-anchor="middle">The model proposes.</text><text class="sub" x="430" y="322" text-anchor="middle">Code decides what is saved.</text>
+
+<path class="edge" d="M240 86H290V140H320" marker-end="url(#ah)"/>
+<path class="edge" d="M240 156H320" marker-end="url(#ah)"/>
+<path class="edge" d="M240 226H320" marker-end="url(#ah)"/>
+<path class="edge" d="M240 296H290V250H320" marker-end="url(#ah)"/>
+
+<text class="band" x="610" y="32">TOOLS</text>
+<g><rect class="frame" x="610" y="40" width="200" height="130" rx="10"/><text class="n" x="626" y="62">Read</text><text class="sub m" x="626" y="88">get_price_rules</text><text class="sub m" x="626" y="112">check_availability</text><text class="sub m" x="626" y="136">check_van_stock</text></g>
+<g><rect class="frame" x="610" y="190" width="200" height="100" rx="10"/><text class="n" x="626" y="212">Write</text><text class="sub m" x="626" y="238">create_or_update_ticket</text><text class="sub m" x="626" y="262">propose_transition</text></g>
+<g><rect class="frame" x="610" y="310" width="200" height="100" rx="10"/><text class="n" x="626" y="332">Talk</text><text class="sub m" x="626" y="358">send_whatsapp_message</text><text class="sub m" x="626" y="382">ask_owner</text></g>
+
+<path class="edge" d="M540 140H580V105H610" marker-end="url(#ah)"/>
+<path class="edge hot" d="M540 240H610" marker-end="url(#ahh)"/>
+<path class="edge" d="M540 260H580V360H610" marker-end="url(#ah)"/>
+
+<g><rect class="box" x="870" y="80" width="150" height="50" rx="8"/><text class="n" x="945" y="110" text-anchor="middle">Postgres</text></g>
+<g><rect class="box key" x="870" y="215" width="150" height="50" rx="8"/><text class="n" x="945" y="237" text-anchor="middle">State validator</text><text class="sub" x="945" y="254" text-anchor="middle">plain code</text></g>
+<g><rect class="box" x="870" y="335" width="150" height="50" rx="8"/><text class="n" x="945" y="356" text-anchor="middle">WhatsApp</text><text class="sub" x="945" y="373" text-anchor="middle">or business app</text></g>
+<path class="edge" d="M870 105H810" marker-end="url(#ah)"/>
+<path class="edge hot" d="M810 240H870" marker-end="url(#ahh)"/>
+<path class="edge hot" d="M945 215V130" marker-end="url(#ahh)"/><text class="lbl hot" x="953" y="178">valid only</text>
+<path class="edge" d="M810 360H870" marker-end="url(#ah)"/>
+</svg>
+</figure>
+<ul class="notes">
+<li>Read tools return data; they change nothing.</li>
+<li><code>propose_transition</code> only asks. The validator checks the state machine and the actor, and rejects the rest.</li>
+<li>The system prompt keeps the agent on one business's requests. WhatsApp bans general-purpose AI assistants on its business API.</li>
+<li><code>ask_owner</code> turns a doubt into a question with buttons in the business app, like the fill valve pickup.</li>
+</ul>
+</section>
+
+<footer>Source of truth for names, numbers and rules: 02-HANDOFF.md. Model IDs and the live-location API still need to be confirmed in the official docs.</footer>
+</div>
+</html>
