@@ -1,0 +1,15 @@
+{
+  "name": "owl-hours",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Zukki: AI agent for small local-service businesses (plumbers first). A person confirms every job.",
+  "packageManager": "pnpm@10.0.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "test": "node --test packages/shared/test/job-states.test.ts",
+    "typecheck": "tsc --noEmit -p tsconfig.base.json"
+  }
+}
