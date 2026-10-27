@@ -14,7 +14,7 @@ Full context: [docs/HANDOFF.md](docs/HANDOFF.md).
 - `packages/shared` — job state machine, zod schemas, types
 - `packages/meta-models` — Meta Model API clients (Spark, SAM, voice, image)
 - `packages/whatsapp` — WhatsApp Cloud API sender
-- `supabase/` — Postgres migrations + demo seed
+- persistence — TBD, database not designed yet (`apps/api/src/store.ts` is in-memory)
 
 ## Checks
 

@@ -1,5 +1,5 @@
-// In-memory job store. Postgres + Supabase replaces this adapter in the
-// next slice; routes depend only on the functions below.
+// In-memory job store. A database replaces this adapter once the schema
+// is designed; routes depend only on the functions below.
 import { transitionJob } from "@owl-hours/shared";
 import type { JobActor, JobState } from "@owl-hours/shared";
 

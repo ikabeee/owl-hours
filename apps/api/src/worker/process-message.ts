@@ -1,7 +1,7 @@
 // Async pipeline for one inbound WhatsApp message. Each step maps to a
 // Meta Model API call; every step below is unwired until its slice lands.
 export async function downloadMedia(_mediaId: string): Promise<string> {
-  throw new Error("todo: fetch media URL with token, store in Supabase Storage");
+  throw new Error("todo: fetch media URL with token, store in object storage (TBD)");
 }
 
 export async function transcribeVoice(_audioPath: string): Promise<string> {

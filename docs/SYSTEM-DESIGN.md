@@ -33,12 +33,12 @@ only the business's own jobs and technicians.
 
 ```text
 WhatsApp Cloud API ──webhook──▶ apps/api (Node + Hono) ──▶ worker/process-message.ts
-                                   │                              ├─ download media → Supabase Storage
+                                   │                              ├─ download media → object storage (TBD)
                                    │                              ├─ Voice Transcribe (transcript)
                                    │                              ├─ SAM 3.1 (valve box, puddle signal)
                                    │                              └─ Muse Spark agent (tools, ticket JSON)
                                    ▼
-                              Supabase (Postgres + Storage + Realtime)
+                              Persistence (TBD — schema not designed yet)
                                    ▲
                     apps/owner (Expo / React Native + Expo web) ◀── realtime, push
 ```
@@ -46,13 +46,13 @@ WhatsApp Cloud API ──webhook──▶ apps/api (Node + Hono) ──▶ worke
 | Component | Responsibility | Does not do |
 |---|---|---|
 | `apps/api/src/routes/*` | HTTP only: validate, answer 200, delegate | No business rules, no model calls |
-| `apps/api/src/store.ts` (→ Postgres next) | Job + event persistence | No transition logic |
+| `apps/api/src/store.ts` (in-memory) | Job + event persistence until the schema is designed | No transition logic |
 | `packages/shared` | State machine, zod schemas, types | No I/O, no framework imports |
 | `apps/api/src/agent/*` | Prompts, summaries, tool contracts | Never writes `jobs.state` directly |
 | `packages/meta-models` | One client per Meta model | No prompt logic |
 | `packages/whatsapp` | Send text / interactive / location | No triage logic |
 | `apps/owner` | Owner decisions: confirm, map, quote, ad | No state transitions except via API |
-| `supabase/` | Source of truth for jobs, events, consents | No enforcement (code owns it) |
+| persistence (TBD) | Future source of truth for jobs, events, consents | No enforcement (code owns it) |
 
 Dependency direction: routes → store + shared; agent → tools + shared;
 owner → API over HTTP only. `packages/shared` is imported by everyone and
@@ -91,8 +91,8 @@ skipping `proposed → customer_approved` gets 409. Every attempt lands in
 ### 3.3 Ad studio (screen 10, Could scope)
 
 ```text
-Review form (Flow or web fallback) → consents row (photos_for_ads, granted)
-  → GET /studio/ads reads consents → Muse Image edits before/after photos
+Review form (Flow or web fallback) → consent record (schema TBD)
+  → GET /studio/ads reads the consent record → Muse Image edits before/after photos
   → owner previews, publishes to Page / Marketplace / Instagram
 ```
 
@@ -100,20 +100,16 @@ Without an explicit granted consent, `/studio/ads` returns `[]`.
 
 ## 4. Data
 
-Tables in `supabase/migrations/0001_init.sql`: `businesses`,
-`price_rules`, `technicians`, `customers`, `jobs`, `job_evidence`,
-`job_events`, `messages`, `consents`.
+Not designed yet — no tables, no migration, no seed. When the schema lands,
+it must preserve these invariants (enforced in code, not just SQL):
 
-Key invariants (enforced in code, not just SQL):
-
-- `customers.exact_address` stays null until `customer_approved`. The public
+- The exact address stays hidden until `customer_approved`. The public
   projection exposes only distance before that.
 - `quote` always carries `{lines, total_min, total_max, excludes}` with
   totals equal to the line sums (see `quoteSchema`). No exact final price
   exists before `on_site`.
-- `job_evidence.signals` carries `{water_spreading: boolean}` — a signal,
-  never a measured area.
-- `job_events` is append-only and is the audit log for every demo claim.
+- Water spreading is stored as a boolean signal, never a measured area.
+- The event log is append-only and is the audit log for every demo claim.
 
 ## 5. Job state machine
 
@@ -150,7 +146,7 @@ wiring each client.
 | Human approves every job | `transitionJob` actor locks + `POST /propose` mapping to 409 |
 | AI disclosure first | `AI_DISCLOSURE` in `customer-agent.ts`, first message template |
 | Location privacy | `exact_address` null until approval; public projection shows distance |
-| Photo consent | `consents` table gates `/studio/ads` |
+| Photo consent | consent check gates `/studio/ads` (table TBD) |
 | Quotes are ranges | `quoteSchema` (min/max only, totals = sums) |
 | Safety first | `nextSafetyQuestion` blocks triage until water + cables answered |
 | No generated safety images | Overlay drawn on real frames; Muse Image only in studio |
