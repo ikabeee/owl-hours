@@ -14,6 +14,10 @@ New to the codebase? Read in this order:
    `transitionJob` in `packages/shared/src/job-states.ts`,
    `groupJobsByTab` in `apps/owner/lib/tonight.ts`.
 
+Visual reference: `design/png/` (10 screens in flow order) and
+`design/screens/` (the same screens as static HTML). This doc uses ASCII
+diagrams on purpose — no generated images.
+
 ## 1. Context
 
 An AI agent for small local-service businesses (plumbers first). A customer
