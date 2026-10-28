@@ -78,7 +78,7 @@ async function readMessage(message: InboundMessage, deps: PipelineDeps): Promise
   };
 }
 
-function describeValve(valve: ValveResult): string {
+export function describeValve(valve: ValveResult): string {
   if (valve.kind === "marked") {
     const confidence = valve.detection.confidence?.toFixed(2) ?? "unknown";
     return `Pipeline note: a shut-off valve was marked on this frame (confidence ${confidence}). The circled photo will be sent to the customer.`;

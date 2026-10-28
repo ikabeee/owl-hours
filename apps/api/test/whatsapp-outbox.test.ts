@@ -28,6 +28,66 @@ const row = (over: Partial<OutboxRow> = {}): OutboxRow => ({
   ...over,
 });
 
+describe("renderOutbound: Zukki's steps", () => {
+  const zukki = (over: Partial<OutboxRow>) => row({ sender: "zukki", businessName: null, businessShortName: null, ...over });
+
+  it("asks for the location with WhatsApp's button (payload 05)", () => {
+    const message = renderOutbound(zukki({ kind: "location_request", body: "Share your location." }), null);
+    assert.deepEqual(message?.interactive, {
+      type: "location_request_message",
+      body: { text: "Share your location." },
+      action: { name: "send_location" },
+    });
+  });
+
+  it("sends the category list with every row of payload 02", () => {
+    const message = renderOutbound(zukki({ kind: "interactive", body: "What are you looking for?", payload: { variant: "category_list" } }), null);
+    const interactive = message?.interactive as { type: string; action: { button: string; sections: Array<{ rows: Array<{ id: string }> }> }; footer: unknown };
+    assert.equal(interactive.type, "list");
+    assert.equal(interactive.action.button, "See options");
+    assert.deepEqual(
+      interactive.action.sections.flatMap((s) => s.rows.map((r) => r.id)),
+      ["cat_plumbing", "cat_electrical", "cat_locksmith", "cat_food", "cat_beauty", "cat_auto", "cat_pets", "cat_other"],
+    );
+    assert.deepEqual(interactive.footer, { text: "Only businesses open now and near you" });
+  });
+
+  it("sends button cards with an image or text header and a footer (payloads 04, 07)", () => {
+    const safety = renderOutbound(
+      zukki({
+        kind: "interactive",
+        body: "Turn this valve clockwise.",
+        payload: { variant: "safety", header_image_url: "https://example.supabase.co/m.jpg", buttons: [{ id: "safety_done", title: "Done, no cables" }] },
+      }),
+      null,
+    );
+    assert.deepEqual((safety?.interactive as Record<string, unknown>).header, { type: "image", image: { link: "https://example.supabase.co/m.jpg" } });
+
+    const card = renderOutbound(
+      zukki({
+        kind: "interactive",
+        body: "★ 4.9 (128)",
+        payload: {
+          variant: "suggest_business",
+          header_text: "Northside Plumbing",
+          footer: "Closest plumber taking night jobs right now",
+          buttons: [{ id: `connect:${NORTHSIDE}`, title: "Connect me" }, { id: "another_option", title: "Show another option" }],
+        },
+      }),
+      null,
+    );
+    const interactive = card?.interactive as Record<string, unknown>;
+    assert.deepEqual(interactive.header, { type: "text", text: "Northside Plumbing" });
+    assert.deepEqual(interactive.footer, { text: "Closest plumber taking night jobs right now" });
+  });
+
+  it("refuses a card whose buttons break WhatsApp's limits", () => {
+    const tooLong = zukki({ kind: "interactive", body: "x", payload: { buttons: [{ id: "a", title: "This title is far too long" }] } });
+    assert.equal(renderOutbound(tooLong, null), null);
+    assert.equal(renderOutbound(zukki({ kind: "interactive", body: "x", payload: {} }), null), null);
+  });
+});
+
 describe("renderOutbound", () => {
   it("signs an owner message as written (payload 11)", () => {
     assert.deepEqual(renderOutbound(row(), "Mario"), {

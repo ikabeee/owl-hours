@@ -1,11 +1,14 @@
-// Stores what customers send on WhatsApp. Every write is idempotent on
-// WhatsApp's message id, so Meta's retries are safe: an error here makes the
-// webhook answer 500 and Meta tries again later.
+// Stores what customers send on WhatsApp, then hands each new message to
+// Zukki (orchestrator/respond.ts) on the conversation's queue. Every write
+// is idempotent on WhatsApp's message id, so Meta's retries are safe: an
+// error here makes the webhook answer 500 and Meta tries again later, and
+// a retried message is never answered twice.
 import { randomUUID } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import type { WebhookEvent, WhatsAppClient } from "@owl-hours/whatsapp";
 import { unwrap } from "../services/db-result.ts";
+import type { Turn, TurnContext } from "../orchestrator/types.ts";
 import * as whatsapp from "../services/whatsapp-service.ts";
 
 export type Logger = Pick<Console, "info" | "warn" | "error">;
@@ -14,10 +17,15 @@ export type InboundDeps = {
   db: SupabaseClient;
   client: Pick<WhatsAppClient, "getMedia" | "download">;
   storeMedia: (path: string, bytes: Uint8Array, contentType: string) => Promise<void>;
-  // Runs slow work (media download) after the webhook has answered.
-  background: (task: () => Promise<void>) => void;
+  // Runs slow work (media download, Zukki's answer) after the webhook has
+  // answered, one task at a time per conversation, in arrival order.
+  enqueue: (conversationId: string, task: () => Promise<void>) => void;
+  // Zukki's turn. Unset: messages are stored and nobody answers.
+  respond?: ((ctx: TurnContext, turn: Turn) => Promise<void>) | undefined;
   log: Logger;
 };
+
+type Stored = { conversationId: string; isNewConversation: boolean; businessId: string | null };
 
 type MessageEvent = Extract<WebhookEvent, { type: "message" }>;
 type MediaContent = Extract<MessageEvent["content"], { kind: "media" }>;
@@ -50,13 +58,31 @@ export async function handleEvents(deps: InboundDeps, events: WebhookEvent[]): P
   }
 }
 
+// Queues Zukki's answer to a message that was stored for the first time.
+function answer(deps: InboundDeps, event: MessageEvent, stored: Stored, turn: Turn): void {
+  const { respond } = deps;
+  if (!respond) return;
+  deps.enqueue(stored.conversationId, () => respond(turnContext(event, stored), turn));
+}
+
+function turnContext(event: MessageEvent, stored: Stored): TurnContext {
+  return {
+    conversationId: stored.conversationId,
+    waMessageId: event.waMessageId,
+    isNewConversation: stored.isNewConversation,
+    businessId: stored.businessId,
+  };
+}
+
 async function handleMessage(deps: InboundDeps, event: MessageEvent): Promise<void> {
   const who = { waId: event.waId, profileName: event.profileName ?? undefined, receivedAt: event.receivedAt };
   const { content } = event;
   switch (content.kind) {
-    case "text":
-      await whatsapp.recordInbound(deps.db, { ...who, waMessageId: event.waMessageId, kind: "text", text: content.text });
+    case "text": {
+      const stored = await whatsapp.recordInbound(deps.db, { ...who, waMessageId: event.waMessageId, kind: "text", text: content.text });
+      if (!stored.duplicate) answer(deps, event, stored, { kind: "text", text: content.text });
       return;
+    }
     case "button_reply":
     case "list_reply": {
       const stored = await whatsapp.recordInbound(deps.db, {
@@ -66,15 +92,17 @@ async function handleMessage(deps: InboundDeps, event: MessageEvent): Promise<vo
         text: content.title,
         payload: { id: content.id, title: content.title },
       });
+      if (stored.duplicate) return;
       const quoteId = QUOTE_APPROVE.exec(content.id)?.[1];
-      if (quoteId && !stored.duplicate) {
+      if (quoteId) {
         await approveQuote(deps, quoteId, event.waMessageId);
       }
+      answer(deps, event, stored, { kind: "button", id: content.id, title: content.title });
       return;
     }
     case "location": {
       const conversation = await whatsapp.resolveConversation(deps.db, who);
-      await whatsapp.saveLocation(deps.db, {
+      const saved = await whatsapp.saveLocation(deps.db, {
         conversationId: conversation.conversationId,
         waMessageId: event.waMessageId,
         latitude: content.latitude,
@@ -82,6 +110,7 @@ async function handleMessage(deps: InboundDeps, event: MessageEvent): Promise<vo
         address: content.address ?? undefined,
         receivedAt: event.receivedAt,
       });
+      if (!saved.duplicate) answer(deps, event, conversation, { kind: "location" });
       return;
     }
     case "media":
@@ -148,7 +177,8 @@ async function handleMedia(deps: InboundDeps, event: MessageEvent, content: Medi
     unwrap(await deps.db.from("media").delete().eq("id", media.id));
     return;
   }
-  deps.background(async () => {
+  deps.enqueue(stored.conversationId, async () => {
+    let turn: Turn = { kind: "media", mediaId: media.id, mediaType: content.mediaType, caption: content.caption ?? null };
     try {
       const info = await deps.client.getMedia(content.waMediaId);
       const bytes = await deps.client.download(info.url);
@@ -156,7 +186,9 @@ async function handleMedia(deps: InboundDeps, event: MessageEvent, content: Medi
       unwrap(await deps.db.from("media").update({ size_bytes: bytes.byteLength }).eq("id", media.id));
     } catch (error) {
       deps.log.error(`whatsapp: download of media ${media.id} (message ${event.waMessageId}) failed: ${errorText(error)}`);
+      turn = { kind: "media_failed" };
     }
+    await deps.respond?.(turnContext(event, stored), turn);
   });
 }
 

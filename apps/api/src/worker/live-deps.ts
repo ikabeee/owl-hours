@@ -1,8 +1,10 @@
 // Real pipeline steps: Meta Model API (Spark, SAM 3.1, Voice Transcribe),
 // ffmpeg, sharp (marked frame) and Supabase (data + storage). Settings come from loadConfig() (apps/api/.env.example).
-// WhatsApp media download is still a stub until the WhatsApp slice lands.
-import { readFile } from "node:fs/promises";
-import { extname } from "node:path";
+// Media comes from the private bucket, where the webhook stored it.
+import { mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { basename, extname, join } from "node:path";
+import { z } from "zod";
 import { createChatCompletion, createMetaClient, segmentImage, transcribeWav } from "@owl-hours/meta-models";
 import { markValve } from "../ai/valve-step.ts";
 import { runAgent } from "../agent/run-agent.ts";
@@ -13,6 +15,8 @@ import { createSupabaseRepository } from "../db/repository.ts";
 import { drawMarkup } from "../media/draw-markup.ts";
 import { extractFrameArgs, runFfmpeg, toWavArgs } from "../media/ffmpeg.ts";
 import { createMediaStore } from "../media/media-store.ts";
+import { TEMP_PREFIX } from "../orchestrator/media.ts";
+import { unwrap } from "../services/db-result.ts";
 import type { PipelineDeps } from "./process-message.ts";
 
 // A second in skips the blurry first frame most phone videos start with.
@@ -30,8 +34,19 @@ export function createLiveDeps(config: ApiConfig = loadConfig()): PipelineDeps {
   const mediaStore = createMediaStore(supabase);
 
   return {
-    downloadMedia: async () => {
-      throw new Error("todo: WhatsApp media download (GET /{media-id} with the access token)");
+    // mediaId is our media row (public.media.id). Each download gets its own
+    // temp folder; orchestrator/media.ts removes it when the turn is done.
+    downloadMedia: async (mediaId) => {
+      const row = z
+        .object({ storage_path: z.string() })
+        .parse(unwrap(await supabase.from("media").select("storage_path").eq("id", mediaId).single()));
+      const { data, error } = await supabase.storage.from("media").download(row.storage_path);
+      if (error || !data) {
+        throw new Error(`media ${mediaId} download failed: ${error?.message ?? "no data"}`);
+      }
+      const path = join(await mkdtemp(join(tmpdir(), TEMP_PREFIX)), basename(row.storage_path));
+      await writeFile(path, new Uint8Array(await data.arrayBuffer()));
+      return path;
     },
     toWav: async (audioPath) => {
       const output = withSuffix(audioPath, ".wav");

@@ -3,6 +3,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import type { WebhookEvent } from "@owl-hours/whatsapp";
+import type { Turn, TurnContext } from "../src/orchestrator/types.ts";
 import { handleEvents, type InboundDeps } from "../src/whatsapp/inbound.ts";
 import { fakeSupabase, pgError, type FakeCall, type FakeReply } from "./helpers/fake-supabase.ts";
 
@@ -18,24 +19,38 @@ const inboundRow = (duplicate = false) => [{
   open_tenant_id: null,
 }];
 
-function setup(respond: (call: FakeCall) => FakeReply) {
+function setup(respond: (call: FakeCall) => FakeReply, options: { downloadFails?: boolean } = {}) {
   const { client, calls } = fakeSupabase(respond);
   const tasks: Array<() => Promise<void>> = [];
+  const queuedFor: string[] = [];
+  const turns: Array<{ ctx: TurnContext; turn: Turn }> = [];
   const stored: Array<{ path: string; bytes: number; contentType: string }> = [];
   const logs: string[] = [];
   const deps: InboundDeps = {
     db: client,
     client: {
       getMedia: async () => ({ url: "https://lookaside.fbsbx.com/x", mimeType: "video/mp4", sizeBytes: 3 }),
-      download: async () => new Uint8Array([1, 2, 3]),
+      download: async () => {
+        if (options.downloadFails) throw new Error("WhatsApp API 404");
+        return new Uint8Array([1, 2, 3]);
+      },
     },
     storeMedia: async (path, bytes, contentType) => {
       stored.push({ path, bytes: bytes.byteLength, contentType });
     },
-    background: (task) => tasks.push(task),
+    enqueue: (conversationId, task) => {
+      queuedFor.push(conversationId);
+      tasks.push(task);
+    },
+    respond: async (ctx, turn) => {
+      turns.push({ ctx, turn });
+    },
     log: { info: (m: string) => logs.push(m), warn: (m: string) => logs.push(m), error: (m: string) => logs.push(m) },
   };
-  return { deps, calls, tasks, stored, logs };
+  const runTasks = async () => {
+    for (const task of tasks) await task();
+  };
+  return { deps, calls, tasks, queuedFor, turns, runTasks, stored, logs };
 }
 
 const message = (content: Extract<WebhookEvent, { type: "message" }>["content"], id = "wamid.1"): WebhookEvent => ({
@@ -153,6 +168,67 @@ describe("handleEvents", () => {
     ]);
     assert.equal(calls.length, 1);
     assert.deepEqual(calls[0]?.body, { p_wa_message_id: "wamid.OUT", p_status: "read" });
+  });
+
+  it("hands each new message to Zukki on the conversation's queue, once", async () => {
+    const { deps, queuedFor, turns, runTasks } = setup(() => ({ body: inboundRow() }));
+    await handleEvents(deps, [message({ kind: "text", text: "My toilet is leaking" })]);
+    assert.deepEqual(queuedFor, [ANA_CHAT]);
+    assert.deepEqual(turns, []);
+    await runTasks();
+    assert.deepEqual(turns, [
+      {
+        ctx: { conversationId: ANA_CHAT, waMessageId: "wamid.1", isNewConversation: false, businessId: null },
+        turn: { kind: "text", text: "My toilet is leaking" },
+      },
+    ]);
+
+    const retry = setup(() => ({ body: inboundRow(true) }));
+    await handleEvents(retry.deps, [message({ kind: "text", text: "My toilet is leaking" })]);
+    assert.equal(retry.tasks.length, 0);
+  });
+
+  it("passes button taps and locations on", async () => {
+    const { deps, turns, runTasks } = setup((call) => {
+      if (call.path.endsWith("resolve_inbound_conversation")) {
+        return { body: [{ conversation_id: ANA_CHAT, customer_id: ANA_CHAT, is_new: false, open_tenant_id: null }] };
+      }
+      if (call.path.endsWith("save_customer_location")) {
+        return { body: [{ message_id: ANA_CHAT, customer_location_id: ANA_CHAT, duplicate: false }] };
+      }
+      return { body: inboundRow() };
+    });
+    await handleEvents(deps, [
+      message({ kind: "button_reply", id: "safety_done", title: "Done, no cables" }, "wamid.btn"),
+      message({ kind: "location", latitude: 41.88, longitude: -87.63, address: null }, "wamid.loc"),
+    ]);
+    await runTasks();
+    assert.deepEqual(turns.map((t) => t.turn), [{ kind: "button", id: "safety_done", title: "Done, no cables" }, { kind: "location" }]);
+  });
+
+  it("hands media to Zukki after it is stored, or says the download failed", async () => {
+    const reply = (call: FakeCall): FakeReply => {
+      if (call.path === "/rest/v1/messages") return { body: [] };
+      if (call.path.endsWith("resolve_inbound_conversation")) {
+        return { body: [{ conversation_id: ANA_CHAT, customer_id: ANA_CHAT, is_new: true, open_tenant_id: null }] };
+      }
+      if (call.path === "/rest/v1/media") return { body: call.method === "POST" ? { id: MEDIA } : [] };
+      return { body: [{ ...inboundRow()[0], is_new_conversation: true }] };
+    };
+    const video = message({ kind: "media", mediaType: "video", waMediaId: "WA-MEDIA", mimeType: "video/mp4", caption: null }, "wamid.vid");
+
+    const ok = setup(reply);
+    await handleEvents(ok.deps, [video]);
+    await ok.runTasks();
+    assert.equal(ok.stored.length, 1);
+    assert.deepEqual(ok.turns[0]?.turn, { kind: "media", mediaId: MEDIA, mediaType: "video", caption: null });
+    assert.equal(ok.turns[0]?.ctx.isNewConversation, true);
+
+    const failed = setup(reply, { downloadFails: true });
+    await handleEvents(failed.deps, [video]);
+    await failed.runTasks();
+    assert.deepEqual(failed.turns[0]?.turn, { kind: "media_failed" });
+    assert.match(failed.logs.join("\n"), /download of media/);
   });
 
   it("lets a database error through so the webhook answers 500", async () => {

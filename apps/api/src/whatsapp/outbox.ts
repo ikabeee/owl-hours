@@ -1,10 +1,19 @@
 // Sends queued owner and Zukki messages through the Cloud API, in the
-// formats of handoff-ui/whatsapp/payloads (11 as written, 12 polished).
+// formats of handoff-ui/whatsapp/payloads (Zukki's 01-10, 13-15; owner 11
+// as written, 12 polished).
 // claim_outbox marks each row sent; the result is then recorded with
 // WhatsApp's id, or as failed.
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
-import { buttonMessage, textMessage, type OutgoingMessage, type WhatsAppClient } from "@owl-hours/whatsapp";
+import {
+  buttonMessage,
+  listMessage,
+  locationRequestMessage,
+  textMessage,
+  type ListSection,
+  type OutgoingMessage,
+  type WhatsAppClient,
+} from "@owl-hours/whatsapp";
 import { unwrap } from "../services/db-result.ts";
 import * as whatsapp from "../services/whatsapp-service.ts";
 import { errorText, type Logger } from "./inbound.ts";
@@ -14,6 +23,36 @@ export const POLISHED_BUTTONS = [
   { id: "reply_ok", title: "Sounds good" },
   { id: "reply_question", title: "Ask a question" },
 ];
+
+// Payload 02. Row ids are cat_<category> (packages/shared/src/categories.ts).
+export const CATEGORY_LIST: ListSection[] = [
+  {
+    title: "Home",
+    rows: [
+      { id: "cat_plumbing", title: "Plumbing", description: "Leaks, drains, toilets, water heaters" },
+      { id: "cat_electrical", title: "Electrical", description: "Power, outlets, lights" },
+      { id: "cat_locksmith", title: "Locksmith", description: "Locked out, lock changes" },
+    ],
+  },
+  {
+    title: "Everyday",
+    rows: [
+      { id: "cat_food", title: "Food and drinks", description: "Restaurants, bakeries, catering" },
+      { id: "cat_beauty", title: "Beauty and care", description: "Salons, barbers, spas" },
+      { id: "cat_auto", title: "Car and moto", description: "Mechanics, tires, car wash" },
+      { id: "cat_pets", title: "Pets", description: "Vets, grooming, pet shops" },
+    ],
+  },
+  { title: "Other", rows: [{ id: "cat_other", title: "Something else", description: "Tell me what you need" }] },
+];
+
+// What orchestrator/copy.ts writes into payload for a button card.
+const zukkiCard = z.object({
+  buttons: z.array(z.object({ id: z.string().min(1).max(256), title: z.string().min(1).max(20) })).min(1).max(3),
+  header_text: z.string().min(1).max(60).optional(),
+  header_image_url: z.string().url().optional(),
+  footer: z.string().min(1).max(60).optional(),
+});
 
 const outboxRow = z.object({
   id: z.string().uuid(),
@@ -40,7 +79,7 @@ export function renderOutbound(row: OutboxRow, senderFirstName: string | null): 
     return null;
   }
   if (row.sender === "zukki") {
-    return row.kind === "text" ? textMessage(row.waId, row.body) : null;
+    return renderZukki(row, row.body);
   }
   const business = row.businessName ?? "Your business";
   const signed = `*${senderFirstName ? `${business} · ${senderFirstName}` : business}*\n${row.body}`;
@@ -56,6 +95,29 @@ export function renderOutbound(row: OutboxRow, senderFirstName: string | null): 
     return buttonMessage(row.waId, { body: signed, buttons: POLISHED_BUTTONS, footer });
   }
   return null;
+}
+
+function renderZukki(row: OutboxRow, body: string): OutgoingMessage | null {
+  if (row.kind === "text") return textMessage(row.waId, body);
+  if (row.kind === "location_request") return locationRequestMessage(row.waId, body);
+  if (row.kind !== "interactive") return null;
+  if (row.payload?.variant === "category_list") {
+    return listMessage(row.waId, {
+      body,
+      button: "See options",
+      sections: CATEGORY_LIST,
+      footer: "Only businesses open now and near you",
+    });
+  }
+  const card = zukkiCard.safeParse(row.payload ?? {});
+  if (!card.success || body.length > INTERACTIVE_BODY_MAX) return null;
+  return buttonMessage(row.waId, {
+    body,
+    buttons: card.data.buttons,
+    footer: card.data.footer,
+    headerText: card.data.header_text,
+    headerImageUrl: card.data.header_image_url,
+  });
 }
 
 export async function drainOutbox(deps: OutboxDeps, limit = 20): Promise<{ sent: number; failed: number }> {

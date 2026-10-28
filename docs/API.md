@@ -63,11 +63,34 @@ What it stores:
 - Delivery receipts: `delivered`, `read`, `failed` update the outbound message.
 - Anything else (stickers, reactions) is logged and skipped.
 
-It does not yet run Zukki's reply (`/assist`) on its own; see "Not built yet".
+### Zukki's answer
+
+After answering Meta, the server hands each new customer message to Zukki (`src/orchestrator/`), one message at a time per conversation, in arrival order. Zukki queues its replies in the outbox (`messages` rows with `sender = 'zukki'`, `delivery = 'queued'`), so the owner app sees them too.
+
+The steps are fixed code; Muse Spark only reads what the customer needs (category, urgency, a title and summary for the request card) and answers free questions:
+
+| Customer does | Zukki sends |
+|---|---|
+| First message of a conversation | 01 disclosure, then the step below |
+| Unclear message ("hi") | 02 category list |
+| Off-topic question | 14 |
+| Urgent leak (text, photo or video) | 03 typing, then 04: the valve frame marked by SAM with Done, no cables / I can't find it (general advice and no picture when SAM is unsure) |
+| Urgent electrical problem | safety advice, then 05 |
+| Done, no cables / I can't find it | 05 location request (simpler steps first for I can't find it) |
+| Picks a category | home categories: "what's going on?"; others: 05 |
+| Shares the location | 06, then 07 for the best match |
+| Show another option | 07 for the next match |
+| Connect me | 08 (the offer is created) |
+| Any other question | Spark's answer, with the directory and price tools |
+| Types "Zukki" in a business chat | 15; everything else in a business chat goes to the owner only |
+
+What changes on the owner's side is polled every 5 seconds: an accepted offer sends 10, an expired or declined one sends 09 then 07 for the next business, and a sent quote sends 13 (Approve visit / Ask a question). Each notice is sent once.
+
+Voice notes are transcribed (saved in `media.transcript`); video frames need ffmpeg on the server (`railpack.json` installs it).
 
 ### Sending
 
-The server sends queued owner and Zukki messages every `OUTBOX_POLL_MS` (default 2000, `0` turns it off), in the formats of `handoff-ui/whatsapp/payloads`: owner text as payload 11 (`*Business · First name*` line), polished replies as payload 12 (footer and Sounds good / Ask a question buttons), Zukki text as plain text. Each message is recorded as `sent` with WhatsApp's id or as `failed`.
+The server sends queued owner and Zukki messages every `OUTBOX_POLL_MS` (default 2000, `0` turns it off, and also turns off Zukki's notices), in the formats of `handoff-ui/whatsapp/payloads`: owner text as payload 11 (`*Business · First name*` line), polished replies as payload 12 (footer and Sounds good / Ask a question buttons), and Zukki's text, list (02), button cards (04, 07, 13) and location request (05). Each message is recorded as `sent` with WhatsApp's id or as `failed`.
 
 ## WhatsApp integration (`/v1/internal`)
 
@@ -76,9 +99,9 @@ The server sends queued owner and Zukki messages every `OUTBOX_POLL_MS` (default
 | `POST /inbound` | `{ waId, waMessageId, kind: text\|media\|button_reply\|list_reply, text?, payload?, mediaId?, profileName?, receivedAt? }` | `{ conversationId, messageId, duplicate, isNewConversation, businessChatOpen, businessId }`. If `duplicate`, Meta retried: do not reply again. Button and list replies need `payload.id`. |
 | `POST /conversations/resolve` | `{ waId, profileName?, receivedAt? }` | The conversation id, for uploading media before `/inbound` |
 | `POST /conversations/:id/location` | `{ waMessageId, latitude, longitude, address?, receivedAt? }` | `{ messageId, customerLocationId, duplicate }` |
-| `GET /conversations/:id/matches` | `?category=plumbing&exclude=<id,id>` | Payload 07 cards: `businessId, name, shortName, rating, reviews, distanceKm, etaMinutes, openNow, takesNightJobs, visit, nightFee {amount, window}, repairFrom, currency`. Skips businesses already offered or shown in this chat. |
+| `GET /conversations/:id/matches` | `?category=plumbing&exclude=<id,id>` | Payload 07 cards: `businessId, name, shortName, rating, reviews, distanceKm, etaMinutes, openNow, takesNightJobs, visit, nightFee {amount, window}, repairFrom, repairLabel, currency`. Skips businesses already offered or shown in this chat. |
 | `POST /conversations/:id/connect` | `{ businessId, suggestedMin?, suggestedMax? }` | `201 { offerId, attempt, expiresAt, distanceKm }` ("Connect me") |
-| `POST /conversations/:id/assist` | `{ type: text\|audio\|image\|video, text?, caption?, mediaId?, firstInConversation? }` | Zukki's turn: `{ disclosure, reply, transcript, valve, markedFrameUrl }`. Send `disclosure` first (payload 01) when set; `markedFrameUrl` is payload 04's image. |
+| `POST /conversations/:id/assist` | `{ type: text\|audio\|image\|video, text?, caption?, mediaId?, firstInConversation? }` | One model pass without sending anything: `{ disclosure, reply, transcript, valve, markedFrameUrl }`. `mediaId` is the `media` row id; the file is read from the bucket. With the webhook pointed here you do not need it. |
 | `POST /quotes/:id/approve` | | `{ quoteId, jobId, status }` for `quote_approve:<id>`. `422` for an old quote. |
 | `POST /outbox/claim` | `{ limit? }` | Owner and Zukki messages to send, each claimed once: `id, waId, kind, body, payload, polished, businessShortName` |
 | `POST /outbox/send` | `{ limit? }` | Sends what is queued now through the Cloud API: `{ sent, failed }`. `503 whatsapp_not_configured` without the WhatsApp settings. |
@@ -88,7 +111,7 @@ The server sends queued owner and Zukki messages every `OUTBOX_POLL_MS` (default
 
 ### Typical inbound flow (if another service handles the webhook)
 
-With `/webhooks/whatsapp` pointed at this API, steps 1-3 and 7 happen here already.
+With `/webhooks/whatsapp` pointed at this API, every step happens here already (see "Zukki's answer").
 
 1. Webhook arrives: answer 200 to Meta right away.
 2. Media: `POST /conversations/resolve`, upload to the `media` bucket at `conversations/<conversationId>/<file>`, insert the `media` row, then `POST /inbound` with `mediaId`.
@@ -109,6 +132,6 @@ On a deployed server, set these in the host's environment settings instead of a 
 ## Not built yet
 
 - Push notifications to the owner on a new request (Expo push from `push_tokens`).
-- Running Zukki's reply automatically after an inbound message (the webhook stores it; `/assist` and queuing its answer are still called separately). Needs model credits.
-- The pipeline's `downloadMedia` (`src/worker/live-deps.ts`) reading the file the webhook stored in the `media` bucket.
-- Offering the next business automatically when an offer expires (`expire_handoffs` returns the expired offers; the loop that sends payload 09 + 07 is part of the WhatsApp side).
+- The marked frame and transcript on the owner's request card: the frame is sent to the customer but not saved as a `marked_frame` media row yet.
+- After "Zukki" in a business chat, only payload 15 is sent; the customer's next messages still go to the owner.
+- Not yet tried against the real WhatsApp number or a real customer video (ffmpeg and SAM on the server).

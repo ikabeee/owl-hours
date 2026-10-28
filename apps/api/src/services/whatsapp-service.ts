@@ -177,6 +177,7 @@ export async function findMatches(
     const visit = own.find((p) => p.kind === "callout");
     const night = own.find((p) => p.kind === "night_fee");
     const repairs = own.filter((p) => p.kind === "repair_range");
+    const cheapest = repairs.reduce<(typeof repairs)[number] | null>((best, r) => (!best || r.min_amount < best.min_amount ? r : best), null);
     return {
       businessId: match.tenantId,
       name: match.name,
@@ -190,7 +191,9 @@ export async function findMatches(
       currency: visit?.currency ?? own[0]?.currency ?? "USD",
       visit: visit?.min_amount ?? null,
       nightFee: night ? { amount: night.min_amount, window: night.conditions } : null,
-      repairFrom: repairs.length > 0 ? Math.min(...repairs.map((r) => r.min_amount)) : null,
+      repairFrom: cheapest?.min_amount ?? null,
+      // "Leak repair: from $60" on the card: the business's own name for it.
+      repairLabel: cheapest?.item ?? null,
     };
   });
 }

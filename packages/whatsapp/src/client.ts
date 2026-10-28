@@ -21,6 +21,7 @@ export type WhatsAppClientConfig = {
 // The Cloud API message body without messaging_product, which send() adds.
 export type OutgoingMessage = { to: string; type: string } & Record<string, unknown>;
 export type ReplyButton = { id: string; title: string };
+export type ListSection = { title: string; rows: Array<{ id: string; title: string; description?: string | undefined }> };
 export type MediaInfo = { url: string; mimeType: string; sizeBytes: number | null };
 
 export class WhatsAppApiError extends Error {
@@ -61,16 +62,26 @@ export function createWhatsAppClient(config: WhatsAppClientConfig) {
     return res;
   }
 
+  const messagesUrl = `${GRAPH_HOST}/${version}/${encodeURIComponent(config.phoneNumberId)}/messages`;
+  const postMessages = (body: Record<string, unknown>) =>
+    call(messagesUrl, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+
   return {
     // Returns WhatsApp's message id (wamid).
     async send(message: OutgoingMessage): Promise<string> {
-      const res = await call(`${GRAPH_HOST}/${version}/${encodeURIComponent(config.phoneNumberId)}/messages`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messaging_product: "whatsapp", recipient_type: "individual", ...message }),
-      });
+      const res = await postMessages({ messaging_product: "whatsapp", recipient_type: "individual", ...message });
       const [first] = sendResponse.parse(await res.json()).messages;
       return first!.id;
+    },
+
+    // Blue ticks, plus "typing..." for up to 25 seconds while the models run (payload 03).
+    async markRead(messageId: string, options: { typing?: boolean } = {}): Promise<void> {
+      await postMessages({
+        messaging_product: "whatsapp",
+        status: "read",
+        message_id: messageId,
+        ...(options.typing ? { typing_indicator: { type: "text" } } : {}),
+      });
     },
 
     // The download URL is short-lived and needs the same token.
@@ -114,11 +125,18 @@ export function textMessage(to: string, body: string): OutgoingMessage {
   return { to, type: "text", text: { preview_url: false, body } };
 }
 
-// Reply buttons (payloads 12 and 13): body up to 1024 characters, 1-3
-// buttons with titles up to 20, footer up to 60.
+// Reply buttons (payloads 04, 07, 12 and 13): body up to 1024 characters,
+// 1-3 buttons with titles up to 20, footer up to 60, and a text (up to 60)
+// or image header.
 export function buttonMessage(
   to: string,
-  content: { body: string; buttons: ReplyButton[]; footer?: string | undefined; headerText?: string | undefined },
+  content: {
+    body: string;
+    buttons: ReplyButton[];
+    footer?: string | undefined;
+    headerText?: string | undefined;
+    headerImageUrl?: string | undefined;
+  },
 ): OutgoingMessage {
   const interactive: Record<string, unknown> = {
     type: "button",
@@ -126,6 +144,26 @@ export function buttonMessage(
     action: { buttons: content.buttons.map((reply) => ({ type: "reply", reply })) },
   };
   if (content.footer) interactive.footer = { text: content.footer };
-  if (content.headerText) interactive.header = { type: "text", text: content.headerText };
+  if (content.headerImageUrl) interactive.header = { type: "image", image: { link: content.headerImageUrl } };
+  else if (content.headerText) interactive.header = { type: "text", text: content.headerText };
   return { to, type: "interactive", interactive };
+}
+
+// A list sheet (payload 02): one button up to 20 characters, up to 10 rows.
+export function listMessage(
+  to: string,
+  content: { body: string; button: string; sections: ListSection[]; footer?: string | undefined },
+): OutgoingMessage {
+  const interactive: Record<string, unknown> = {
+    type: "list",
+    body: { text: content.body },
+    action: { button: content.button, sections: content.sections },
+  };
+  if (content.footer) interactive.footer = { text: content.footer };
+  return { to, type: "interactive", interactive };
+}
+
+// WhatsApp's own Send location button (payload 05). No header or footer.
+export function locationRequestMessage(to: string, body: string): OutgoingMessage {
+  return { to, type: "interactive", interactive: { type: "location_request_message", body: { text: body }, action: { name: "send_location" } } };
 }

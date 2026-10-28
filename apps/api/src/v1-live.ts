@@ -9,6 +9,10 @@ import { createServiceClient } from "./db/client.ts";
 import { createSupabaseAuthenticator } from "./http/auth.ts";
 import type { V1Deps } from "./routes/v1.ts";
 import type { WebhookDeps } from "./routes/whatsapp.ts";
+import { createRespondDeps } from "./orchestrator/live.ts";
+import type { NoticeDeps } from "./orchestrator/notices.ts";
+import { respond } from "./orchestrator/respond.ts";
+import { createSerializer } from "./orchestrator/serial.ts";
 import { handleEvents, type Logger } from "./whatsapp/inbound.ts";
 import type { OutboxDeps } from "./whatsapp/outbox.ts";
 import { createLiveDeps } from "./worker/live-deps.ts";
@@ -19,6 +23,7 @@ export type LiveDeps = {
   whatsapp: WebhookDeps | Unavailable;
   // Set when both the database and WhatsApp are configured.
   outbox: OutboxDeps | null;
+  notices: NoticeDeps | null;
 };
 
 export function createLiveV1Deps(config: ApiConfig = loadConfig(), whatsapp?: WhatsAppClient): V1Deps {
@@ -39,7 +44,7 @@ export function loadLiveDeps(env: Record<string, string | undefined> = process.e
     config = loadConfig(env);
   } catch (error) {
     const reason = reasonOf(error);
-    return { v1: { unavailable: reason }, whatsapp: { unavailable: reason }, outbox: null };
+    return { v1: { unavailable: reason }, whatsapp: { unavailable: reason }, outbox: null, notices: null };
   }
   let waConfig: WhatsAppConfig | null = null;
   let waReason = "";
@@ -53,8 +58,13 @@ export function loadLiveDeps(env: Record<string, string | undefined> = process.e
     : undefined;
   const v1 = createLiveV1Deps(config, client);
   if (!waConfig || !client) {
-    return { v1, whatsapp: { unavailable: waReason }, outbox: null };
+    return { v1, whatsapp: { unavailable: waReason }, outbox: null, notices: null };
   }
+  const zukki =
+    v1.chat && v1.pipeline
+      ? createRespondDeps({ db: v1.serviceDb, chat: v1.chat, pipeline: v1.pipeline, whatsapp: client, log })
+      : null;
+  const serial = createSerializer(log);
   return {
     v1,
     whatsapp: {
@@ -66,7 +76,8 @@ export function loadLiveDeps(env: Record<string, string | undefined> = process.e
             db: v1.serviceDb,
             client,
             storeMedia: (path, bytes, contentType) => uploadMedia(v1.serviceDb, path, bytes, contentType),
-            background: (task) => void task(),
+            enqueue: (conversationId, task) => void serial(conversationId, task),
+            respond: zukki ? (ctx, turn) => respond(zukki, ctx, turn) : undefined,
             log,
           },
           events,
@@ -74,6 +85,7 @@ export function loadLiveDeps(env: Record<string, string | undefined> = process.e
       log,
     },
     outbox: { db: v1.serviceDb, client, log },
+    notices: zukki ? { db: v1.serviceDb, store: zukki.store, directory: zukki.directory, log } : null,
   };
 }
 

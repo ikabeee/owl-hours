@@ -1,6 +1,13 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { WhatsAppApiError, buttonMessage, createWhatsAppClient, textMessage } from "../src/index.ts";
+import {
+  WhatsAppApiError,
+  buttonMessage,
+  createWhatsAppClient,
+  listMessage,
+  locationRequestMessage,
+  textMessage,
+} from "../src/index.ts";
 
 type Call = { url: string; init: RequestInit };
 
@@ -62,6 +69,19 @@ describe("createWhatsAppClient", () => {
     assert.equal(calls.length, 2);
   });
 
+  it("marks a message read with the typing indicator (payload 03)", async () => {
+    const { impl, calls } = fakeFetch(() => json({ success: true }));
+    const client = createWhatsAppClient({ accessToken: TOKEN, phoneNumberId: "1234567890", fetch: impl });
+    await client.markRead("wamid.IN1", { typing: true });
+    assert.equal(calls[0]?.url, "https://graph.facebook.com/v23.0/1234567890/messages");
+    assert.deepEqual(JSON.parse(String(calls[0]?.init.body)), {
+      messaging_product: "whatsapp",
+      status: "read",
+      message_id: "wamid.IN1",
+      typing_indicator: { type: "text" },
+    });
+  });
+
   it("never sends the token to a host outside Meta", async () => {
     const { impl, calls } = fakeFetch(() => new Response("x"));
     const client = createWhatsAppClient({ accessToken: TOKEN, phoneNumberId: "1", fetch: impl });
@@ -88,6 +108,56 @@ describe("buttonMessage", () => {
         action: { buttons: [{ type: "reply", reply: { id: "reply_ok", title: "Sounds good" } }] },
         footer: { text: "Written with Zukki, approved by Northside" },
         header: { type: "text", text: "Quote" },
+      },
+    });
+  });
+
+  it("puts an image in the header (payload 04)", () => {
+    const message = buttonMessage("15551234567", {
+      body: "Turn this valve clockwise.",
+      buttons: [{ id: "safety_done", title: "Done, no cables" }],
+      headerImageUrl: "https://example.supabase.co/marked.jpg",
+    });
+    assert.deepEqual((message.interactive as Record<string, unknown>).header, {
+      type: "image",
+      image: { link: "https://example.supabase.co/marked.jpg" },
+    });
+  });
+});
+
+describe("listMessage", () => {
+  it("builds a list with sections and a footer (payload 02)", () => {
+    const message = listMessage("15551234567", {
+      body: "What are you looking for?",
+      button: "See options",
+      sections: [{ title: "Home", rows: [{ id: "cat_plumbing", title: "Plumbing", description: "Leaks" }] }],
+      footer: "Only businesses open now and near you",
+    });
+    assert.deepEqual(message, {
+      to: "15551234567",
+      type: "interactive",
+      interactive: {
+        type: "list",
+        body: { text: "What are you looking for?" },
+        action: {
+          button: "See options",
+          sections: [{ title: "Home", rows: [{ id: "cat_plumbing", title: "Plumbing", description: "Leaks" }] }],
+        },
+        footer: { text: "Only businesses open now and near you" },
+      },
+    });
+  });
+});
+
+describe("locationRequestMessage", () => {
+  it("asks for the location with WhatsApp's own button (payload 05)", () => {
+    assert.deepEqual(locationRequestMessage("15551234567", "Share your location."), {
+      to: "15551234567",
+      type: "interactive",
+      interactive: {
+        type: "location_request_message",
+        body: { text: "Share your location." },
+        action: { name: "send_location" },
       },
     });
   });

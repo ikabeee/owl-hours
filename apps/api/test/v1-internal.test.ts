@@ -148,6 +148,7 @@ describe("/v1/internal matching", () => {
       visit: 45,
       nightFee: { amount: 25, window: "10 PM-7 AM" },
       repairFrom: 60,
+      repairLabel: "Leak repair",
     });
   });
 

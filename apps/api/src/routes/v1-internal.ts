@@ -71,7 +71,8 @@ const assistBody = z
     type: z.enum(["text", "audio", "image", "video"]),
     text: z.string().max(4096).optional(),
     caption: z.string().max(1024).optional(),
-    mediaId: z.string().min(1).max(128).optional(),
+    // Our media row id (the file is read from the media bucket).
+    mediaId: z.string().uuid().optional(),
     firstInConversation: z.boolean().optional(),
   })
   .strict();
