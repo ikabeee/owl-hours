@@ -22,7 +22,7 @@ resources, and a proposed team plan (not yet agreed).
 - `packages/meta-models` — Meta Model API clients (Spark, SAM, voice, image)
 - `packages/whatsapp` — WhatsApp Cloud API sender
 - `handoff-ui` — UI handoff: customer WhatsApp messages, owner app (Expo + Astryx), demo screens
-- persistence — TBD, database not designed yet (`apps/api/src/store.ts` is in-memory)
+- `supabase` — Postgres schema, row-level security, functions and seed ([docs/DATA-MODEL.md](docs/DATA-MODEL.md)); the API still uses the in-memory `apps/api/src/store.ts` until it is wired
 
 ## Checks
 
@@ -31,6 +31,7 @@ npm test            # everything, in dependency order
 npm run test:api     # api (+ its deps)
 npm run test:owner   # owner app
 npm run test:shared  # shared package
+npm run test:db      # Supabase migrations + RLS tests (needs Docker)
 npm run typecheck    # everything
 npm run typecheck:owner
 npm run build:owner  # owner Android export

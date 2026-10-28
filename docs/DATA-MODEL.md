@@ -1,0 +1,223 @@
+# Data model (Supabase)
+
+The schema behind handoff section 6. Source of truth: `supabase/migrations/`.
+Run `npm run test:db` (needs Docker) to apply it to a throwaway Postgres +
+PostGIS and run the isolation and function tests in `supabase/tests/`.
+
+## ER diagram
+
+```mermaid
+erDiagram
+  tenants ||--o{ tenant_users : "team"
+  tenants ||--o{ price_rules : "prices"
+  tenants ||--o{ business_hours : "hours"
+  tenants ||--o{ service_areas : "covers"
+  tenants ||--o{ handoffs : "is offered"
+  tenants ||--o{ jobs : "does"
+  tenants ||--o{ linked_accounts : "links"
+  tenants ||--o{ content_drafts : "drafts"
+  customers ||--o{ conversations : "starts"
+  conversations ||--o{ handoffs : "offered to"
+  conversations |o--o| handoffs : "active_handoff_id"
+  conversations ||--o{ messages : "contains"
+  conversations ||--o{ media : "has"
+  conversations ||--o{ customer_locations : "exact address"
+  conversations ||--o{ consents : "grants"
+  conversations ||--o{ jobs : "becomes"
+  handoffs ||--o{ handoff_events : "audit"
+  handoffs ||--o{ jobs : "leads to"
+  jobs ||--o{ job_events : "audit"
+  media |o--o{ messages : "attached to"
+  auth_users ||--o{ tenant_users : "member"
+  auth_users ||--o{ push_tokens : "devices"
+
+  tenants {
+    uuid id PK
+    text slug UK
+    text name
+    text category
+    text timezone
+    geography location
+    numeric rating
+    bool accepts_now
+    bool night_jobs
+  }
+  tenant_users {
+    uuid tenant_id PK, FK
+    uuid user_id PK, FK
+    tenant_role role
+    text display_name
+  }
+  price_rules {
+    uuid id PK
+    uuid tenant_id FK
+    text item
+    price_kind kind
+    int min_amount
+    int max_amount
+    text conditions
+  }
+  business_hours {
+    uuid id PK
+    uuid tenant_id FK
+    smallint weekday
+    time opens
+    time closes
+  }
+  service_areas {
+    uuid id PK
+    uuid tenant_id FK
+    geography center
+    numeric radius_km
+  }
+  customers {
+    uuid id PK
+    text wa_id UK "hidden from owners"
+    text display_name
+    text approx_area
+  }
+  conversations {
+    uuid id PK
+    uuid customer_id FK
+    conversation_state state
+    urgency urgency
+    uuid active_handoff_id FK
+    timestamptz last_message_at
+  }
+  customer_locations {
+    uuid id PK
+    uuid conversation_id FK
+    geography location
+    text address
+  }
+  handoffs {
+    uuid id PK
+    uuid conversation_id FK
+    uuid tenant_id FK
+    handoff_status status
+    smallint attempt
+    timestamptz expires_at
+  }
+  handoff_events {
+    bigint id PK
+    uuid handoff_id FK
+    job_actor actor
+    handoff_status to_status
+  }
+  messages {
+    uuid id PK
+    uuid conversation_id FK
+    uuid tenant_id FK "null while with Zukki"
+    message_sender sender
+    text body
+    bool polished
+    uuid media_id FK
+    text wa_message_id UK
+    delivery_status delivery
+  }
+  media {
+    uuid id PK
+    uuid conversation_id FK
+    media_kind kind
+    text storage_path UK
+    text transcript
+    jsonb sam_detections
+  }
+  jobs {
+    uuid id PK
+    uuid tenant_id FK
+    uuid conversation_id FK
+    uuid handoff_id FK
+    job_state state
+    jsonb ticket
+    int total_min
+    int total_max
+  }
+  job_events {
+    bigint id PK
+    uuid job_id FK
+    job_actor actor
+    job_state to_state
+  }
+  linked_accounts {
+    uuid id PK
+    uuid tenant_id FK
+    social_platform platform
+    uuid token_secret_id "Vault id, hidden"
+  }
+  content_drafts {
+    uuid id PK
+    uuid tenant_id FK
+    uuid_array source_media_ids
+    draft_status status
+    uuid reviewed_by
+  }
+  consents {
+    bigint id PK
+    uuid conversation_id FK
+    consent_kind kind
+    bool granted
+  }
+  push_tokens {
+    uuid user_id PK, FK
+    text expo_token PK
+  }
+```
+
+## Who can do what
+
+The Platform API and the WhatsApp orchestrator use `service_role` (bypasses
+RLS, so they must scope by tenant in code). The owner app uses the signed-in
+user's JWT, so row-level security is the tenant boundary. `anon` gets nothing.
+
+| Data | Owner app (authenticated) |
+|---|---|
+| tenants, price_rules, business_hours, service_areas | Read all (public directory). Owners edit their own; never `rating`, `review_count`, `slug`. |
+| conversations, media, consents | Read while their business holds an offered, accepted or closed handoff. |
+| messages | Read Zukki-phase messages (`tenant_id` null) plus their own business's chat. Insert only as `owner`, only in an accepted handoff, never `polished`. |
+| customers | `id, display_name, approx_area` only. Never `wa_id`. |
+| customer_locations | Only after the customer approved this business's visit. |
+| handoffs, jobs, events | Read own. State changes only through the functions below. |
+| linked_accounts | Read own (no `token_secret_id`), owners can unlink. |
+| content_drafts | Read own; owners edit drafts; approval through `review_content_draft`. |
+| push_tokens | Own rows only. |
+
+## Functions (call with `supabase.rpc(...)`)
+
+| Function | Caller | What it does |
+|---|---|---|
+| `search_directory(category, lat, lng, at?, exclude?, limit?, max_km?)` | API, app | Businesses accepting now, open or taking night jobs, whose service area covers the point. Closest first, then rating. |
+| `create_handoff(conversation_id, tenant_id)` | API only | Offers the request: 5-minute window if urgency is `now`, 30 otherwise. One open handoff per conversation. |
+| `accept_handoff(handoff_id)` | Owner | Accepts in time, or expires the offer if the window closed (returns status `expired`). |
+| `decline_handoff(handoff_id, reason?)` | Owner | Declines; the conversation goes back to matching. |
+| `expire_handoffs()` | API / pg_cron | Expires overdue offers (safe to run from several workers) and returns them so the API can offer the next business. |
+| `owner_transition_job(job_id, to_state, reason)` | Owner | Owner side of `packages/shared/src/job-states.ts`. Agent and customer moves stay in the API. |
+| `review_content_draft(draft_id, approve)` | Owner | Approves or rejects a draft. |
+
+Errors come back with the Postgres code: `P0002` not found (or not yours),
+`22023` the state does not allow it, `23505` a second open handoff, `23514`
+draft media without consent or from another business's job.
+
+## Guarantees the database enforces
+
+- Tenant isolation through RLS on every table (a test fails if a table is missing RLS).
+- A job and its events always belong to the business its handoff went to (composite foreign keys).
+- At most one offered or accepted handoff per conversation.
+- Webhook retries insert a message once (`wa_message_id` is unique; use `on conflict do nothing`).
+- Every handoff and job change writes an audit row in the same transaction.
+- Marketing drafts only use media with the customer's latest consent, from the business's own jobs.
+- Nothing is published without a reviewer (`reviewed_by`) on the draft.
+
+## Setting up a Supabase project
+
+1. `supabase init` (keeps the existing `migrations/` and `seed.sql`), then `supabase link`.
+2. Enable `pg_cron` under Database > Extensions if you want the database to run the handoff timer.
+3. `supabase db push` for a hosted project, or `supabase db reset` locally (also loads the seed).
+4. Clients select explicit columns from `customers` and `linked_accounts`; `select *` is denied because some columns are hidden.
+5. Regenerate types for the apps: `supabase gen types typescript --linked > packages/shared/src/database.types.ts`.
+
+## Open questions
+
+- Demo city: the seed uses Cancun coordinates as a placeholder.
+- Matching weights beyond distance then rating (handoff open question 3).
+- Staff accounts: the `staff` role can read and chat but not edit prices or approve posts.
