@@ -9,7 +9,7 @@
     }
   },
   "deploy": {
-    "aptPackages": ["ffmpeg"],
+    "aptPackages": ["...", "ffmpeg"],
     "startCommand": "pnpm --filter @owl-hours/api start"
   }
 }

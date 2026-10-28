@@ -75,8 +75,13 @@ export function createLiveDeps(config: ApiConfig = loadConfig()): PipelineDeps {
         segment: (concept, url) => segmentImage(client, { concept, imageUrl: url }),
         drawOverlay: (frame, svgFor) => drawMarkup(frame, withSuffix(frame, "-valve.jpg"), svgFor),
       }),
-    publishImage: async (conversationId, imagePath) =>
-      (await mediaStore.publishJpeg(conversationId, await readFile(imagePath))).url,
+    publishImage: async (conversationId, imagePath, sourceMediaId) => {
+      const bytes = await readFile(imagePath);
+      const image = sourceMediaId
+        ? await mediaStore.saveMarkedFrame(conversationId, sourceMediaId, bytes)
+        : await mediaStore.publishJpeg(conversationId, bytes);
+      return image.url;
+    },
     runAgent: (messages, conversationId) =>
       runAgent({
         chat: (request) => createChatCompletion(client, request),

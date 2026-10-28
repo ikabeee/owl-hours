@@ -47,7 +47,7 @@ async function read(
   const valve = await pipeline.markValve(framePath, imageUrl);
   parts.push(textPart(describeValve(valve)));
   if (valve.kind === "marked") {
-    const markedFrameUrl = await pipeline.publishImage(input.conversationId, valve.markedFramePath);
+    const markedFrameUrl = await pipeline.publishImage(input.conversationId, valve.markedFramePath, input.mediaId);
     return { parts, transcript: null, markedFrameUrl, valveAdvice: null };
   }
   return { parts, transcript: null, markedFrameUrl: null, valveAdvice: valve.advice };

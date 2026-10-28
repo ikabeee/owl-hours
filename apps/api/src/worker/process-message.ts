@@ -25,7 +25,8 @@ export type PipelineDeps = {
   toDataUrl: (imagePath: string) => Promise<string>;
   markValve: (framePath: string, imageUrl: string) => Promise<ValveResult>;
   // Uploads the marked frame; returns the URL for payload 04's image header.
-  publishImage: (conversationId: string, imagePath: string) => Promise<string>;
+  // With sourceMediaId it is also saved as that media's marked_frame row.
+  publishImage: (conversationId: string, imagePath: string, sourceMediaId?: string) => Promise<string>;
   runAgent: (messages: ChatMessage[], conversationId: string) => Promise<{ reply: string }>;
 };
 

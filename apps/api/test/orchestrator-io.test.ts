@@ -202,9 +202,17 @@ describe("createMediaReader", () => {
   });
 
   it("marks the valve on a video frame and publishes it", async () => {
-    const { pipeline, calls } = await fakePipeline();
+    const published: (string | undefined)[][] = [];
+    const { pipeline, calls } = await fakePipeline({
+      publishImage: async (conversationId, _path, sourceMediaId) => {
+        published.push([conversationId, sourceMediaId]);
+        return "https://example.supabase.co/marked.jpg";
+      },
+    });
     const reading = await createMediaReader(pipeline)({ conversationId: CHAT, mediaId: MEDIA, mediaType: "video", caption: "help", findValve: true });
     assert.deepEqual(calls, ["frame", "sam"]);
+    // Saved against the customer's video, so the owner's card shows it too.
+    assert.deepEqual(published, [[CHAT, MEDIA]]);
     assert.equal(reading.markedFrameUrl, "https://example.supabase.co/marked.jpg");
     assert.equal(reading.valveAdvice, null);
     assert.equal(reading.parts[0]?.type, "text");

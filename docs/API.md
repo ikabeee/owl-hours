@@ -74,7 +74,7 @@ The steps are fixed code; Muse Spark only reads what the customer needs (categor
 | First message of a conversation | 01 disclosure, then the step below |
 | Unclear message ("hi") | 02 category list |
 | Off-topic question | 14 |
-| Urgent leak (text, photo or video) | 03 typing, then 04: the valve frame marked by SAM with Done, no cables / I can't find it (general advice and no picture when SAM is unsure) |
+| Urgent leak (text, photo or video) | 03 typing, then 04: the valve frame marked by SAM with Done, no cables / I can't find it (general advice and no picture when SAM is unsure). The marked frame is saved as a `marked_frame` media row linked to the video, so the owner's request card shows it next to the video; a voice note's transcript is the card's `customerQuote`. |
 | Urgent electrical problem | safety advice, then 05 |
 | Done, no cables / I can't find it | 05 location request (simpler steps first for I can't find it) |
 | Picks a category | home categories: "what's going on?"; others: 05 |
@@ -132,6 +132,5 @@ On a deployed server, set these in the host's environment settings instead of a 
 ## Not built yet
 
 - Push notifications to the owner on a new request (Expo push from `push_tokens`).
-- The marked frame and transcript on the owner's request card: the frame is sent to the customer but not saved as a `marked_frame` media row yet.
 - After "Zukki" in a business chat, only payload 15 is sent; the customer's next messages still go to the owner.
 - Not yet tried against the real WhatsApp number or a real customer video (ffmpeg and SAM on the server).
