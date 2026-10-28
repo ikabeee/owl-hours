@@ -1,0 +1,14 @@
+{
+  "$schema": "https://schema.railpack.com",
+  "packages": {
+    "node": "22"
+  },
+  "steps": {
+    "build": {
+      "commands": ["pnpm --filter @owl-hours/api... typecheck"]
+    }
+  },
+  "deploy": {
+    "startCommand": "pnpm --filter @owl-hours/api start"
+  }
+}
