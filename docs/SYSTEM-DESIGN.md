@@ -46,7 +46,7 @@ WhatsApp Cloud API ──webhook──▶ apps/api (Node + Hono) ──▶ worke
 | Component | Responsibility | Does not do |
 |---|---|---|
 | `apps/api/src/routes/*` | HTTP only: validate, answer 200, delegate | No business rules, no model calls |
-| `apps/api/src/store.ts` (in-memory) | Job + event persistence until the schema is designed | No transition logic |
+| Supabase (`supabase/`, via `/v1`) | Job + event persistence | No transition logic outside the database functions |
 | `packages/shared` | State machine, zod schemas, types | No I/O, no framework imports |
 | `apps/api/src/agent/*` | Prompts, summaries, tool contracts | Never writes `jobs.state` directly |
 | `packages/meta-models` | One client per Meta model | No prompt logic |
@@ -131,8 +131,8 @@ in `packages/shared/src/job-states.ts`, covered by 5 tests.
 |---|---|---|
 | Muse Spark 1.3 (vision, video, tools, structured output) | Triage, safety questions, diagnosis, ticket JSON, quote draft, owner follow-ups | `agent/*`, `agent/tools.ts`, `worker/runCustomerAgent` |
 | SAM 3.1 (text-prompted masks/boxes, tracking) | `shut-off valve` / `fill valve` boxes, `water puddle` signal | `worker/segmentFrame`; overlay drawn by our own code on the real frame |
-| Muse Voice Transcribe (streaming + batch STT) | Customer voice note, owner hands-free / hold-to-talk | `worker/transcribeVoice`, `routes/voice.ts` |
-| Muse Image (generate + edit) | Ad image from before/after job photos only | `routes/studio.ts` (screen 10) |
+| Muse Voice Transcribe (streaming + batch STT) | Customer voice note, owner hands-free / hold-to-talk | `worker/transcribeVoice` (owner voice route not built yet) |
+| Muse Image (generate + edit) | Ad image from before/after job photos only | not built yet (screen 10) |
 
 Hard limits honored: no video generation, no TTS (agent replies in text),
 transcribe before reasoning about audio, safety overlays never use generated

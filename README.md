@@ -16,13 +16,13 @@ resources, and a proposed team plan (not yet agreed).
 
 ## Layout
 
-- `apps/api` — Hono server (WhatsApp webhook, jobs, voice, studio) + worker
+- `apps/api` — Hono server (WhatsApp webhook, `/v1` owner and internal API, see [docs/API.md](docs/API.md)) + worker
 - `apps/owner` — Expo app for the owner/technician (Expo web for judges)
 - `packages/shared` — job state machine, zod schemas, types
 - `packages/meta-models` — Meta Model API clients (Spark, SAM, voice, image)
 - `packages/whatsapp` — WhatsApp Cloud API sender
 - `handoff-ui` — UI handoff: customer WhatsApp messages, owner app (Expo + Astryx), demo screens
-- `supabase` — Postgres schema, row-level security, functions and seed ([docs/DATA-MODEL.md](docs/DATA-MODEL.md)); the API still uses the in-memory `apps/api/src/store.ts` until it is wired
+- `supabase` — Postgres schema, row-level security, functions and seed ([docs/DATA-MODEL.md](docs/DATA-MODEL.md)); the `/v1` API reads and writes it
 
 ## Checks
 
@@ -36,6 +36,6 @@ npm run typecheck    # everything
 npm run typecheck:owner
 npm run build:owner  # owner Android export
 npm run dev          # api + owner together
-npm run dev:api      # api watcher only
+npm run dev:api      # api watcher only (listens on PORT, default 3000; reads apps/api/.env)
 npm run dev:owner    # Expo web only
 ```
