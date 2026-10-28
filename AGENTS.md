@@ -31,6 +31,34 @@ Zukki is an AI assistant on WhatsApp that finds an open, nearby local business
 `docs/HANDOFF.md` describes an older model and is not authoritative for UI work.
 `design/` (root) holds the previous screen set; prefer `handoff-ui/`.
 
+## App architecture (apps/owner)
+
+Screaming structure: the tree names the business flows, not the framework.
+`app/` holds thin Expo Router adapters (one import + one render per route).
+Each business flow is one module under `features/` (`requests`, `chats`,
+`jobs`, `content`, `business`), managed by four concerns:
+
+- `components/` — what the user sees (DOM screens + native chrome).
+- `copys/` — every visible string, typed; copy comes from the handoff design
+  HTML, never invented in a component.
+- `services/` — the only place that talks to APIs (`offersService.ts`:
+  `getOffer`, `accept`, `decline`). Returns domain types from
+  `shared/data/types`, never raw rows. Client singleton: `shared/infra/`.
+- `hooks/` — state and data for screens. Consumes `services/` only, through
+  injected dependencies (mock today, Supabase tomorrow).
+- `lib/` — pure logic per feature (no React, no I/O); the unit-test surface.
+
+Consumption rules: components never import services; routes never call
+services (they wire the hook's result into the screen); hooks are the only
+service consumers. Dependencies flow `app/` → `features/` → `shared/`;
+nothing new enters `shared/` without two real callers. Expo DOM rules hold:
+serializable props, top-level async callbacks only.
+
+Work test-first: the coder writes the tests and shows them failing (RED),
+the operator reviews and locks them, the coder implements to GREEN without
+changing the locked tests, and the operator reviews each iteration.
+Record every technical decision in `docs/DECISIONS.md`.
+
 ## Handoff retirement rule
 
 `handoff-ui/` is scaffolding, not a second codebase. As the real UI lands,
