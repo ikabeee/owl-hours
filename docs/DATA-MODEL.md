@@ -16,6 +16,10 @@ erDiagram
   tenants ||--o{ jobs : "does"
   tenants ||--o{ linked_accounts : "links"
   tenants ||--o{ content_drafts : "drafts"
+  tenants ||--o{ technicians : "staff"
+  jobs ||--o{ quotes : "quoted"
+  technicians |o--o{ quotes : "assigned"
+  conversations ||--o{ conversation_reads : "read markers"
   customers ||--o{ conversations : "starts"
   conversations ||--o{ handoffs : "offered to"
   conversations |o--o| handoffs : "active_handoff_id"
@@ -175,6 +179,27 @@ erDiagram
     message_draft_status status
     uuid sent_message_id FK
   }
+  technicians {
+    uuid id PK
+    uuid tenant_id FK
+    text display_name
+    uuid user_id FK "optional app account"
+  }
+  quotes {
+    uuid id PK
+    uuid job_id FK
+    jsonb lines
+    int total_min
+    int total_max
+    timestamptz arrival_from
+    timestamptz arrival_to
+    quote_status status "sent, approved, superseded"
+  }
+  conversation_reads {
+    uuid user_id PK, FK
+    uuid conversation_id PK, FK
+    timestamptz last_read_at
+  }
   platform_settings {
     bool id PK "single row"
     interval urgent_accept_window
@@ -200,6 +225,9 @@ user's JWT, so row-level security is the tenant boundary. `anon` gets nothing.
 | content_drafts | Read own; owners edit drafts; approval through `review_content_draft`. |
 | message_drafts | Read own business's drafts; insert only in an accepted handoff; never write `polished_body`. |
 | push_tokens | Own rows only. |
+| technicians | Read own business's; owners add and edit. |
+| quotes | Read own; sent through `send_quote`, approved by the customer through `approve_quote`. |
+| conversation_reads | Own read markers, only for conversations they can see. |
 | platform_settings | No access (server only). |
 
 ## Functions (call with `supabase.rpc(...)`)
@@ -230,6 +258,9 @@ draft media without consent or from another business's job.
 - **Locations:** save the coordinates in `customer_locations` and store the message as `kind = 'location'` with `payload = {"customer_location_id": ...}`. The database rejects coordinates inside a message payload, because offered businesses can read messages before the customer approves a visit.
 - **Outbound:** owner replies arrive as `delivery = 'queued'` (index `messages_outbox_idx`). Send them, then update `delivery` and `wa_message_id`; status webhooks move it to `delivered`, `read` or `failed`. A polished reply has `kind = 'interactive'` and `payload.variant = 'polished_reply'`: send it with the "Written with Zukki, approved by <business>" footer and the Sounds good / Ask a question buttons.
 - **Media:** upload to the private `media` bucket at `conversations/<conversation_id>/<file>` and insert a `media` row.
+- **Categories:** payload 02 list ids map to `tenants.category` with `categoryFromListReply` in `packages/shared` (`cat_plumbing` to `plumbing`; `cat_other` means ask what they need).
+- **Zukki's reply:** `processMessage` in `apps/api/src/worker/process-message.ts` returns the disclosure to send first (payload 01, first message only), the reply text, and `markedFrameUrl` for payload 04's image header.
+- **Quote approval:** `button_reply quote_approve:<id>` calls `approve_quote(id)`. An old quote's button fails with `22023`, so the customer only approves what they saw last.
 
 ## Guarantees the database enforces
 
@@ -251,8 +282,9 @@ created 2026-10-28 with every migration above and `seed.sql` applied. The
 Supabase security advisor reports only "leaked password protection" (an Auth
 dashboard setting; owners sign in by magic link) and "RLS enabled, no policy" on
 `platform_settings`, which is intentional (server only). The performance
-advisor reports only "unused index", expected before real traffic. Ask Ashwin for an
-invite to the project; keys are never committed.
+advisor reports only "unused index", expected before real traffic. Keys are never
+committed. For development, run Supabase locally from `migrations/` and `seed.sql`
+(below), so nobody needs the hosted project's keys.
 
 ## Setting up a Supabase project
 
