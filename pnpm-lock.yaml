@@ -29,6 +29,9 @@ importers:
       '@owl-hours/shared':
         specifier: workspace:*
         version: link:../../packages/shared
+      '@owl-hours/whatsapp':
+        specifier: workspace:*
+        version: link:../../packages/whatsapp
       '@supabase/supabase-js':
         specifier: '2'
         version: 2.118.0
@@ -133,7 +136,11 @@ importers:
         specifier: ^3
         version: 3.25.76
 
-  packages/whatsapp: {}
+  packages/whatsapp:
+    dependencies:
+      zod:
+        specifier: ^3
+        version: 3.25.76
 
 packages:
 

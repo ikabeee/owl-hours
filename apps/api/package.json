@@ -5,13 +5,14 @@
   "scripts": {
     "dev": "node --env-file-if-exists=.env --watch src/server.ts",
     "start": "node --env-file-if-exists=.env src/server.ts",
-    "test": "node --test test/app.test.ts test/valve-step.test.ts test/ffmpeg.test.ts test/agent-loop.test.ts test/process-message.test.ts test/agent-tools.test.ts test/supabase-repository.test.ts test/config.test.ts test/valve-markup.test.ts test/media-store.test.ts test/customer-agent.test.ts test/test-zukki.test.ts test/v1-owner.test.ts test/v1-internal.test.ts test/http.test.ts",
+    "test": "node --test test/app.test.ts test/valve-step.test.ts test/ffmpeg.test.ts test/agent-loop.test.ts test/process-message.test.ts test/agent-tools.test.ts test/supabase-repository.test.ts test/config.test.ts test/valve-markup.test.ts test/media-store.test.ts test/customer-agent.test.ts test/test-zukki.test.ts test/v1-owner.test.ts test/v1-internal.test.ts test/http.test.ts test/whatsapp-webhook.test.ts test/whatsapp-inbound.test.ts test/whatsapp-outbox.test.ts",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
     "@hono/node-server": "1.19.17",
     "@owl-hours/meta-models": "workspace:*",
     "@owl-hours/shared": "workspace:*",
+    "@owl-hours/whatsapp": "workspace:*",
     "@supabase/supabase-js": "2",
     "hono": "^4.13.14",
     "sharp": "0.35.5",

@@ -4,6 +4,7 @@ import { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ChatChoice, ChatRequest } from "@owl-hours/meta-models";
+import type { WhatsAppClient } from "@owl-hours/whatsapp";
 import type { Authenticate } from "../http/auth.ts";
 import { clientAddress, rateLimit } from "../http/rate-limit.ts";
 import { HttpError, errorResponse } from "../http/respond.ts";
@@ -19,6 +20,8 @@ export type V1Deps = {
   // Muse Spark; absent until model credits are in place.
   chat?: (request: ChatRequest) => Promise<ChatChoice>;
   pipeline?: PipelineDeps;
+  // Cloud API client; absent until the WHATSAPP_* settings are filled in.
+  whatsapp?: Pick<WhatsAppClient, "send">;
   now?: () => number;
 };
 

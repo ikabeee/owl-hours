@@ -6,9 +6,11 @@ import { z } from "zod";
 import { CATEGORIES } from "@owl-hours/shared";
 import { requireServerKey } from "../http/auth.ts";
 import { rateLimit } from "../http/rate-limit.ts";
-import { errorResponse, ok, readId, readJson, readQuery } from "../http/respond.ts";
+import { HttpError, errorResponse, ok, readId, readJson, readQuery } from "../http/respond.ts";
 import * as whatsapp from "../services/whatsapp-service.ts";
 import { processMessage } from "../worker/process-message.ts";
+import { textMessage, type WhatsAppClient } from "@owl-hours/whatsapp";
+import { drainOutbox } from "../whatsapp/outbox.ts";
 import type { V1Deps } from "./v1.ts";
 
 const waId = z.string().regex(/^[0-9]{6,20}$/, "6-20 digits, no plus sign");
@@ -74,6 +76,13 @@ const assistBody = z
   })
   .strict();
 
+function requireWhatsApp(client: Pick<WhatsAppClient, "send"> | undefined): Pick<WhatsAppClient, "send"> {
+  if (!client) {
+    throw new HttpError(503, "whatsapp_not_configured", "WhatsApp is not configured on this server.");
+  }
+  return client;
+}
+
 export function internalRoutes(deps: V1Deps): Hono {
   const app = new Hono();
   app.onError((error, c) => errorResponse(c, error));
@@ -115,6 +124,20 @@ export function internalRoutes(deps: V1Deps): Hono {
   app.post("/outbox/claim", async (c) => {
     const body = await readJson(c, z.object({ limit: z.number().int().min(1).max(100).optional() }).strict());
     return ok(c, await whatsapp.claimOutbox(deps.serviceDb, body.limit));
+  });
+  // Sends whatever is queued now (the server also does this on a timer).
+  app.post("/outbox/send", async (c) => {
+    const body = await readJson(c, z.object({ limit: z.number().int().min(1).max(100).optional() }).strict());
+    const client = requireWhatsApp(deps.whatsapp);
+    return ok(c, await drainOutbox({ db: deps.serviceDb, client, log: console }, body.limit));
+  });
+  // Direct send for testing the number. Not stored in any conversation, and
+  // WhatsApp only delivers free text within 24 hours of the customer's last
+  // message.
+  app.post("/whatsapp/send", async (c) => {
+    const body = await readJson(c, z.object({ to: waId, text: z.string().min(1).max(4096) }).strict());
+    const client = requireWhatsApp(deps.whatsapp);
+    return ok(c, { waMessageId: await client.send(textMessage(body.to, body.text)) });
   });
   app.post("/messages/:id/result", async (c) => {
     const id = readId(c);

@@ -1,16 +1,15 @@
-// WhatsApp Cloud API sender. Webhooks carry only a media ID;
-// fetching the media URL, downloading, and storing in object storage
-// (TBD) lands in the next slice.
-export type InteractiveButton = { id: string; title: string };
-
-export async function sendTextMessage(_to: string, _body: string): Promise<void> {
-  throw new Error("todo: WhatsApp send (next slice)");
-}
-
-export async function sendInteractiveMessage(
-  _to: string,
-  _body: string,
-  _buttons: InteractiveButton[],
-): Promise<void> {
-  throw new Error("todo: WhatsApp interactive (next slice)");
-}
+// WhatsApp Cloud API: sending, media download, webhook signature and parsing.
+export {
+  DEFAULT_GRAPH_VERSION,
+  WhatsAppApiError,
+  buttonMessage,
+  createWhatsAppClient,
+  textMessage,
+  type MediaInfo,
+  type OutgoingMessage,
+  type ReplyButton,
+  type WhatsAppClient,
+  type WhatsAppClientConfig,
+} from "./client.ts";
+export { SIGNATURE_HEADER, verifySignature } from "./signature.ts";
+export { parseWebhook, type InboundContent, type WebhookEvent } from "./webhook.ts";

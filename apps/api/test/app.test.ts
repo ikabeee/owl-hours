@@ -1,7 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { createApp } from "../src/index.ts";
-import { readPort } from "../src/port.ts";
+import { readPollMs, readPort } from "../src/port.ts";
 
 describe("app surface", () => {
   it("answers /health", async () => {
@@ -47,6 +47,17 @@ describe("readPort", () => {
   it("rejects anything else", () => {
     for (const bad of ["0", "65536", "80.5", "abc", "-1"]) {
       assert.throws(() => readPort(bad), /PORT must be/);
+    }
+  });
+});
+
+describe("readPollMs", () => {
+  it("defaults to 2 seconds, allows 0 to turn the sender off", () => {
+    assert.equal(readPollMs(undefined), 2000);
+    assert.equal(readPollMs("0"), 0);
+    assert.equal(readPollMs("500"), 500);
+    for (const bad of ["100", "x", "-5", "70000"]) {
+      assert.throws(() => readPollMs(bad), /OUTBOX_POLL_MS/);
     }
   });
 });

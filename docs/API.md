@@ -46,6 +46,29 @@ The WhatsApp code can also skip HTTP and call the same functions in-process from
 | `POST /jobs/:id/transition` | `{ to: en_route\|on_site\|done\|declined\|cancelled\|owner_confirmed, reason }` | `{ id, state }` |
 | `POST /test-zukki` | `{ question, history?, businessId? }` | `{ businessId, reply }`. Answers only from that business's profile and prices; sends nothing to customers. |
 
+## WhatsApp webhook (`/webhooks/whatsapp`)
+
+Set the Meta app's WhatsApp webhook to `https://<api host>/webhooks/whatsapp`, with the same verify token as `WHATSAPP_VERIFY_TOKEN`, and subscribe to the `messages` field.
+
+| Method | What it does |
+|---|---|
+| `GET` | Meta's verification: returns `hub.challenge` when `hub.mode=subscribe` and `hub.verify_token` matches, else `403`. |
+| `POST` | Checks `X-Hub-Signature-256` (HMAC-SHA256 of the raw body with `META_APP_SECRET`; `401` if wrong), then stores every event and answers `200 { received }`. If storing fails it answers `500` and Meta retries; every write is idempotent on WhatsApp's message id. |
+
+What it stores:
+
+- Text, button replies and list replies: `record_inbound_message` (same as `POST /v1/internal/inbound`). A tap on `quote_approve:<id>` also approves that quote.
+- Location: `save_customer_location`.
+- Image, video, voice note: a `media` row and the message first, then (after answering Meta) the file is downloaded from the Cloud API into the `media` bucket at `conversations/<conversationId>/<uuid>.<ext>`. Types the bucket does not accept (for example `audio/amr`, documents) are logged and skipped.
+- Delivery receipts: `delivered`, `read`, `failed` update the outbound message.
+- Anything else (stickers, reactions) is logged and skipped.
+
+It does not yet run Zukki's reply (`/assist`) on its own; see "Not built yet".
+
+### Sending
+
+The server sends queued owner and Zukki messages every `OUTBOX_POLL_MS` (default 2000, `0` turns it off), in the formats of `handoff-ui/whatsapp/payloads`: owner text as payload 11 (`*Business · First name*` line), polished replies as payload 12 (footer and Sounds good / Ask a question buttons), Zukki text as plain text. Each message is recorded as `sent` with WhatsApp's id or as `failed`.
+
 ## WhatsApp integration (`/v1/internal`)
 
 | Method and path | Body / query | Returns |
@@ -58,10 +81,14 @@ The WhatsApp code can also skip HTTP and call the same functions in-process from
 | `POST /conversations/:id/assist` | `{ type: text\|audio\|image\|video, text?, caption?, mediaId?, firstInConversation? }` | Zukki's turn: `{ disclosure, reply, transcript, valve, markedFrameUrl }`. Send `disclosure` first (payload 01) when set; `markedFrameUrl` is payload 04's image. |
 | `POST /quotes/:id/approve` | | `{ quoteId, jobId, status }` for `quote_approve:<id>`. `422` for an old quote. |
 | `POST /outbox/claim` | `{ limit? }` | Owner and Zukki messages to send, each claimed once: `id, waId, kind, body, payload, polished, businessShortName` |
+| `POST /outbox/send` | `{ limit? }` | Sends what is queued now through the Cloud API: `{ sent, failed }`. `503 whatsapp_not_configured` without the WhatsApp settings. |
+| `POST /whatsapp/send` | `{ to: waId, text }` | Test send: `{ waMessageId }`. Not stored in a conversation. WhatsApp delivers free text only within 24 hours of the customer's last message. |
 | `POST /messages/:id/result` | `{ waMessageId }` or `{ waMessageId: null }` on failure | `{ id, status, waMessageId }` |
 | `POST /delivery-status` | `{ waMessageId, status: delivered\|read\|failed }` | `{ updated }`. Receipts only move forward. |
 
-### Typical inbound flow
+### Typical inbound flow (if another service handles the webhook)
+
+With `/webhooks/whatsapp` pointed at this API, steps 1-3 and 7 happen here already.
 
 1. Webhook arrives: answer 200 to Meta right away.
 2. Media: `POST /conversations/resolve`, upload to the `media` bucket at `conversations/<conversationId>/<file>`, insert the `media` row, then `POST /inbound` with `mediaId`.
@@ -75,8 +102,13 @@ The WhatsApp code can also skip HTTP and call the same functions in-process from
 
 `apps/api/.env` (see `.env.example`): `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `ZUKKI_SERVER_KEY` (32+ characters), `META_MODEL_API_KEY`. Without them `/v1` answers `503 not_configured` naming the missing variables.
 
+WhatsApp (optional as a group; without it the webhook answers `503` and nothing is sent): `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_VERIFY_TOKEN` (16+ characters, we choose it), `META_APP_SECRET`, optional `WHATSAPP_GRAPH_VERSION` (default `v23.0`). `WHATSAPP_BUSINESS_ACCOUNT_ID` and `META_APP_ID` are kept for reference; the code does not need them. Server: `PORT` (default 3000), `OUTBOX_POLL_MS`.
+
+On a deployed server, set these in the host's environment settings instead of a file. Share the values through a password manager, never in chat or GitHub. A temporary access token from the API Setup page expires after about a day; use a System User token for anything longer.
+
 ## Not built yet
 
 - Push notifications to the owner on a new request (Expo push from `push_tokens`).
-- WhatsApp media download (`downloadMedia` in `src/worker/live-deps.ts`).
+- Running Zukki's reply automatically after an inbound message (the webhook stores it; `/assist` and queuing its answer are still called separately). Needs model credits.
+- The pipeline's `downloadMedia` (`src/worker/live-deps.ts`) reading the file the webhook stored in the `media` bucket.
 - Offering the next business automatically when an offer expires (`expire_handoffs` returns the expired offers; the loop that sends payload 09 + 07 is part of the WhatsApp side).

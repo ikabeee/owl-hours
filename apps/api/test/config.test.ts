@@ -1,7 +1,37 @@
 // Startup config: fail fast on missing settings without echoing secrets.
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { loadConfig } from "../src/config.ts";
+import { loadConfig, loadWhatsAppConfig } from "../src/config.ts";
+
+describe("loadWhatsAppConfig", () => {
+  const env = {
+    WHATSAPP_ACCESS_TOKEN: "test-access-token-0123456789",
+    WHATSAPP_PHONE_NUMBER_ID: "123456789012345",
+    WHATSAPP_VERIFY_TOKEN: "verify-token-0123456789",
+    META_APP_SECRET: "app-secret-0123456789",
+  };
+
+  it("reads the settings, graph version optional", () => {
+    const config = loadWhatsAppConfig({ ...env, WHATSAPP_GRAPH_VERSION: "" });
+    assert.equal(config.phoneNumberId, "123456789012345");
+    assert.equal(config.graphVersion, undefined);
+    assert.equal(loadWhatsAppConfig({ ...env, WHATSAPP_GRAPH_VERSION: "v24.0" }).graphVersion, "v24.0");
+  });
+
+  it("names what is missing without printing values", () => {
+    assert.throws(
+      () => loadWhatsAppConfig({ WHATSAPP_ACCESS_TOKEN: "short", WHATSAPP_PHONE_NUMBER_ID: "+1 555" }),
+      (error: unknown) => {
+        const message = String(error);
+        assert.match(message, /WHATSAPP_ACCESS_TOKEN/);
+        assert.match(message, /META_APP_SECRET/);
+        assert.match(message, /WHATSAPP_VERIFY_TOKEN/);
+        assert.doesNotMatch(message, /short|\+1 555/);
+        return true;
+      },
+    );
+  });
+});
 
 describe("loadConfig", () => {
   it("reads the required settings", () => {
