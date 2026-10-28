@@ -1,11 +1,10 @@
-// Screen 05 (HfQuote): line items, estimated total, owner confirm.
-// Wires POST /jobs/:id/propose with actor owner in the next slice.
+// Placeholder: OwContent lands in the content slice.
 import { StyleSheet, Text, View } from "react-native";
 
-export default function QuoteScreen() {
+export default function ContentScreen() {
   return (
     <View style={styles.center}>
-      <Text style={styles.body}>Quote confirm lands in the next slice.</Text>
+      <Text style={styles.body}>Content lands in the next slice.</Text>
     </View>
   );
 }

@@ -1,0 +1,23 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "moduleResolution": "Bundler",
+    "module": "ESNext",
+    "allowImportingTsExtensions": true,
+    "types": ["node"]
+  },
+  "include": [
+    "app/**/*.tsx",
+    "app/**/*.ts",
+    "features/**/*.tsx",
+    "features/**/*.ts",
+    "shared/**/*.tsx",
+    "shared/**/*.ts",
+    "lib/**/*.ts",
+    "css.d.ts"
+  ],
+  "exclude": ["node_modules"]
+}
