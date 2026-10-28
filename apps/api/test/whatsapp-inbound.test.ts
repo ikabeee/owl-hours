@@ -213,7 +213,9 @@ describe("handleEvents", () => {
         return { body: [{ conversation_id: ANA_CHAT, customer_id: ANA_CHAT, is_new: true, open_tenant_id: null }] };
       }
       if (call.path === "/rest/v1/media") return { body: call.method === "POST" ? { id: MEDIA } : [] };
-      return { body: [{ ...inboundRow()[0], is_new_conversation: true }] };
+      // As in the database: the conversation was made by the resolve call
+      // just before, so recording the message no longer sees it as new.
+      return { body: inboundRow() };
     };
     const video = message({ kind: "media", mediaType: "video", waMediaId: "WA-MEDIA", mimeType: "video/mp4", caption: null }, "wamid.vid");
 

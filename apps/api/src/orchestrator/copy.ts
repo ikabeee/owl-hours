@@ -96,7 +96,12 @@ export const electricalSafety = (): ZukkiMessage =>
 export function locationRequest(category: Category, options: { waterOff: boolean }): ZukkiMessage {
   const ask = `share your location so I can find ${someone(category)}.`;
   const lead = options.waterOff ? `Good, the water is off. Now ${ask}` : capitalize(ask);
-  return { kind: "location_request", body: `${lead} The business only sees the exact address after you approve a visit.` };
+  // public.messages needs a payload on every kind but text and media.
+  return {
+    kind: "location_request",
+    body: `${lead} The business only sees the exact address after you approve a visit.`,
+    payload: { variant: "location_request" },
+  };
 }
 
 export const describeNeed = (category: Category): ZukkiMessage =>

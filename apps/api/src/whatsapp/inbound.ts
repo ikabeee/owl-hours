@@ -163,7 +163,7 @@ async function handleMedia(deps: InboundDeps, event: MessageEvent, content: Medi
         .single(),
     ),
   );
-  const stored = await whatsapp.recordInbound(deps.db, {
+  const recorded = await whatsapp.recordInbound(deps.db, {
     waId: event.waId,
     waMessageId: event.waMessageId,
     kind: "media",
@@ -172,6 +172,9 @@ async function handleMedia(deps: InboundDeps, event: MessageEvent, content: Medi
     profileName: event.profileName ?? undefined,
     receivedAt: event.receivedAt,
   });
+  // resolveConversation above made the conversation, so only it knows
+  // whether this is the customer's first message (payload 01).
+  const stored = { ...recorded, isNewConversation: conversation.isNewConversation || recorded.isNewConversation };
   if (stored.duplicate) {
     // Lost a race with a retry of the same message; keep the other copy.
     unwrap(await deps.db.from("media").delete().eq("id", media.id));

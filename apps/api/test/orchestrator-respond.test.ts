@@ -65,6 +65,8 @@ function setup(options: {
     store: {
       facts: async () => ({ ...baseFacts, ...options.facts }),
       queue: async (_id, message, tenantId) => {
+        // Same rule as public.messages (messages_payload_required).
+        assert.ok(message.kind === "text" || message.payload, `${message.kind} message needs a payload`);
         queued.push({ message, tenantId: tenantId ?? null });
       },
       saveNeed: async (_id, need) => {
