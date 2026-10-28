@@ -1,0 +1,75 @@
+/* Zukki landing motion.
+   Three looping scenes, each inside an element with [data-scene]:
+   - hero      12s  chat fills in, Zukki flies to the owner card, Accept pulses
+   - route      6s  a dot travels customer -> Zukki -> business, each stop glows
+   - studio    16s  Draft -> Edit -> Approve -> Publish, story-style progress bars
+   Rules:
+   - A scene only plays while it is on screen (src/scripts/inview.ts adds .is-inview).
+   - Without JS (no .js on <html>) scenes play normally.
+   - prefers-reduced-motion: every animation is removed and each scene shows its final, readable state.
+   Percentages below are positions on each scene's own loop. */
+
+.js [data-scene]:not(.is-inview) * { animation-play-state: paused !important; }
+
+@media (prefers-reduced-motion: reduce) {
+  [data-scene] *, [data-scene] { animation: none !important; }
+}
+
+/* ---------- HERO (12s) ---------- */
+/* chat messages appear in order: video 3-7%, text 15-19%, Zukki reply 29-33%, suggestion 43-47%; all fade at 88-94% */
+@keyframes zkB1 { 0%,3% { opacity:0; transform:translateY(12px) } 7%,88% { opacity:1; transform:none } 94%,100% { opacity:0 } }
+@keyframes zkB2 { 0%,15% { opacity:0; transform:translateY(12px) } 19%,88% { opacity:1; transform:none } 94%,100% { opacity:0 } }
+@keyframes zkB3 { 0%,29% { opacity:0; transform:translateY(12px) } 33%,88% { opacity:1; transform:none } 94%,100% { opacity:0 } }
+@keyframes zkB4 { 0%,43% { opacity:0; transform:translateY(12px) } 47%,88% { opacity:1; transform:none } 94%,100% { opacity:0 } }
+/* owner request card slides in at 52-58% */
+@keyframes zkCard { 0%,52% { opacity:0; transform:translate(40px,0) scale(.96) } 58%,88% { opacity:1; transform:none } 94%,100% { opacity:0; transform:none } }
+/* accept-window bar shrinks while the card is visible */
+@keyframes zkTimer { 0%,58% { transform:scaleX(1) } 88%,100% { transform:scaleX(.18) } }
+/* Accept button press + ring at 72-86% */
+@keyframes zkAccept {
+  0%,72% { transform:none; box-shadow:0 0 0 0 rgba(0,116,226,0) }
+  76% { transform:scale(.95) }
+  80% { transform:none; box-shadow:0 0 0 10px rgba(0,116,226,.2) }
+  86%,100% { transform:none; box-shadow:0 0 0 0 rgba(0,116,226,0) }
+}
+/* Zukki: perched on the chat 0-44%, flies in an arc 44-58%, lands on the owner card 58-88%, fades and resets 88-98% */
+@keyframes zkOwlFly {
+  0%,44% { left:10%; top:43px; opacity:1 }
+  51% { left:38%; top:-6px; opacity:1 }
+  58%,88% { left:calc(100% - 150px); top:167px; opacity:1 }
+  92% { left:calc(100% - 150px); top:167px; opacity:0 }
+  93% { left:10%; top:43px; opacity:0 }
+  98%,100% { left:10%; top:43px; opacity:1 }
+}
+/* pose swap: waving while perched, running while flying */
+@keyframes zkPoseA { 0%,44% { opacity:1 } 46%,56% { opacity:0 } 58%,100% { opacity:1 } }
+@keyframes zkPoseB { 0%,44% { opacity:0 } 46%,56% { opacity:1 } 58%,100% { opacity:0 } }
+
+/* ---------- ROUTE (6s) ---------- */
+@keyframes zkTravel {
+  0% { left:0%; opacity:0 }
+  6%,12% { left:0%; opacity:1 }
+  40%,56% { left:50%; opacity:1 }
+  84%,94% { left:100%; opacity:1 }
+  100% { left:100%; opacity:0 }
+}
+@keyframes zkN1 { 0%,6% { box-shadow:0 0 0 0 rgba(0,116,226,0) } 11% { box-shadow:0 0 0 14px var(--zk-accent-glow) } 20%,100% { box-shadow:0 0 0 0 rgba(0,116,226,0) } }
+@keyframes zkN2 { 0%,40% { box-shadow:0 0 0 0 rgba(0,116,226,0) } 47% { box-shadow:0 0 0 14px var(--zk-accent-glow) } 56%,100% { box-shadow:0 0 0 0 rgba(0,116,226,0) } }
+@keyframes zkN3 { 0%,84% { box-shadow:0 0 0 0 rgba(0,116,226,0) } 89% { box-shadow:0 0 0 14px var(--zk-accent-glow) } 98%,100% { box-shadow:0 0 0 0 rgba(0,116,226,0) } }
+
+/* ---------- STUDIO (16s, four 4s states) ---------- */
+@keyframes zkS1 { 0% { opacity:0; transform:translateY(16px) } 4%,21% { opacity:1; transform:none } 25%,100% { opacity:0; transform:translateY(-16px) } }
+@keyframes zkS2 { 0%,25% { opacity:0; transform:translateY(16px) } 29%,46% { opacity:1; transform:none } 50%,100% { opacity:0; transform:translateY(-16px) } }
+@keyframes zkS3 { 0%,50% { opacity:0; transform:translateY(16px) scale(.98) } 54%,71% { opacity:1; transform:none } 75%,100% { opacity:0; transform:translateY(-16px) } }
+@keyframes zkS4 { 0%,75% { opacity:0; transform:translateY(16px) } 79%,96% { opacity:1; transform:none } 100% { opacity:0 } }
+@keyframes zkP1 { 0% { transform:scaleX(0) } 25%,100% { transform:scaleX(1) } }
+@keyframes zkP2 { 0%,25% { transform:scaleX(0) } 50%,100% { transform:scaleX(1) } }
+@keyframes zkP3 { 0%,50% { transform:scaleX(0) } 75%,100% { transform:scaleX(1) } }
+@keyframes zkP4 { 0%,75% { transform:scaleX(0) } 100% { transform:scaleX(1) } }
+@keyframes zkL1 { 0%,24% { color:var(--zk-text) } 25%,100% { color:var(--zk-text-3) } }
+@keyframes zkL2 { 0%,24% { color:var(--zk-text-3) } 25%,49% { color:var(--zk-text) } 50%,100% { color:var(--zk-text-3) } }
+@keyframes zkL3 { 0%,49% { color:var(--zk-text-3) } 50%,74% { color:var(--zk-text) } 75%,100% { color:var(--zk-text-3) } }
+@keyframes zkL4 { 0%,74% { color:var(--zk-text-3) } 75%,99% { color:var(--zk-text) } 100% { color:var(--zk-text-3) } }
+@keyframes zkType { 0%,30% { width:0 } 44%,100% { width:100% } }
+@keyframes zkCaret { 0%,49% { opacity:1 } 50%,100% { opacity:0 } }
+@keyframes zkPop { 0%,52% { transform:scale(.4); opacity:0 } 57% { transform:scale(1.12); opacity:1 } 60%,100% { transform:scale(1); opacity:1 } }
