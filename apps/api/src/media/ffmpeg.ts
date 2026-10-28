@@ -15,10 +15,6 @@ export function toWavArgs(input: string, output: string): string[] {
   return ["-y", "-i", input, "-ac", "1", "-ar", "24000", "-c:a", "pcm_s16le", "-map_metadata", "-1", output];
 }
 
-export function overlayArgs(input: string, filter: string, output: string): string[] {
-  return ["-y", "-i", input, "-vf", filter, "-q:v", "2", output];
-}
-
 export async function runFfmpeg(args: string[], bin = process.env.FFMPEG_PATH ?? "ffmpeg"): Promise<void> {
   try {
     await execFileAsync(bin, ["-hide_banner", "-loglevel", "error", ...args], { windowsHide: true });

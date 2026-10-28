@@ -1,7 +1,7 @@
 // ffmpeg argument builders. The real binary is not run in unit tests.
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { extractFrameArgs, overlayArgs, toWavArgs } from "../src/media/ffmpeg.ts";
+import { extractFrameArgs, toWavArgs } from "../src/media/ffmpeg.ts";
 
 describe("ffmpeg args", () => {
   it("extracts one JPEG frame at the given second", () => {
@@ -13,12 +13,6 @@ describe("ffmpeg args", () => {
   it("converts any audio to mono 16-bit 24 kHz WAV for Voice Transcribe", () => {
     assert.deepEqual(toWavArgs("note.ogg", "note.wav"), [
       "-y", "-i", "note.ogg", "-ac", "1", "-ar", "24000", "-c:a", "pcm_s16le", "-map_metadata", "-1", "note.wav",
-    ]);
-  });
-
-  it("burns a filter onto a frame", () => {
-    assert.deepEqual(overlayArgs("f.jpg", "drawbox=x=1", "g.jpg"), [
-      "-y", "-i", "f.jpg", "-vf", "drawbox=x=1", "-q:v", "2", "g.jpg",
     ]);
   });
 });

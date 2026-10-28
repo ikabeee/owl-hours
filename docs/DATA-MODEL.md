@@ -207,10 +207,12 @@ user's JWT, so row-level security is the tenant boundary. `anon` gets nothing.
 | Function | Caller | What it does |
 |---|---|---|
 | `search_directory(category, lat, lng, at?, exclude?, limit?, max_km?)` | API, app | Businesses accepting now, open or taking night jobs, whose service area covers the point. Closest first, then rating. |
-| `search_directory_for_conversation(conversation_id, category, exclude?)` | API only | Same search from the customer's latest shared location, so coordinates never pass through the API or the model. `P0002` if no location yet. |
-| `create_handoff(conversation_id, tenant_id)` | API only | Offers the request. Window from `platform_settings` (defaults: 5 minutes if urgency is `now`, 30 otherwise). One open handoff per conversation. |
+| `search_directory_for_conversation(conversation_id, category, exclude?)` | API only | Same search from the customer's latest shared location, so coordinates never pass through the API or the model. Skips businesses this chat was already offered or shown ("Show another option"). Returns `short_name` and `eta_minutes` for payloads 07 and 12. `P0002` if no location yet. |
+| `create_handoff(conversation_id, tenant_id, suggested_min?, suggested_max?)` | API only | Offers the request and records the distance and suggested quote for the offer card. Window: the business's own override, else `platform_settings` (defaults: 5 minutes if urgency is `now`, 30 otherwise). One open handoff per conversation. |
+| `send_quote(job_id, lines, arrival_from, arrival_to, technician_id?, note?)` | Owner | Sends a quote (payload 13). Totals are the sum of the lines; a new quote supersedes the open one; the job moves to `owner_confirmed`. |
+| `approve_quote(quote_id)` | API only | The customer's `quote_approve:<id>` button. Approves only the current quote and moves the job to `customer_approved`, which unlocks the address. |
 | `accept_handoff(handoff_id)` | Owner | Accepts in time, or expires the offer if the window closed (returns status `expired`). |
-| `decline_handoff(handoff_id, reason?)` | Owner | Declines; the conversation goes back to matching. |
+| `decline_handoff(handoff_id, reason?, note?)` | Owner | Declines with a reason (`busy`, `too_far`, `not_offered`, `other`); the conversation goes back to matching. |
 | `expire_handoffs()` | API / pg_cron | Expires overdue offers (safe to run from several workers) and returns them so the API can offer the next business. |
 | `owner_transition_job(job_id, to_state, reason)` | Owner | Owner side of `packages/shared/src/job-states.ts`. Agent and customer moves stay in the API. |
 | `record_job_transition(job_id, from, to, actor, reason)` | API only | Agent and customer moves after the TypeScript validator. Compare-and-set: `40001` if the job changed since it was read. |

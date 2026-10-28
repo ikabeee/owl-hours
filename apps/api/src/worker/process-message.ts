@@ -4,7 +4,7 @@
 // live-deps.ts wires the real Meta Model API and ffmpeg.
 import { imagePart, textPart, type ChatMessage, type ContentPart } from "@owl-hours/meta-models";
 import type { ValveResult } from "../ai/valve-step.ts";
-import { CUSTOMER_SYSTEM_PROMPT } from "../agent/customer-agent.ts";
+import { AI_DISCLOSURE, CUSTOMER_SYSTEM_PROMPT } from "../agent/customer-agent.ts";
 
 export type InboundMessage = {
   // Resolved by the webhook from the sender; tools are scoped to it.
@@ -13,6 +13,8 @@ export type InboundMessage = {
   text?: string;
   caption?: string;
   mediaId?: string;
+  // Set by the webhook for the first inbound message of a conversation.
+  firstInConversation?: boolean;
 };
 
 export type PipelineDeps = {
@@ -22,12 +24,17 @@ export type PipelineDeps = {
   extractFrame: (videoPath: string) => Promise<string>;
   toDataUrl: (imagePath: string) => Promise<string>;
   markValve: (framePath: string, imageUrl: string) => Promise<ValveResult>;
+  // Uploads the marked frame; returns the URL for payload 04's image header.
+  publishImage: (conversationId: string, imagePath: string) => Promise<string>;
   runAgent: (messages: ChatMessage[], conversationId: string) => Promise<{ reply: string }>;
 };
 
 export type PipelineResult = {
   transcript: string | null;
+  // Send before anything else (payload 01) when set.
+  disclosure: string | null;
   valve: ValveResult | null;
+  markedFrameUrl: string | null;
   reply: string;
 };
 
@@ -37,8 +44,11 @@ export async function processMessage(message: InboundMessage, deps: PipelineDeps
     { role: "system", content: CUSTOMER_SYSTEM_PROMPT },
     { role: "user", content: parts },
   ];
+  const markedFrameUrl =
+    valve?.kind === "marked" ? await deps.publishImage(message.conversationId, valve.markedFramePath) : null;
   const { reply } = await deps.runAgent(messages, message.conversationId);
-  return { transcript, valve, reply };
+  const disclosure = message.firstInConversation ? AI_DISCLOSURE : null;
+  return { transcript, disclosure, valve, markedFrameUrl, reply };
 }
 
 type ReadMessage = { parts: ContentPart[]; transcript: string | null; valve: ValveResult | null };

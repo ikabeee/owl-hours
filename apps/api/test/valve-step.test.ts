@@ -3,7 +3,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import type { SamDetection } from "@owl-hours/meta-models";
-import { GENERIC_VALVE_ADVICE, markValve, pickValve, valveOverlayFilter } from "../src/ai/valve-step.ts";
+import { GENERIC_VALVE_ADVICE, markValve, pickValve } from "../src/ai/valve-step.ts";
 
 function detection(objectId: number, confidence: number | null): SamDetection {
   return {
@@ -35,19 +35,6 @@ describe("pickValve", () => {
   });
 });
 
-describe("valveOverlayFilter", () => {
-  it("pads the box and keeps it inside the frame", () => {
-    const filter = valveOverlayFilter({ x1: 0, y1: 10, x2: 80, y2: 70 }, 640, 480);
-    // 80x60 box padded by 25% each side (20, 15), clamped at the top-left edge.
-    assert.equal(filter, "drawbox=x=0:y=0:w=100:h=85:color=red@0.9:t=6");
-  });
-
-  it("scales the line width with the frame", () => {
-    const filter = valveOverlayFilter({ x1: 400, y1: 400, x2: 600, y2: 600 }, 1920, 1080);
-    assert.match(filter, /:t=14$/);
-  });
-});
-
 describe("markValve", () => {
   it("returns the marked frame when SAM is confident", async () => {
     const drawn: string[] = [];
@@ -55,8 +42,8 @@ describe("markValve", () => {
       framePath: "frame.jpg",
       imageUrl: "data:image/jpeg;base64,AA",
       segment: async () => [detection(1, 0.88)],
-      drawOverlay: async (framePath, filter) => {
-        drawn.push(`${framePath}|${filter}`);
+      drawOverlay: async (framePath, svgFor) => {
+        drawn.push(`${framePath}|${svgFor(1280, 960)}`);
         return "frame-marked.jpg";
       },
     });
@@ -67,7 +54,11 @@ describe("markValve", () => {
       assert.equal(result.detection.objectId, 1);
     }
     assert.equal(drawn.length, 1);
-    assert.match(drawn[0] ?? "", /^frame\.jpg\|drawbox=/);
+    // SAM's 640x480 coordinates drawn on the real 1280x960 frame: ring, arrow, label.
+    assert.match(drawn[0] ?? "", /^frame\.jpg\|<svg [^>]*width="1280" height="960" viewBox="0 0 640 480"/);
+    assert.match(drawn[0] ?? "", /<circle [^>]*stroke="#FF3B30"/);
+    assert.match(drawn[0] ?? "", /<polygon /);
+    assert.match(drawn[0] ?? "", />Shut-off valve<\/text>/);
   });
 
   it("falls back to generic advice and draws nothing when SAM is unsure", async () => {

@@ -25,6 +25,7 @@ function fakeDeps(overrides: Partial<PipelineDeps> = {}) {
         confidence: 0.9,
       },
     }),
+    publishImage: async (conversationId, path) => `https://storage.example/${conversationId}${path}?token=t`,
     runAgent: async (messages) => {
       agentRequests.push(messages);
       return { reply: "Turn the valve I circled clockwise." };
@@ -57,6 +58,7 @@ describe("processMessage", () => {
     const result = await processMessage({ conversationId: "c1", type: "video", mediaId: "v1", caption: "help" }, deps);
 
     assert.equal(result.valve?.kind, "marked");
+    assert.equal(result.markedFrameUrl, "https://storage.example/c1/tmp/marked.jpg?token=t", "payload 04 image link");
     const sent = JSON.stringify(agentRequests[0]);
     assert.match(sent, /data:image\/jpeg;base64,\/tmp\/v1\.jpg/);
     assert.match(sent, /help/);
@@ -66,9 +68,13 @@ describe("processMessage", () => {
   it("tells the agent when the valve could not be marked", async () => {
     const { deps, agentRequests } = fakeDeps({
       markValve: async () => ({ kind: "fallback", advice: "Look under the sink." }),
+      publishImage: async () => {
+        throw new Error("nothing to publish");
+      },
     });
-    await processMessage({ conversationId: "c1", type: "image", mediaId: "i1" }, deps);
+    const result = await processMessage({ conversationId: "c1", type: "image", mediaId: "i1" }, deps);
     assert.match(JSON.stringify(agentRequests[0]), /could not be marked/);
+    assert.equal(result.markedFrameUrl, null);
   });
 
   it("passes plain text straight to the agent without touching media", async () => {
@@ -80,6 +86,14 @@ describe("processMessage", () => {
     const result = await processMessage({ conversationId: "c1", type: "text", text: "Is anyone there?" }, deps);
     assert.equal(result.reply, "Turn the valve I circled clockwise.");
     assert.match(JSON.stringify(agentRequests[0]), /Is anyone there/);
+  });
+
+  it("sends the disclosure from code on the first message only", async () => {
+    const { deps } = fakeDeps();
+    const first = await processMessage({ conversationId: "c1", type: "text", text: "hi", firstInConversation: true }, deps);
+    const later = await processMessage({ conversationId: "c1", type: "text", text: "hi" }, deps);
+    assert.match(first.disclosure ?? "", /^Hi, I'm Zukki, an AI assistant/);
+    assert.equal(later.disclosure, null);
   });
 
   it("rejects a media message with no media id", async () => {

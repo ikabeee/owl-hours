@@ -59,7 +59,8 @@ export function createAgentTools(ctx: ToolContext): AgentTool[] {
       name: "search_directory",
       description:
         "Find up to 3 businesses in a category that can take this request now, closest first. " +
-        "Uses the location the customer shared; if they have not shared one, ask them to.",
+        "Uses the location the customer shared; if they have not shared one, ask them to. " +
+        "Businesses already suggested or offered in this chat are skipped automatically.",
       input: z
         .object({
           category: z.string().regex(/^[a-z_]{2,32}$/).describe("e.g. plumbing"),
@@ -81,6 +82,7 @@ export function createAgentTools(ctx: ToolContext): AgentTool[] {
           distance_km: match.distanceKm,
           open_now: match.openNow,
           takes_night_jobs: match.nightJobs,
+          can_arrive_in_min: match.etaMinutes,
         }));
       },
     }),

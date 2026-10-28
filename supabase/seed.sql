@@ -21,20 +21,28 @@ values
    'authenticated', 'owner@eastside.example', now(), '{"provider":"email","providers":["email"]}',
    '{}', now(), now());
 
-insert into public.tenants (id, slug, name, category, timezone, location, rating, review_count,
-                            accepts_now, night_jobs, website)
+-- Northside "can arrive in about 40 min" (ZkWaMatch); Eastside's 55 is a placeholder.
+insert into public.tenants (id, slug, name, short_name, category, timezone, location, rating, review_count,
+                            accepts_now, night_jobs, eta_minutes, website)
 values
-  ('10000000-0000-4000-8000-000000000001', 'northside', 'Northside Plumbing', 'plumbing', 'America/Cancun',
-   private.geo_point(21.1727, -86.8515), 4.9, 128, true, true, 'https://northside.example'),
-  ('10000000-0000-4000-8000-000000000002', 'eastside', 'Eastside Plumbing', 'plumbing', 'America/Cancun',
-   private.geo_point(21.1619, -86.8283), 4.8, 96, true, true, null),
-  ('10000000-0000-4000-8000-000000000003', 'lagoon', 'Lagoon Plumbing', 'plumbing', 'America/Cancun',
-   private.geo_point(21.1547, -86.8515), 4.6, 41, true, false, null);
+  ('10000000-0000-4000-8000-000000000001', 'northside', 'Northside Plumbing', 'Northside', 'plumbing', 'America/Cancun',
+   private.geo_point(21.1727, -86.8515), 4.9, 128, true, true, 40, 'https://northside.example'),
+  ('10000000-0000-4000-8000-000000000002', 'eastside', 'Eastside Plumbing', 'Eastside', 'plumbing', 'America/Cancun',
+   private.geo_point(21.1619, -86.8283), 4.8, 96, true, true, 55, null),
+  ('10000000-0000-4000-8000-000000000003', 'lagoon', 'Lagoon Plumbing', 'Lagoon', 'plumbing', 'America/Cancun',
+   private.geo_point(21.1547, -86.8515), 4.6, 41, true, false, null, null);
 
 insert into public.tenant_users (tenant_id, user_id, role, display_name)
 values
   ('10000000-0000-4000-8000-000000000001', '20000000-0000-4000-8000-000000000001', 'owner', 'Mario R.'),
   ('10000000-0000-4000-8000-000000000002', '20000000-0000-4000-8000-000000000002', 'owner', 'Eastside owner');
+
+-- Mario owns Northside and is also its technician ("Mario R." on the quote).
+insert into public.technicians (id, tenant_id, display_name, user_id)
+values
+  ('b0000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000001', 'Mario R.',
+   '20000000-0000-4000-8000-000000000001'),
+  ('b0000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000002', 'Luis P.', null);
 
 -- $45 visit + $25 night fee + $60-90 repair = $130-160 (demo numbers).
 insert into public.price_rules (tenant_id, item, kind, min_amount, max_amount, conditions)
@@ -64,20 +72,22 @@ values
   ('30000000-0000-4000-8000-000000000001', '15550000001', 'Ana L.', 'Downtown'),
   ('30000000-0000-4000-8000-000000000002', '15550000002', 'Pedro M.', 'Hotel Zone');
 
-insert into public.conversations (id, customer_id, state, category, urgency, summary, last_message_at, created_at)
+insert into public.conversations (id, customer_id, state, category, urgency, title, summary, last_message_at, created_at)
 values
   ('40000000-0000-4000-8000-000000000001', '30000000-0000-4000-8000-000000000001', 'chatting', 'plumbing', 'now',
-   'Toilet will not stop running; water reaching the hallway.', '2026-11-03T05:06:30Z', '2026-11-03T05:04:00Z'),
+   'Toilet won''t stop running', 'Toilet will not stop running; water reaching the hallway.',
+   '2026-11-03T05:06:30Z', '2026-11-03T05:04:00Z'),
   ('40000000-0000-4000-8000-000000000002', '30000000-0000-4000-8000-000000000002', 'offered', 'plumbing', 'today',
-   'Kitchen sink drips under the cabinet.', now(), now());
+   'Kitchen sink dripping', 'Kitchen sink drips under the cabinet.', now(), now());
 
-insert into public.handoffs (id, conversation_id, tenant_id, status, urgency, attempt, offered_at, expires_at, resolved_at)
+insert into public.handoffs (id, conversation_id, tenant_id, status, urgency, attempt, offered_at, expires_at, resolved_at,
+                             distance_km, suggested_min, suggested_max)
 values
   -- Accepted with 4:32 left on the 5-minute window.
   ('50000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000001',
-   'accepted', 'now', 1, '2026-11-03T05:05:00Z', '2026-11-03T05:10:00Z', '2026-11-03T05:05:28Z'),
+   'accepted', 'now', 1, '2026-11-03T05:05:00Z', '2026-11-03T05:10:00Z', '2026-11-03T05:05:28Z', 1.2, 130, 160),
   ('50000000-0000-4000-8000-000000000002', '40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000002',
-   'offered', 'today', 1, now(), now() + interval '30 minutes', null);
+   'offered', 'today', 1, now(), now() + interval '30 minutes', null, null, null, null);
 
 update public.conversations set active_handoff_id = '50000000-0000-4000-8000-000000000001'
 where id = '40000000-0000-4000-8000-000000000001';
@@ -107,7 +117,7 @@ values
   ('70000000-0000-4000-8000-000000000002', '40000000-0000-4000-8000-000000000001', null, 'customer', null,
    null, '60000000-0000-4000-8000-000000000002', 'wamid.seed.ana.2', 'received', '2026-11-03T05:04:05Z'),
   ('70000000-0000-4000-8000-000000000003', '40000000-0000-4000-8000-000000000001', null, 'zukki', null,
-   'Hi, I''m Zukki, an AI assistant that finds you a local business. A person at the business confirms every job.',
+   'Hi, I''m Zukki, an AI assistant that finds you a local business and connects you with it. A person from the business confirms every request.',
    null, 'wamid.seed.ana.3', 'read', '2026-11-03T05:04:20Z'),
   ('70000000-0000-4000-8000-000000000004', '40000000-0000-4000-8000-000000000001', null, 'zukki', null,
    'Northside Plumbing is open now, 1.2 km away, and takes night jobs.', null, 'wamid.seed.ana.4', 'read',
@@ -121,11 +131,12 @@ values
 -- The video and voice note are media messages (message kinds migration).
 update public.messages set kind = 'media' where media_id is not null and body is null;
 
-insert into public.jobs (id, tenant_id, conversation_id, handoff_id, title, state, total_min, total_max, arrival_window, created_at)
+insert into public.jobs (id, tenant_id, conversation_id, handoff_id, title, state, total_min, total_max, arrival_window,
+                         technician_id, created_at)
 values
   ('80000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000001',
    '50000000-0000-4000-8000-000000000001', 'Toilet won''t stop running', 'proposed', 130, 160, '12:55 AM',
-   '2026-11-03T05:06:00Z');
+   'b0000000-0000-4000-8000-000000000001', '2026-11-03T05:06:00Z');
 
 -- Ana shared her location; Northside sees it only after she approves the visit.
 insert into public.customer_locations (id, conversation_id, location, address, shared_at)

@@ -22,9 +22,15 @@ rollback;
 begin;
 set local role service_role;
 do $$ begin
-  assert (select string_agg(slug, ',' order by distance_km)
+  -- Northside already has Ana's handoff, so it is not suggested again.
+  assert (select string_agg(slug || ':' || eta_minutes, ',' order by distance_km)
           from public.search_directory_for_conversation('40000000-0000-4000-8000-000000000001', 'plumbing',
-               '{}', '2026-11-03T05:04:00Z')) = 'northside,eastside', 'Ana''s night match';
+               '{}', '2026-11-03T05:04:00Z')) = 'eastside:55', 'Ana''s next option';
+  insert into public.messages (conversation_id, sender, kind, payload, body)
+  values ('40000000-0000-4000-8000-000000000001', 'zukki', 'interactive',
+          '{"variant":"suggest_business","business_id":"10000000-0000-4000-8000-000000000002"}', 'Eastside card');
+  assert (select count(*) from public.search_directory_for_conversation('40000000-0000-4000-8000-000000000001', 'plumbing',
+          '{}', '2026-11-03T05:04:00Z')) = 0, 'a business already suggested is not suggested twice';
   begin
     perform public.search_directory_for_conversation('40000000-0000-4000-8000-000000000002', 'plumbing');
     raise exception 'searched without a shared location';
@@ -154,8 +160,9 @@ set local request.jwt.claims to :'eastside';
 do $$
 declare h public.handoffs;
 begin
-  h := public.decline_handoff('50000000-0000-4000-8000-000000000002', 'no technician free');
+  h := public.decline_handoff('50000000-0000-4000-8000-000000000002', 'busy', 'no technician free');
   assert h.status = 'declined', 'status was ' || h.status;
+  assert h.decline_reason = 'busy', 'decline reason stored';
   assert (select active_handoff_id from public.conversations where id = h.conversation_id) is null, 'active handoff cleared';
 end $$;
 rollback;
@@ -356,18 +363,21 @@ begin;
 set local role service_role;
 do $$ begin
   begin
-    insert into public.content_drafts (tenant_id, source_media_ids, caption, platforms)
-    values ('10000000-0000-4000-8000-000000000001', array['60000000-0000-4000-8000-000000000001']::uuid[], 'Fixed!', array['facebook_page']::public.social_platform[]);
+    insert into public.content_drafts (tenant_id, source, source_job_id, source_media_ids, caption, platforms)
+    values ('10000000-0000-4000-8000-000000000001', 'job', '80000000-0000-4000-8000-000000000001',
+            array['60000000-0000-4000-8000-000000000001']::uuid[], 'Fixed!', array['facebook_page']::public.social_platform[]);
     raise exception 'draft without consent was allowed';
   exception when check_violation then null;
   end;
   insert into public.consents (conversation_id, kind, granted)
   values ('40000000-0000-4000-8000-000000000001', 'photos_for_marketing', true);
-  insert into public.content_drafts (tenant_id, source_media_ids, caption, platforms)
-  values ('10000000-0000-4000-8000-000000000001', array['60000000-0000-4000-8000-000000000001']::uuid[], 'Fixed!', array['facebook_page']::public.social_platform[]);
+  insert into public.content_drafts (tenant_id, source, source_job_id, source_media_ids, caption, platforms)
+  values ('10000000-0000-4000-8000-000000000001', 'job', '80000000-0000-4000-8000-000000000001',
+          array['60000000-0000-4000-8000-000000000001']::uuid[], 'Fixed!', array['facebook_page']::public.social_platform[]);
   begin
-    insert into public.content_drafts (tenant_id, source_media_ids, caption, platforms)
-    values ('10000000-0000-4000-8000-000000000002', array['60000000-0000-4000-8000-000000000001']::uuid[], 'Stolen', array['instagram']::public.social_platform[]);
+    insert into public.content_drafts (tenant_id, source, source_job_id, source_media_ids, caption, platforms)
+    values ('10000000-0000-4000-8000-000000000002', 'prices', null,
+            array['60000000-0000-4000-8000-000000000001']::uuid[], 'Stolen', array['instagram']::public.social_platform[]);
     raise exception 'Eastside used Northside''s job photo';
   exception when check_violation then null;
   end;
@@ -385,6 +395,113 @@ begin
   on conflict (wa_message_id) do nothing;
   get diagnostics inserted = row_count;
   assert inserted = 0, 'duplicate webhook delivery was stored';
+end $$;
+rollback;
+
+\echo '# quotes: the owner sends, the customer approves only the current one'
+begin;
+set local role authenticated;
+set local request.jwt.claims to :'mario';
+do $$
+declare first public.quotes; second public.quotes;
+begin
+  first := public.send_quote('80000000-0000-4000-8000-000000000001',
+    '[{"label":"Visit","min":45,"max":45},{"label":"Night fee","min":25,"max":25},{"label":"Fill valve repair","min":60,"max":90}]',
+    '2026-11-03T05:55:00Z', '2026-11-03T06:25:00Z', 'b0000000-0000-4000-8000-000000000001');
+  assert first.total_min = 130 and first.total_max = 160, 'totals are the sum of the lines';
+  assert (select state from public.jobs where id = first.job_id) = 'owner_confirmed', 'sending confirms the job';
+  assert (select arrival_window from public.jobs where id = first.job_id) = '12:55–1:25 AM', 'local arrival window';
+  second := public.send_quote(first.job_id, '[{"label":"Visit","min":45,"max":45},{"label":"Repair","min":70,"max":90}]',
+    '2026-11-03T05:55:00Z', '2026-11-03T06:25:00Z');
+  assert (select status from public.quotes where id = first.id) = 'superseded', 'a new quote replaces the old one';
+  begin
+    perform public.send_quote(first.job_id, '[{"label":"Visit","min":50,"max":40}]', now(), now());
+    raise exception 'a line with max < min was accepted';
+  exception when sqlstate '22023' then null;
+  end;
+  begin
+    perform public.send_quote(first.job_id, '[{"label":"Visit","min":"lots","max":40}]', now(), now());
+    raise exception 'a non-numeric amount was accepted';
+  exception when sqlstate '22023' then null;
+  end;
+  begin
+    perform public.send_quote(first.job_id, '[{"label":"Visit","min":45,"max":45}]', now(), now(),
+      'b0000000-0000-4000-8000-000000000002');
+    raise exception 'assigned another business''s technician';
+  exception when foreign_key_violation then null;
+  end;
+end $$;
+reset role;
+set local role service_role;
+do $$
+declare current_quote uuid; old_quote uuid; q public.quotes;
+begin
+  select id into current_quote from public.quotes where status = 'sent';
+  select id into old_quote from public.quotes where status = 'superseded';
+  begin
+    perform public.approve_quote(old_quote);
+    raise exception 'an old quote button approved the job';
+  exception when sqlstate '22023' then null;
+  end;
+  q := public.approve_quote(current_quote);
+  assert q.status = 'approved', 'quote approved';
+  assert (select state from public.jobs where id = q.job_id) = 'customer_approved', 'job approved by the customer';
+  assert (select count(*) from public.job_events where job_id = q.job_id and actor = 'customer') = 1, 'approval logged';
+end $$;
+reset role;
+set local role authenticated;
+set local request.jwt.claims to :'mario';
+do $$ begin
+  assert (select count(*) from public.customer_locations) = 1, 'the address unlocks after approval';
+end $$;
+rollback;
+
+\echo '# an offer records distance and the business''s own accept window'
+begin;
+set local role service_role;
+do $$
+declare h public.handoffs;
+begin
+  insert into public.customer_locations (conversation_id, location)
+  values ('40000000-0000-4000-8000-000000000002', private.geo_point(21.1619, -86.8515));
+  update public.tenants set normal_accept_window = interval '15 minutes' where slug = 'northside';
+  update public.handoffs set status = 'declined', resolved_at = now() where id = '50000000-0000-4000-8000-000000000002';
+  h := public.create_handoff('40000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000001', 115, 145);
+  assert h.distance_km = 1.2, 'distance was ' || h.distance_km;
+  assert h.expires_at - h.offered_at = interval '15 minutes', 'business override wins';
+  assert h.suggested_min = 115 and h.suggested_max = 145, 'suggested quote stored';
+end $$;
+rollback;
+
+\echo '# technicians, read markers and consent requests'
+begin;
+set local role authenticated;
+set local request.jwt.claims to :'eastside';
+do $$ begin
+  assert (select count(*) from public.technicians) = 1, 'Eastside sees only its technician';
+  begin
+    insert into public.conversation_reads (user_id, conversation_id)
+    values ('20000000-0000-4000-8000-000000000002', '40000000-0000-4000-8000-000000000001');
+    raise exception 'Eastside marked Ana''s chat as read';
+  exception when insufficient_privilege then null;
+  end;
+end $$;
+set local request.jwt.claims to :'mario';
+insert into public.conversation_reads (user_id, conversation_id)
+values ('20000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000001')
+on conflict (user_id, conversation_id) do update set last_read_at = excluded.last_read_at;
+reset role;
+do $$ begin
+  insert into public.consents (conversation_id, kind, granted)
+  values ('40000000-0000-4000-8000-000000000001', 'photos_for_marketing', null);
+  begin
+    insert into public.price_rules (tenant_id, item, kind, min_amount, max_amount, at_cost)
+    values ('10000000-0000-4000-8000-000000000001', 'Visit', 'callout', 0, 0, true);
+    raise exception 'at cost is only for extra fees';
+  exception when check_violation then null;
+  end;
+  insert into public.price_rules (tenant_id, item, kind, min_amount, max_amount, at_cost)
+  values ('10000000-0000-4000-8000-000000000001', 'Parts', 'extra_fee', 0, 0, true);
 end $$;
 rollback;
 

@@ -1,5 +1,5 @@
 // Real pipeline steps: Meta Model API (Spark, SAM 3.1, Voice Transcribe),
-// ffmpeg and Supabase. Settings come from loadConfig() (apps/api/.env.example).
+// ffmpeg, sharp (marked frame) and Supabase (data + storage). Settings come from loadConfig() (apps/api/.env.example).
 // WhatsApp media download is still a stub until the WhatsApp slice lands.
 import { readFile } from "node:fs/promises";
 import { extname } from "node:path";
@@ -10,7 +10,9 @@ import { createAgentTools } from "../agent/tools.ts";
 import { loadConfig, type ApiConfig } from "../config.ts";
 import { createServiceClient } from "../db/client.ts";
 import { createSupabaseRepository } from "../db/repository.ts";
-import { extractFrameArgs, overlayArgs, runFfmpeg, toWavArgs } from "../media/ffmpeg.ts";
+import { drawMarkup } from "../media/draw-markup.ts";
+import { extractFrameArgs, runFfmpeg, toWavArgs } from "../media/ffmpeg.ts";
+import { createMediaStore } from "../media/media-store.ts";
 import type { PipelineDeps } from "./process-message.ts";
 
 // A second in skips the blurry first frame most phone videos start with.
@@ -23,7 +25,9 @@ function withSuffix(path: string, suffix: string): string {
 
 export function createLiveDeps(config: ApiConfig = loadConfig()): PipelineDeps {
   const client = createMetaClient({ apiKey: config.metaModelApiKey });
-  const repo = createSupabaseRepository(createServiceClient(config));
+  const supabase = createServiceClient(config);
+  const repo = createSupabaseRepository(supabase);
+  const mediaStore = createMediaStore(supabase);
 
   return {
     downloadMedia: async () => {
@@ -54,12 +58,10 @@ export function createLiveDeps(config: ApiConfig = loadConfig()): PipelineDeps {
         framePath,
         imageUrl,
         segment: (concept, url) => segmentImage(client, { concept, imageUrl: url }),
-        drawOverlay: async (frame, filter) => {
-          const output = withSuffix(frame, "-valve.jpg");
-          await runFfmpeg(overlayArgs(frame, filter, output));
-          return output;
-        },
+        drawOverlay: (frame, svgFor) => drawMarkup(frame, withSuffix(frame, "-valve.jpg"), svgFor),
       }),
+    publishImage: async (conversationId, imagePath) =>
+      (await mediaStore.publishJpeg(conversationId, await readFile(imagePath))).url,
     runAgent: (messages, conversationId) =>
       runAgent({
         chat: (request) => createChatCompletion(client, request),

@@ -38,11 +38,13 @@ describe("createSupabaseRepository", () => {
           tenant_id: NORTHSIDE,
           slug: "northside",
           name: "Northside Plumbing",
+          short_name: "Northside",
           rating: 4.9,
           review_count: 128,
           night_jobs: true,
           open_now: false,
-          distance_km: 1.2,
+          eta_minutes: 40,
+          distance_km: "1.2",
         },
       ],
     }));
@@ -50,6 +52,8 @@ describe("createSupabaseRepository", () => {
     const matches = await repo.searchDirectory({ conversationId: ANA, category: "plumbing", exclude: [] });
 
     assert.equal(matches[0]?.distanceKm, 1.2);
+    assert.equal(matches[0]?.etaMinutes, 40);
+    assert.equal(matches[0]?.shortName, "Northside");
     assert.equal(calls[0]?.method, "POST");
     assert.equal(calls[0]?.url.pathname, "/rest/v1/rpc/search_directory_for_conversation");
     assert.deepEqual(calls[0]?.body, { p_conversation_id: ANA, p_category: "plumbing", p_exclude: [] });

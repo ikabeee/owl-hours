@@ -45,10 +45,12 @@ function fakeRepo(jobs: JobRow[] = []) {
           tenantId: NORTHSIDE,
           slug: "northside",
           name: "Northside Plumbing",
+          shortName: "Northside",
           rating: 4.9,
           reviewCount: 128,
           nightJobs: true,
           openNow: false,
+          etaMinutes: 40,
           distanceKm: 1.2,
         },
       ];

@@ -21,10 +21,12 @@ export type DirectoryMatch = {
   tenantId: string;
   slug: string;
   name: string;
+  shortName: string;
   rating: number | null;
   reviewCount: number;
   nightJobs: boolean;
   openNow: boolean;
+  etaMinutes: number | null;
   distanceKm: number;
 };
 
@@ -72,10 +74,12 @@ const matchRow = z.object({
   tenant_id: z.string().uuid(),
   slug: z.string(),
   name: z.string(),
+  short_name: z.string(),
   rating: numeric.nullable(),
   review_count: z.number().int(),
   night_jobs: z.boolean(),
   open_now: z.boolean(),
+  eta_minutes: z.number().int().nullable(),
   distance_km: numeric,
 });
 
@@ -144,10 +148,12 @@ export function createSupabaseRepository(client: SupabaseClient): ZukkiRepositor
         tenantId: row.tenant_id,
         slug: row.slug,
         name: row.name,
+        shortName: row.short_name,
         rating: row.rating,
         reviewCount: row.review_count,
         nightJobs: row.night_jobs,
         openNow: row.open_now,
+        etaMinutes: row.eta_minutes,
         distanceKm: row.distance_km,
       }));
     },
