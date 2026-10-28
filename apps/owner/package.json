@@ -6,7 +6,11 @@
   "type": "module",
   "scripts": {
     "start": "expo start",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "dev": "expo start --web",
+    "build": "expo export --platform android",
+    "test": "node --test lib/tonight.test.ts",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
     "@astryxdesign/core": "0.7.4",
