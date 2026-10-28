@@ -6,12 +6,16 @@ const envSchema = z.object({
   META_MODEL_API_KEY: z.string().min(1),
   SUPABASE_URL: z.string().url(),
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(30),
+  SUPABASE_ANON_KEY: z.string().min(30),
+  ZUKKI_SERVER_KEY: z.string().min(32),
 });
 
 export type ApiConfig = {
   metaModelApiKey: string;
   supabaseUrl: string;
   supabaseServiceRoleKey: string;
+  supabaseAnonKey: string;
+  serverKey: string;
 };
 
 export function loadConfig(env: Record<string, string | undefined> = process.env): ApiConfig {
@@ -24,5 +28,7 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
     metaModelApiKey: parsed.data.META_MODEL_API_KEY,
     supabaseUrl: parsed.data.SUPABASE_URL,
     supabaseServiceRoleKey: parsed.data.SUPABASE_SERVICE_ROLE_KEY,
+    supabaseAnonKey: parsed.data.SUPABASE_ANON_KEY,
+    serverKey: parsed.data.ZUKKI_SERVER_KEY,
   };
 }

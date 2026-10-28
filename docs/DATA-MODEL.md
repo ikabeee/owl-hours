@@ -262,6 +262,18 @@ draft media without consent or from another business's job.
 - **Zukki's reply:** `processMessage` in `apps/api/src/worker/process-message.ts` returns the disclosure to send first (payload 01, first message only), the reply text, and `markedFrameUrl` for payload 04's image header.
 - **Quote approval:** `button_reply quote_approve:<id>` calls `approve_quote(id)`. An old quote's button fails with `22023`, so the customer only approves what they saw last.
 
+## API functions (migration `api_layer`)
+
+| Function | Caller | What it does |
+|---|---|---|
+| `resolve_inbound_conversation`, `record_inbound_message` | API only | WhatsApp intake, serialized per customer: one message per `wa_message_id`, one conversation per 24-hour window, reused while a business chat is open. |
+| `save_customer_location` | API only | Stores coordinates in `customer_locations` and a referencing message, once. |
+| `claim_outbox`, `record_outbound_result`, `record_delivery_status` | API only | Owner and Zukki messages to send, claimed with `SKIP LOCKED`; receipts only move forward. |
+| `owner_offers`, `owner_conversations`, `owner_conversation_messages`, `owner_jobs` | Owner | One read per screen, SECURITY INVOKER so RLS applies. |
+| `mark_conversation_read` | Owner | Read marker for unread counts. |
+
+HTTP endpoints over these: `docs/API.md`.
+
 ## Guarantees the database enforces
 
 - Tenant isolation through RLS on every table (a test fails if a table is missing RLS).

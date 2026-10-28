@@ -10,11 +10,11 @@ export type InboundMessage = {
   // Resolved by the webhook from the sender; tools are scoped to it.
   conversationId: string;
   type: "text" | "audio" | "image" | "video";
-  text?: string;
-  caption?: string;
-  mediaId?: string;
+  text?: string | undefined;
+  caption?: string | undefined;
+  mediaId?: string | undefined;
   // Set by the webhook for the first inbound message of a conversation.
-  firstInConversation?: boolean;
+  firstInConversation?: boolean | undefined;
 };
 
 export type PipelineDeps = {

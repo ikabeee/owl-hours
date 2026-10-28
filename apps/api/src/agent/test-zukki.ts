@@ -49,7 +49,7 @@ export type TestZukkiInput = {
   // From the signed-in owner's session (tenant_users), not from the request body.
   tenantId: string;
   question: string;
-  history?: { role: "user" | "assistant"; content: string }[];
+  history?: { role: "user" | "assistant"; content: string }[] | undefined;
   chat: (request: ChatRequest) => Promise<ChatChoice>;
   repo: Pick<ZukkiRepository, "getBusinessProfile" | "getPriceRules">;
 };

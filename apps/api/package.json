@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "node --watch src/index.ts",
-    "test": "node --test test/jobs.test.ts test/valve-step.test.ts test/ffmpeg.test.ts test/agent-loop.test.ts test/process-message.test.ts test/agent-tools.test.ts test/supabase-repository.test.ts test/config.test.ts test/valve-markup.test.ts test/media-store.test.ts test/customer-agent.test.ts test/test-zukki.test.ts",
+    "test": "node --test test/jobs.test.ts test/valve-step.test.ts test/ffmpeg.test.ts test/agent-loop.test.ts test/process-message.test.ts test/agent-tools.test.ts test/supabase-repository.test.ts test/config.test.ts test/valve-markup.test.ts test/media-store.test.ts test/customer-agent.test.ts test/test-zukki.test.ts test/v1-owner.test.ts test/v1-internal.test.ts test/http.test.ts",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {

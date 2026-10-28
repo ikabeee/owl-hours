@@ -505,4 +505,138 @@ do $$ begin
 end $$;
 rollback;
 
+\echo '# WhatsApp intake: retries stored once, one conversation per customer window'
+begin;
+set local role service_role;
+do $$
+declare r record; again record; second record; later record; n integer;
+begin
+  select * into r from public.record_inbound_message('15550000009', 'wamid.new.1', 'text', 'My door is jammed',
+                                                      null, null, 'Sofia R.', '2026-11-03T05:00:00Z');
+  assert r.is_new_conversation and not r.duplicate and r.message_id is not null, 'first message opens a conversation';
+  assert (select display_name from public.customers where wa_id = '15550000009') = 'Sofia R.', 'customer created';
+  select * into again from public.record_inbound_message('15550000009', 'wamid.new.1', 'text', 'My door is jammed');
+  assert again.duplicate and again.message_id = r.message_id, 'retry returns the stored message';
+  select count(*) into n from public.messages where wa_message_id = 'wamid.new.1';
+  assert n = 1, 'retry not stored twice';
+  select * into second from public.record_inbound_message('15550000009', 'wamid.new.2', 'list_reply', null,
+                                                           '{"id":"cat_locksmith","title":"Locksmith"}', null, null,
+                                                           '2026-11-03T05:01:00Z');
+  assert second.conversation_id = r.conversation_id and not second.is_new_conversation, 'same conversation';
+  select * into later from public.record_inbound_message('15550000009', 'wamid.new.3', 'text', 'hi again',
+                                                          null, null, null, '2026-11-04T06:00:00Z');
+  assert later.conversation_id <> r.conversation_id and later.is_new_conversation, 'a new conversation after 24 hours';
+  begin
+    perform public.record_inbound_message('15550000009', 'wamid.new.4', 'location', null, '{}');
+    raise exception 'location accepted as a plain message';
+  exception when sqlstate '22023' then null;
+  end;
+  begin
+    perform public.record_inbound_message('not-a-number', 'wamid.new.5', 'text', 'x');
+    raise exception 'bad wa_id accepted';
+  exception when sqlstate '22023' then null;
+  end;
+end $$;
+do $$
+declare r record;
+begin
+  -- Ana's chat with Northside is open: her message goes to Northside, even days later.
+  select * into r from public.record_inbound_message('15550000001', 'wamid.ana.later', 'text', 'Is Mario close?',
+                                                      null, null, null, '2026-11-06T05:00:00Z');
+  assert r.conversation_id = '40000000-0000-4000-8000-000000000001', 'open business chat reused';
+  assert r.open_tenant_id = '10000000-0000-4000-8000-000000000001', 'routed to Northside';
+  assert (select tenant_id from public.messages where id = r.message_id) = '10000000-0000-4000-8000-000000000001';
+end $$;
+rollback;
+
+\echo '# locations are stored by reference and saved once'
+begin;
+set local role service_role;
+do $$
+declare r record; again record;
+begin
+  select * into r from public.save_customer_location('40000000-0000-4000-8000-000000000002', 'wamid.pedro.loc',
+                                                      21.1350, -86.7460, 'Hotel Zone km 9');
+  assert (select payload ->> 'customer_location_id' from public.messages where id = r.message_id)::uuid = r.customer_location_id;
+  assert (select kind from public.messages where id = r.message_id) = 'location';
+  select * into again from public.save_customer_location('40000000-0000-4000-8000-000000000002', 'wamid.pedro.loc', 1, 1);
+  assert again.duplicate and again.message_id = r.message_id, 'retry is a no-op';
+  begin
+    perform public.save_customer_location('40000000-0000-4000-8000-000000000002', 'wamid.bad', 91, 0);
+    raise exception 'latitude 91 accepted';
+  exception when sqlstate '22023' then null;
+  end;
+end $$;
+rollback;
+
+\echo '# outbox: each queued message is claimed once, receipts only move forward'
+begin;
+set local role authenticated;
+set local request.jwt.claims to :'mario';
+insert into public.messages (conversation_id, tenant_id, sender, author_user_id, body)
+values ('40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000001', 'owner',
+        '20000000-0000-4000-8000-000000000001', 'On my way');
+reset role;
+set local role service_role;
+do $$
+declare claimed jsonb; m public.messages; msg_id uuid;
+begin
+  claimed := public.claim_outbox(10);
+  assert jsonb_array_length(claimed) = 1, 'one queued message';
+  assert claimed -> 0 ->> 'waId' = '15550000001' and claimed -> 0 ->> 'businessShortName' = 'Northside';
+  assert jsonb_array_length(public.claim_outbox(10)) = 0, 'not claimed twice';
+  msg_id := (claimed -> 0 ->> 'id')::uuid;
+  m := public.record_outbound_result(msg_id, 'wamid.out.1');
+  assert m.delivery = 'sent' and m.wa_message_id = 'wamid.out.1';
+  assert public.record_delivery_status('wamid.out.1', 'read'), 'read';
+  assert not public.record_delivery_status('wamid.out.1', 'delivered'), 'delivered after read is ignored';
+  assert not public.record_delivery_status('wamid.ana.1', 'read'), 'customer messages are not outbound';
+  assert (select delivery from public.messages where id = msg_id) = 'read';
+end $$;
+rollback;
+
+\echo '# owner screens read through row-level security'
+begin;
+set local role authenticated;
+set local request.jwt.claims to :'eastside';
+do $$
+declare offers jsonb;
+begin
+  offers := public.owner_offers('offered');
+  assert jsonb_array_length(offers) = 1 and offers -> 0 ->> 'customerName' = 'Pedro M.', 'Eastside sees Pedro''s request';
+  assert not (offers::text like '%15550000002%'), 'no phone number in the offer';
+  assert jsonb_array_length(public.owner_offers('accepted')) = 0, 'not Northside''s accepted request';
+  assert jsonb_array_length(public.owner_jobs()) = 0, 'no other business''s jobs';
+  begin
+    perform public.owner_conversation_messages('40000000-0000-4000-8000-000000000001');
+    raise exception 'Eastside read Ana''s chat';
+  exception when sqlstate 'P0002' then null;
+  end;
+  begin
+    perform public.claim_outbox(1);
+    raise exception 'an owner claimed the outbox';
+  exception when insufficient_privilege then null;
+  end;
+end $$;
+set local request.jwt.claims to :'mario';
+do $$
+declare offers jsonb; chats jsonb; page jsonb; jobs jsonb;
+begin
+  offers := public.owner_offers('accepted');
+  assert offers -> 0 ->> 'distanceKm' = '1.2' and offers -> 0 -> 'suggestedQuote' ->> 'min' = '130';
+  assert jsonb_array_length(offers -> 0 -> 'media') = 1, 'the video, not the voice note';
+  chats := public.owner_conversations();
+  assert jsonb_array_length(chats) = 1 and chats -> 0 ->> 'title' = 'Toilet won''t stop running';
+  assert (chats -> 0 ->> 'unread')::int = 4, 'unread was ' || (chats -> 0 ->> 'unread');
+  perform public.mark_conversation_read('40000000-0000-4000-8000-000000000001');
+  assert (public.owner_conversations() -> 0 ->> 'unread')::int = 0, 'read marker clears unread';
+  page := public.owner_conversation_messages('40000000-0000-4000-8000-000000000001', null, 3);
+  assert jsonb_array_length(page) = 3 and page -> 2 ->> 'text' = 'ok mario there 12:55', 'newest page, oldest first';
+  assert page -> 2 ->> 'delivery' = 'as_written';
+  jobs := public.owner_jobs();
+  assert jobs -> 0 ->> 'technician' = 'Mario R.' and jobs -> 0 ->> 'shareConsent' = 'not_asked';
+  assert jobs -> 0 -> 'location' = 'null'::jsonb, 'no address before approval';
+end $$;
+rollback;
+
 \echo 'ok - functions'

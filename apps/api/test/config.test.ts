@@ -9,8 +9,11 @@ describe("loadConfig", () => {
       META_MODEL_API_KEY: "meta-test",
       SUPABASE_URL: "https://abc.supabase.co",
       SUPABASE_SERVICE_ROLE_KEY: "service-role-test-key-0123456789",
+      SUPABASE_ANON_KEY: "anon-test-key-0123456789-0123456789",
+      ZUKKI_SERVER_KEY: "server-key-0123456789-0123456789-0123",
     });
     assert.equal(config.supabaseUrl, "https://abc.supabase.co");
+    assert.equal(config.serverKey, "server-key-0123456789-0123456789-0123");
   });
 
   it("names what is missing or invalid but never prints values", () => {
@@ -21,6 +24,7 @@ describe("loadConfig", () => {
         assert.match(message, /META_MODEL_API_KEY/);
         assert.match(message, /SUPABASE_URL/);
         assert.match(message, /SUPABASE_SERVICE_ROLE_KEY/);
+        assert.match(message, /ZUKKI_SERVER_KEY/);
         assert.doesNotMatch(message, /short-secret|not a url/);
         return true;
       },
