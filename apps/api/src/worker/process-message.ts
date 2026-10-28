@@ -1,24 +1,75 @@
-// Async pipeline for one inbound WhatsApp message. Each step maps to a
-// Meta Model API call; every step below is unwired until its slice lands.
-export async function downloadMedia(_mediaId: string): Promise<string> {
-  throw new Error("todo: fetch media URL with token, store in object storage (TBD)");
+// Async pipeline for one inbound WhatsApp message:
+// download -> (voice: WAV + transcribe) | (image/video: frame + SAM valve) -> Spark agent.
+// Every step is injected so the pipeline runs on fakes until credits land;
+// live-deps.ts wires the real Meta Model API and ffmpeg.
+import { imagePart, textPart, type ChatMessage, type ContentPart } from "@owl-hours/meta-models";
+import type { ValveResult } from "../ai/valve-step.ts";
+import { CUSTOMER_SYSTEM_PROMPT } from "../agent/customer-agent.ts";
+
+export type InboundMessage = {
+  type: "text" | "audio" | "image" | "video";
+  text?: string;
+  caption?: string;
+  mediaId?: string;
+};
+
+export type PipelineDeps = {
+  downloadMedia: (mediaId: string) => Promise<string>;
+  toWav: (audioPath: string) => Promise<string>;
+  transcribe: (wavPath: string) => Promise<string>;
+  extractFrame: (videoPath: string) => Promise<string>;
+  toDataUrl: (imagePath: string) => Promise<string>;
+  markValve: (framePath: string, imageUrl: string) => Promise<ValveResult>;
+  runAgent: (messages: ChatMessage[]) => Promise<{ reply: string }>;
+};
+
+export type PipelineResult = {
+  transcript: string | null;
+  valve: ValveResult | null;
+  reply: string;
+};
+
+export async function processMessage(message: InboundMessage, deps: PipelineDeps): Promise<PipelineResult> {
+  const { parts, transcript, valve } = await readMessage(message, deps);
+  const messages: ChatMessage[] = [
+    { role: "system", content: CUSTOMER_SYSTEM_PROMPT },
+    { role: "user", content: parts },
+  ];
+  const { reply } = await deps.runAgent(messages);
+  return { transcript, valve, reply };
 }
 
-export async function transcribeVoice(_audioPath: string): Promise<string> {
-  throw new Error("todo: Muse Voice Transcribe over WebSocket");
+type ReadMessage = { parts: ContentPart[]; transcript: string | null; valve: ValveResult | null };
+
+async function readMessage(message: InboundMessage, deps: PipelineDeps): Promise<ReadMessage> {
+  if (message.type === "text") {
+    return { parts: [textPart(message.text ?? "")], transcript: null, valve: null };
+  }
+  if (!message.mediaId) {
+    throw new Error(`mediaId is required for ${message.type} messages`);
+  }
+  const mediaPath = await deps.downloadMedia(message.mediaId);
+  const caption = message.caption ? [textPart(`Customer caption: ${message.caption}`)] : [];
+
+  if (message.type === "audio") {
+    const transcript = await deps.transcribe(await deps.toWav(mediaPath));
+    return { parts: [textPart(`Customer voice note (transcribed): ${transcript}`)], transcript, valve: null };
+  }
+
+  const framePath = message.type === "video" ? await deps.extractFrame(mediaPath) : mediaPath;
+  const imageUrl = await deps.toDataUrl(framePath);
+  const valve = await deps.markValve(framePath, imageUrl);
+  return {
+    parts: [...caption, imagePart(imageUrl), textPart(describeValve(valve))],
+    transcript: null,
+    valve,
+  };
 }
 
-export async function segmentFrame(
-  _framePath: string,
-  _prompt: "shut-off valve" | "fill valve" | "water puddle",
-): Promise<unknown> {
-  throw new Error("todo: SAM 3.1 text-prompted masks/boxes");
-}
-
-export async function runCustomerAgent(_input: unknown): Promise<unknown> {
-  throw new Error("todo: Muse Spark agent with tools");
-}
-
-export async function processMessage(_message: unknown): Promise<void> {
-  throw new Error("todo: download -> transcribe -> SAM -> Spark agent");
+function describeValve(valve: ValveResult): string {
+  if (valve.kind === "marked") {
+    const confidence = valve.detection.confidence?.toFixed(2) ?? "unknown";
+    return `Pipeline note: a shut-off valve was marked on this frame (confidence ${confidence}). The circled photo will be sent to the customer.`;
+  }
+  return `Pipeline note: the shut-off valve could not be marked with confidence. Do not point at a specific pipe. Give this general advice: ${valve.advice}`;
 }

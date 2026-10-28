@@ -2,10 +2,15 @@
   "name": "@owl-hours/meta-models",
   "version": "0.0.0",
   "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
   "scripts": {
+    "test": "node --test test/client.test.ts test/sam.test.ts test/spark.test.ts test/voice.test.ts",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
-    "@owl-hours/shared": "workspace:*"
+    "@owl-hours/shared": "workspace:*",
+    "zod": "^3"
   }
 }

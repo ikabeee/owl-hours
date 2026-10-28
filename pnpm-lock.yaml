@@ -20,6 +20,9 @@ importers:
 
   apps/api:
     dependencies:
+      '@owl-hours/meta-models':
+        specifier: workspace:*
+        version: link:../../packages/meta-models
       '@owl-hours/shared':
         specifier: workspace:*
         version: link:../../packages/shared
@@ -111,6 +114,9 @@ importers:
       '@owl-hours/shared':
         specifier: workspace:*
         version: link:../shared
+      zod:
+        specifier: ^3
+        version: 3.25.76
 
   packages/shared:
     dependencies:
