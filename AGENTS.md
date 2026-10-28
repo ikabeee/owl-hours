@@ -1,0 +1,71 @@
+# AGENTS.md
+
+Instructions for coding agents working on this repo. Humans: the pitch and
+team plan live in `docs/HACKATHON.md`.
+
+## What this is
+
+Zukki is an AI assistant on WhatsApp that finds an open, nearby local business
+(any category) and connects the customer with it. Two surfaces:
+
+- **Customer**: plain WhatsApp chat with Zukki's number (Cloud API only).
+- **Owner**: `apps/owner`, an Expo native shell whose screens are Astryx
+  components inside Expo DOM components.
+
+`apps/api` is the Hono backend (webhook, orchestrator, worker).
+`packages/shared` owns the job state machine and schemas.
+`packages/whatsapp` owns the Cloud API sender.
+
+## Sources of truth
+
+| Concern | Read this | Notes |
+|---|---|---|
+| UI scope, rules, build order | `handoff-ui/HANDOFF-UI.md` | Current (Oct 27 decisions) |
+| Customer messages | `handoff-ui/whatsapp/MESSAGES.md` + `payloads/*.json` | Only what the Cloud API can send; 15 ready-to-send bodies |
+| Owner screens | `handoff-ui/owner-app/HANDOFF-RN-UI.md` + `design/html/*.html` | HTML is truth for copy/layout; Astryx is truth for control look |
+| Verified starter | `handoff-ui/owner-app/starter/` | Expo 58 + Astryx 0.7.4 shell that type-checks and bundles |
+| Demo path | `handoff-ui/demo/` | 10 screens, build and rehearse first |
+| Mascot | `apps/owner/assets/mascots/zukki/` | Canonical pack; `handoff-ui/` carries no mascot binaries |
+| Demo numbers | `handoff-ui/owner-app/starter/mock.ts` | Keep identical everywhere (prices, ratings, countdown) |
+
+`docs/HANDOFF.md` describes an older model and is not authoritative for UI work.
+`design/` (root) holds the previous screen set; prefer `handoff-ui/`.
+
+## Handoff retirement rule
+
+`handoff-ui/` is scaffolding, not a second codebase. As the real UI lands,
+delete the handoff artifact it replaces so there is never two of anything:
+
+- A WhatsApp payload is live in `packages/whatsapp` → delete its
+  `handoff-ui/whatsapp/payloads/*.json` (and its screen when nothing references it).
+- An owner screen is live in `apps/owner` → delete its
+  `handoff-ui/owner-app/design/{screens/*.png,html/*.html}` pair.
+- The starter is fully absorbed into `apps/owner` → delete
+  `handoff-ui/owner-app/starter/`.
+- A demo step runs on real phones → delete its `handoff-ui/demo/{png,html}` piece.
+
+Delete in the same PR that ships the replacement. A handoff file is either
+still the truth (leave it byte-identical) or replaced (delete it); syncing
+edits into handoff files creates the second source of truth this rule removes.
+
+## Rules that must hold in code
+
+- Human approves every job: no `customer_approved` without owner confirm +
+  customer approval. Nothing is posted without owner approval.
+- AI disclosure first in every chat; off-topic gets the `14` payload.
+- Location privacy: approximate area only until the customer approves a visit.
+- Tenant isolation: one business never sees another's data.
+- Accept windows: 5 min urgent / 30 min otherwise, then the next business.
+- Shared UI rules (`handoff-ui/HANDOFF-UI.md` §3): no AI slop, 48px buttons,
+  body ≥ 16px, owl only at its listed moments.
+
+## Checks and commits
+
+```sh
+npm test
+npm run typecheck
+```
+
+Run both before reporting done. Commits follow Conventional Commits, with no
+`Co-Authored-By` and no AI attribution lines. Push, PR creation and merge are
+the human's decision unless asked.
