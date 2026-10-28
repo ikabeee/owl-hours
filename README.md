@@ -27,6 +27,14 @@ resources, and a proposed team plan (not yet agreed).
 ## Checks
 
 ```sh
-npm test
-npm run typecheck
+npm test            # everything, in dependency order
+npm run test:api     # api (+ its deps)
+npm run test:owner   # owner app
+npm run test:shared  # shared package
+npm run typecheck    # everything
+npm run typecheck:owner
+npm run build:owner  # owner Android export
+npm run dev          # api + owner together
+npm run dev:api      # api watcher only
+npm run dev:owner    # Expo web only
 ```
