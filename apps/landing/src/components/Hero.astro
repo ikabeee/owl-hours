@@ -1,0 +1,118 @@
+---
+// Hero: nav, headline, two anchor buttons, and the 12s "hero" scene.
+---
+<header class="hero panel" id="top">
+  <nav class="nav" aria-label="Main">
+    <a class="brand" href="#top">
+      <img src="/owl/avatar.png" alt="" width="36" height="36" />
+      <span>Zukki</span>
+    </a>
+    <div class="nav__links">
+      <a href="#how">How it works</a>
+      <a href="#studio">Marketing Studio</a>
+    </div>
+  </nav>
+
+  <div class="hero__body">
+    <div class="hero__copy">
+      <h1>Zukki finds the customer. You do the job.</h1>
+      <p>An AI agent on WhatsApp that sends nearby requests to your business.</p>
+      <div class="hero__actions">
+        <a class="btn btn--primary" href="#how">See it work</a>
+        <a class="btn btn--light" href="#studio">Marketing Studio</a>
+      </div>
+    </div>
+
+    <div class="scene-wrap">
+      <div
+        class="scene"
+        data-scene="hero"
+        role="img"
+        aria-label="Animation: a customer sends a video to Zukki, Zukki suggests Northside Plumbing, flies to the owner's request card and the owner accepts"
+      >
+        <div class="owl" aria-hidden="true">
+          <img class="owl__wave" src="/owl/waving.webp" alt="" width="130" height="141" />
+          <img class="owl__run" src="/owl/running-right.webp" alt="" width="130" height="141" />
+        </div>
+
+        <div class="chat" aria-hidden="true">
+          <div class="chat__head">
+            <img src="/owl/avatar.png" alt="" width="30" height="30" />
+            <span>Zukki</span>
+          </div>
+          <div class="chat__body">
+            <div class="msg msg--video b1">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="6 4 20 12 6 20 6 4"></polygon></svg>
+              <span>Video · 0:12</span>
+            </div>
+            <div class="msg msg--out b2">Leak! Help?</div>
+            <div class="msg msg--in b3">Close the valve first. Finding a plumber…</div>
+            <div class="msg msg--in msg--card b4">
+              <div class="msg__text"><strong>Northside Plumbing</strong> · open now</div>
+              <div class="msg__button">Connect me</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="request" aria-hidden="true">
+          <span class="request__label">New request</span>
+          <span class="request__title">Leaking toilet</span>
+          <div class="request__timer"><div></div></div>
+          <span class="request__hint">Accept within 5 min</span>
+          <span class="request__accept">Accept</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<style>
+  .hero { padding: 0 var(--zk-gutter) 72px; overflow: hidden; }
+
+  .nav { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; padding: 20px 0; }
+  .brand { display: flex; align-items: center; gap: 10px; min-height: 44px; color: var(--zk-text); text-decoration: none; font-family: var(--zk-font-display); font-weight: 700; font-size: 21px; }
+  .brand img { border-radius: var(--zk-r-full); }
+  .nav__links { display: flex; flex-wrap: wrap; gap: 4px; background: var(--zk-card); border-radius: var(--zk-r-full); padding: 4px; }
+  .nav__links a { display: inline-flex; align-items: center; min-height: 44px; color: var(--zk-text); text-decoration: none; font-size: 15px; font-weight: 500; padding: 0 16px; border-radius: var(--zk-r-full); }
+  .nav__links a:hover { background: var(--zk-panel); }
+
+  .hero__body { display: flex; flex-wrap: wrap; align-items: center; gap: 48px; padding-top: 48px; }
+  .hero__copy { flex: 1 1 440px; min-width: 0; display: flex; flex-direction: column; gap: 28px; }
+  h1 { margin: 0; font-family: var(--zk-font-display); font-weight: 600; font-size: var(--zk-h1); line-height: 0.98; letter-spacing: -0.04em; }
+  .hero__copy p { margin: 0; font-size: 20px; line-height: 1.45; color: var(--zk-text-2); max-width: 440px; }
+  .hero__actions { display: flex; flex-wrap: wrap; gap: 12px; }
+
+  /* ---- scene ---- */
+  .scene-wrap { flex: 1 1 480px; min-width: 0; display: flex; justify-content: center; }
+  .scene { position: relative; width: 100%; max-width: 520px; height: 570px; }
+
+  .owl { position: absolute; left: 10%; top: 43px; width: 130px; height: 141px; z-index: 4; animation: zkOwlFly 12s cubic-bezier(.45,0,.25,1) infinite; }
+  .owl img { position: absolute; inset: 0; width: 130px; height: auto; }
+  .owl__wave { animation: zkPoseA 12s linear infinite; }
+  .owl__run { opacity: 0; animation: zkPoseB 12s linear infinite; }
+
+  .chat { position: absolute; left: 0; top: 176px; width: min(300px, 78%); background: var(--zk-card); border-radius: var(--zk-r-card-lg); box-shadow: var(--zk-shadow-1); overflow: hidden; }
+  .chat__head { display: flex; align-items: center; gap: 10px; padding: 14px 16px; border-bottom: 1px solid var(--zk-border); font-weight: 600; font-size: 14px; }
+  .chat__head img { border-radius: var(--zk-r-full); }
+  .chat__body { background: var(--zk-panel); margin: 10px; border-radius: 16px; padding: 12px; height: 300px; display: flex; flex-direction: column; gap: 8px; }
+
+  .msg { font-size: 13px; line-height: 1.4; max-width: 88%; }
+  .msg--out { align-self: flex-end; background: var(--zk-card); border-radius: 12px 12px 4px 12px; padding: 8px 10px; }
+  .msg--in { align-self: flex-start; background: var(--zk-card); border-radius: 12px 12px 12px 4px; padding: 8px 10px; }
+  .msg--video { align-self: flex-end; background: var(--zk-ink); color: var(--zk-on-dark); border-radius: 12px 12px 4px 12px; padding: 22px 14px; font-size: 12px; display: flex; align-items: center; gap: 6px; }
+  .msg--card { padding: 0; overflow: hidden; }
+  .msg__text { padding: 8px 10px; }
+  .msg__button { border-top: 1px solid var(--zk-border); text-align: center; padding: 8px; font-weight: 600; color: var(--zk-accent); }
+  .b1 { animation: zkB1 12s ease-out infinite; }
+  .b2 { animation: zkB2 12s ease-out infinite; }
+  .b3 { animation: zkB3 12s ease-out infinite; }
+  .b4 { animation: zkB4 12s ease-out infinite; }
+
+  .request { position: absolute; right: 0; top: 300px; width: min(250px, 64%); background: var(--zk-card); border-radius: var(--zk-r-card-lg); box-shadow: var(--zk-shadow-2); padding: 16px; display: flex; flex-direction: column; gap: 12px; z-index: 3; animation: zkCard 12s cubic-bezier(.2,.8,.2,1) infinite; }
+  .request__label { font-size: 12px; font-weight: 600; color: var(--zk-text-2); }
+  .request__title { font-size: 17px; font-weight: 600; line-height: 1.25; }
+  .request__timer { height: 6px; border-radius: 3px; background: var(--zk-panel); overflow: hidden; }
+  .request__timer div { height: 100%; background: var(--zk-text); transform-origin: left center; animation: zkTimer 12s linear infinite; }
+  .request__hint { font-size: 12px; color: var(--zk-text-2); }
+  .request__accept { display: flex; align-items: center; justify-content: center; min-height: 44px; border-radius: var(--zk-r-el); background: var(--zk-accent); color: var(--zk-on-accent); font-weight: 700; font-size: 15px; animation: zkAccept 12s ease-out infinite; }
+</style>

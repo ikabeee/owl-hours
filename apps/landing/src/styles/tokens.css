@@ -1,0 +1,54 @@
+/* Zukki landing tokens. Same values as the owner app (Astryx neutral theme, accent = Astryx blue-50).
+   Do not add colors outside this file. */
+:root {
+  /* surfaces */
+  --zk-bg: #ffffff;            /* page */
+  --zk-panel: #f1f1f1;         /* rounded section panels, chat background */
+  --zk-card: #ffffff;
+  --zk-night: #0e1116;         /* closing panel */
+  --zk-ink: #15171c;           /* video thumbnails, avatars */
+  --zk-dark-button: #1d2129;   /* secondary button on dark */
+
+  /* text */
+  --zk-text: #000000;
+  --zk-text-2: #474747;        /* body copy on white and on #f1f1f1 (passes 4.5:1) */
+  --zk-text-3: #6a6a6a;        /* inactive step labels, decorative arrows */
+  --zk-on-dark: #ffffff;
+  --zk-on-dark-2: #c9ccd2;
+  --zk-on-dark-3: #b8bcc4;
+
+  /* lines */
+  --zk-border: rgba(0, 0, 0, 0.08);
+  --zk-border-strong: #d4d4d4; /* track line, image placeholders */
+  --zk-track: #e6e6e6;         /* progress segments, text skeletons */
+  --zk-border-on-dark: rgba(255, 255, 255, 0.12);
+
+  /* brand */
+  --zk-accent: #0074e2;
+  --zk-accent-hover: #005bb3;
+  --zk-on-accent: #ffffff;
+  --zk-accent-glow: rgba(0, 116, 226, 0.16);
+  --zk-success: #146600;
+
+  /* radius */
+  --zk-r-el: 10px;
+  --zk-r-btn: 12px;
+  --zk-r-card: 20px;
+  --zk-r-card-lg: 24px;
+  --zk-r-panel: 28px;
+  --zk-r-full: 9999px;
+
+  /* elevation */
+  --zk-shadow-1: 0 12px 32px rgba(0, 0, 0, 0.08);
+  --zk-shadow-2: 0 20px 48px rgba(0, 0, 0, 0.14);
+
+  /* type */
+  --zk-font: "Inter Variable", Inter, system-ui, sans-serif;
+  --zk-font-display: "Inter Tight", "Inter Variable", Inter, sans-serif;
+  --zk-h1: clamp(46px, 6.4vw, 88px);
+  --zk-h2: clamp(34px, 4.6vw, 60px);
+
+  /* layout */
+  --zk-page-pad: 16px;
+  --zk-gutter: clamp(20px, 4vw, 56px);
+}
