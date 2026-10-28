@@ -1,0 +1,18 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "types": ["node"]
+  },
+  "include": [
+    "packages/shared/src/**/*.ts",
+    "packages/shared/test/**/*.ts",
+    "packages/meta-models/src/**/*.ts",
+    "packages/whatsapp/src/**/*.ts",
+    "apps/api/src/**/*.ts",
+    "apps/api/test/**/*.ts",
+    "apps/owner/lib/**/*.ts"
+  ],
+  "exclude": ["node_modules"]
+}
