@@ -4,8 +4,8 @@ Informational one-page site for Zukki. Full spec: [HANDOFF-LANDING.md](./HANDOFF
 
 ```bash
 # From repository root:
-pnpm --filter @owl-hours/landing dev      # http://localhost:4321
-pnpm --filter @owl-hours/landing build    # static output in dist/
+pnpm dev:landing      # http://localhost:4321
+pnpm build:landing    # static output in apps/landing/dist/
 
 # Or from apps/landing:
 cd apps/landing

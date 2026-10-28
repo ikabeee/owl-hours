@@ -1,48 +1,95 @@
 ---
-// "Zukki drafts. You approve." Step list + a story-style stage that loops Draft -> Edit -> Approve -> Publish (16s).
+// Marketing Studio: "Your real jobs become your best proof."
+// Zukki organizes what really happened on each job into four kinds of content,
+// shown as a story-style stage that loops (16s, four 4s states):
+// Recovery story -> Customer review -> Before and after -> Tools in action.
+// The owner approves everything (fixed Approve bar under the stage).
 ---
 <section class="studio panel" id="studio" aria-labelledby="studio-title" data-scene="studio">
   <div class="studio__copy">
     <span class="eyebrow">Marketing Studio</span>
-    <h2 class="h2" id="studio-title">Zukki drafts. You approve.</h2>
-    <ol class="steps">
-      <li class="l1">1&nbsp;&nbsp;Draft</li>
-      <li class="l2">2&nbsp;&nbsp;Edit</li>
-      <li class="l3">3&nbsp;&nbsp;Approve</li>
-      <li class="l4">4&nbsp;&nbsp;Publish</li>
+    <h2 class="h2" id="studio-title">Your real jobs become your best proof.</h2>
+    <ol class="kinds">
+      <li class="l1">Recovery stories</li>
+      <li class="l2">Customer reviews</li>
+      <li class="l3">Before and after</li>
+      <li class="l4">Tools in action</li>
     </ol>
-    <p class="studio__note">Zukki asks to publish only when you link your Page and Instagram. Unlink anytime.</p>
+    <p class="studio__note">Zukki organizes what really happened on each job. Reviews stay in your customer's words, and nothing is posted until you approve it.</p>
   </div>
 
   <div class="studio__visual">
-    <div class="stage" role="img" aria-label="Animation: Zukki drafts a post, you edit the caption, approve it, and it is published to your Facebook Page and Instagram">
+    <div
+      class="stage"
+      role="img"
+      aria-label="Animation: Zukki turns a finished job into a recovery story, a customer review, a before and after photo and a short tools video, each waiting for the owner's approval"
+    >
       <div class="progress" aria-hidden="true">
         <span><i class="p1"></i></span><span><i class="p2"></i></span><span><i class="p3"></i></span><span><i class="p4"></i></span>
       </div>
-      <div class="stage__screens" aria-hidden="true">
+
+      <div class="screens" aria-hidden="true">
+        <!-- 1. Recovery story, built from the WhatsApp chat timeline -->
         <div class="screen st1">
-          <div class="row"><img src="/owl/avatar.png" alt="" width="28" height="28" /><b>New draft</b></div>
-          <div class="photo">[Job photo]</div>
-          <span class="skel" style="width: 92%"></span>
-          <span class="skel" style="width: 64%"></span>
+          <div class="screen__head">
+            <img class="avatar" src="/owl/avatar.png" alt="" width="28" height="28" />
+            <b>Recovery story</b><small>from the chat</small>
+          </div>
+          <div class="box timeline">
+            <div class="t t1"><span class="dot"></span><time>12:04 AM</time><b>Leak reported</b></div>
+            <div class="t t2"><span class="dot"></span><time>12:06 AM</time><b>Water shut off</b></div>
+            <div class="t t3"><span class="dot"></span><time>12:40 AM</time><b>Mario arrives</b></div>
+            <div class="t t4"><span class="dot dot--accent"></span><time>7:00 AM</time><b>Fixed</b></div>
+          </div>
+          <p class="headline">Midnight leak, fixed by 7 AM.</p>
         </div>
+
+        <!-- 2. Customer review, in the customer's own words -->
         <div class="screen st2">
-          <b>Edit the caption</b>
-          <div class="photo"></div>
-          <div class="field"><span class="typed">Midnight leak? Fixed by 7 AM.</span><span class="caret"></span></div>
-        </div>
-        <div class="screen screen--center st3">
-          <img src="/owl/review.webp" alt="" width="120" height="130" />
-          <span class="check"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></span>
-          <b class="big">Approved by you</b>
-        </div>
-        <div class="screen st4">
-          <div class="row row--between"><b>Published</b><img src="/owl/jumping.webp" alt="" width="56" height="61" /></div>
-          <div class="posts">
-            <div class="post"><small>Facebook Page</small><span class="post__img"></span><span class="skel" style="width: 90%"></span></div>
-            <div class="post"><small>Instagram</small><span class="post__img"></span><span class="skel" style="width: 70%"></span></div>
+          <div class="screen__head"><b>Customer review</b><small>asked after the job</small></div>
+          <div class="box review">
+            <div class="stars">
+              {Array.from({ length: 5 }).map(() => (
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.1 8.3 22 9.3 17 14.1 18.2 21 12 17.8 5.8 21 7 14.1 2 9.3 8.9 8.3 12 2"></polygon></svg>
+              ))}
+            </div>
+            <p class="quote">“He got here in 30 minutes and explained everything.”</p>
+            <small>Ana · customer, shared with her permission</small>
           </div>
         </div>
+
+        <!-- 3. Before and after photos from the job -->
+        <div class="screen st3">
+          <div class="screen__head"><b>Before and after</b><small>photos from the job</small></div>
+          <div class="ba">
+            <span class="ba__label ba__label--before">Before</span>
+            <div class="ba__after"><span class="ba__label ba__label--after">After</span></div>
+          </div>
+          <p class="hint">[Real photos from the job, with the customer's consent]</p>
+        </div>
+
+        <!-- 4. Tools in action: a short clip from the owner's phone -->
+        <div class="screen st4">
+          <div class="screen__head"><b>Tools in action</b><small>clip from your phone</small></div>
+          <div class="clip">
+            <span class="clip__play">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="#ffffff"><polygon points="7 4 20 12 7 20 7 4"></polygon></svg>
+            </span>
+            <div class="clip__bar">
+              <div class="clip__meta"><b>Drain camera inspection</b><span>0:15</span></div>
+              <span class="clip__track"><i></i></span>
+            </div>
+          </div>
+          <p class="hint">Zukki trims it and adds the caption.</p>
+        </div>
+      </div>
+
+      <div class="approve" aria-hidden="true">
+        <span>Facebook Page · Instagram</span>
+        <span class="approve__btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+          Approve
+        </span>
       </div>
     </div>
   </div>
@@ -52,14 +99,14 @@
   .studio { padding: 80px var(--zk-gutter); display: flex; flex-wrap: wrap; align-items: center; gap: 56px; }
   .studio__copy { flex: 1 1 400px; min-width: 0; display: flex; flex-direction: column; gap: 32px; }
   .studio__copy .h2 { margin-top: -16px; }
-  .steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
-  .steps li { font-family: var(--zk-font-display); font-size: 28px; font-weight: 600; line-height: 1.3; color: var(--zk-text-3); }
-  .steps .l4 { color: var(--zk-text); } /* final state when motion is reduced */
+  .kinds { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+  .kinds li { font-family: var(--zk-font-display); font-size: 28px; font-weight: 600; line-height: 1.3; color: var(--zk-text-3); }
+  .kinds .l4 { color: var(--zk-text); } /* final state when motion is reduced */
   .l1 { animation: zkL1 16s linear infinite; }
   .l2 { animation: zkL2 16s linear infinite; }
   .l3 { animation: zkL3 16s linear infinite; }
   .l4 { animation: zkL4 16s linear infinite; }
-  .studio__note { margin: 0; font-size: 15px; line-height: 1.5; color: var(--zk-text-2); max-width: 380px; }
+  .studio__note { margin: 0; font-size: 15px; line-height: 1.5; color: var(--zk-text-2); max-width: 400px; }
 
   .studio__visual { flex: 1 1 380px; min-width: 0; display: flex; justify-content: center; }
   .stage { width: 100%; max-width: 360px; background: var(--zk-card); border-radius: var(--zk-r-panel); padding: 16px; box-shadow: var(--zk-shadow-1); display: flex; flex-direction: column; gap: 14px; }
@@ -72,32 +119,54 @@
   .p3 { animation: zkP3 16s linear infinite; }
   .p4 { animation: zkP4 16s linear infinite; }
 
-  .stage__screens { position: relative; height: 420px; }
-  .screen { position: absolute; inset: 0; display: flex; flex-direction: column; gap: 12px; font-size: 14px; }
-  .screen--center { align-items: center; justify-content: center; gap: 18px; text-align: center; }
+  .screens { position: relative; height: 372px; }
+  .screen { position: absolute; inset: 0; display: flex; flex-direction: column; gap: 14px; font-size: 14px; }
   .st1, .st2, .st3 { opacity: 0; } /* reduced motion shows st4 only */
   .st1 { animation: zkS1 16s ease-in-out infinite; }
   .st2 { animation: zkS2 16s ease-in-out infinite; }
   .st3 { animation: zkS3 16s ease-in-out infinite; }
   .st4 { animation: zkS4 16s ease-in-out infinite; }
 
-  .row { display: flex; align-items: center; gap: 8px; }
-  .row img { border-radius: var(--zk-r-full); }
-  .row--between { justify-content: space-between; }
-  .row--between img { border-radius: 0; }
-  .photo { flex: 1 1 auto; border-radius: 16px; background: var(--zk-border-strong); display: flex; align-items: center; justify-content: center; color: var(--zk-text-2); font-size: 13px; }
-  .skel { height: 10px; border-radius: 5px; background: var(--zk-track); }
+  .screen__head { display: flex; align-items: center; gap: 8px; }
+  .screen__head small { margin-left: auto; font-size: 12px; color: var(--zk-text-2); }
+  .avatar { border-radius: var(--zk-r-full); }
+  .box { flex: 1 1 auto; background: var(--zk-panel); border-radius: 16px; display: flex; flex-direction: column; justify-content: center; }
+  .hint { margin: 0; font-size: 13px; color: var(--zk-text-2); }
 
-  .field { border: 1.5px solid var(--zk-text); border-radius: var(--zk-r-btn); padding: 12px; line-height: 1.4; display: flex; align-items: center; }
-  .typed { display: inline-block; overflow: hidden; white-space: nowrap; animation: zkType 16s steps(28, end) infinite; }
-  .caret { display: inline-block; width: 2px; height: 18px; margin-left: 1px; background: var(--zk-text); animation: zkCaret 1s step-end infinite; }
+  /* 1 recovery story */
+  .timeline { padding: 18px; gap: 16px; }
+  .t { display: flex; align-items: center; gap: 12px; }
+  .t time { width: 64px; flex: 0 0 auto; font-size: 13px; color: var(--zk-text-2); }
+  .dot { width: 10px; height: 10px; flex: 0 0 auto; border-radius: var(--zk-r-full); background: var(--zk-text); }
+  .dot--accent { background: var(--zk-accent); }
+  .t1 { animation: zkT1 16s ease-out infinite; }
+  .t2 { animation: zkT2 16s ease-out infinite; }
+  .t3 { animation: zkT3 16s ease-out infinite; }
+  .t4 { animation: zkT4 16s ease-out infinite; }
+  .headline { margin: 0; font-size: 15px; font-weight: 600; line-height: 1.4; }
 
-  .check { width: 72px; height: 72px; border-radius: var(--zk-r-full); background: var(--zk-accent); display: flex; align-items: center; justify-content: center; animation: zkPop 16s ease-out infinite; }
-  .big { font-size: 18px; }
+  /* 2 review */
+  .review { padding: 22px; gap: 16px; }
+  .stars { display: flex; gap: 4px; color: var(--zk-text); }
+  .quote { margin: 0; font-family: var(--zk-font-display); font-size: 22px; font-weight: 600; line-height: 1.25; letter-spacing: -0.01em; }
+  .review small { font-size: 13px; color: var(--zk-text-2); }
 
-  .posts { flex: 1 1 auto; display: flex; gap: 10px; min-height: 0; }
-  .post { flex: 1 1 0; min-width: 0; border: 1px solid var(--zk-border); border-radius: 14px; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
-  .post small { font-size: 12px; font-weight: 600; color: var(--zk-text-2); }
-  .post__img { flex: 1 1 auto; border-radius: var(--zk-r-el); background: var(--zk-border-strong); }
-  .post .skel { height: 8px; }
+  /* 3 before / after: the "after" layer wipes over the "before" layer */
+  .ba { flex: 1 1 auto; position: relative; border-radius: 16px; overflow: hidden; background: #8a8a8a; }
+  .ba__after { position: absolute; left: 0; top: 0; bottom: 0; width: 55%; overflow: hidden; background: var(--zk-border-strong); border-right: 3px solid #ffffff; animation: zkWipe 16s cubic-bezier(.6,0,.2,1) infinite; }
+  .ba__label { position: absolute; left: 12px; bottom: 12px; font-size: 12px; font-weight: 600; border-radius: 6px; padding: 4px 8px; white-space: nowrap; }
+  .ba__label--before { left: auto; right: 12px; color: #ffffff; background: rgba(0,0,0,.55); }
+  .ba__label--after { color: var(--zk-text); background: rgba(255,255,255,.8); }
+
+  /* 4 tools clip */
+  .clip { flex: 1 1 auto; position: relative; border-radius: 16px; background: var(--zk-ink); display: flex; align-items: center; justify-content: center; }
+  .clip__play { width: 64px; height: 64px; border-radius: var(--zk-r-full); background: rgba(255,255,255,.16); display: flex; align-items: center; justify-content: center; }
+  .clip__bar { position: absolute; left: 14px; right: 14px; bottom: 14px; display: flex; flex-direction: column; gap: 8px; }
+  .clip__meta { display: flex; justify-content: space-between; font-size: 12px; color: #ffffff; }
+  .clip__track { height: 4px; border-radius: 2px; background: rgba(255,255,255,.25); overflow: hidden; }
+  .clip__track i { display: block; height: 100%; background: #ffffff; transform-origin: left center; animation: zkScrub 16s linear infinite; }
+
+  /* fixed approval bar */
+  .approve { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-top: 12px; border-top: 1px solid var(--zk-border); font-size: 12px; line-height: 1.4; color: var(--zk-text-2); }
+  .approve__btn { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 16px; border-radius: var(--zk-r-el); background: var(--zk-accent); color: var(--zk-on-accent); font-size: 14px; font-weight: 700; }
 </style>

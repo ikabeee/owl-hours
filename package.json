@@ -18,9 +18,11 @@
     "typecheck:owner": "turbo run typecheck --filter=@owl-hours/owner",
     "typecheck:shared": "turbo run typecheck --filter=@owl-hours/shared",
     "build": "turbo run build",
+    "build:landing": "turbo run build --filter=@owl-hours/landing",
     "build:owner": "turbo run build --filter=@owl-hours/owner",
     "dev": "turbo run dev",
     "dev:api": "turbo run dev --filter=@owl-hours/api",
+    "dev:landing": "turbo run dev --filter=@owl-hours/landing",
     "dev:owner": "turbo run dev --filter=@owl-hours/owner"
   },
   "devDependencies": {

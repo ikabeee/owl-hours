@@ -2,7 +2,7 @@
    Three looping scenes, each inside an element with [data-scene]:
    - hero      12s  chat fills in, Zukki flies to the owner card, Accept pulses
    - route      6s  a dot travels customer -> Zukki -> business, each stop glows
-   - studio    16s  Draft -> Edit -> Approve -> Publish, story-style progress bars
+   - studio    16s  Recovery story -> Customer review -> Before and after -> Tools in action, story-style progress bars
    Rules:
    - A scene only plays while it is on screen (src/scripts/inview.ts adds .is-inview).
    - Without JS (no .js on <html>) scenes play normally.
@@ -70,6 +70,12 @@
 @keyframes zkL2 { 0%,24% { color:var(--zk-text-3) } 25%,49% { color:var(--zk-text) } 50%,100% { color:var(--zk-text-3) } }
 @keyframes zkL3 { 0%,49% { color:var(--zk-text-3) } 50%,74% { color:var(--zk-text) } 75%,100% { color:var(--zk-text-3) } }
 @keyframes zkL4 { 0%,74% { color:var(--zk-text-3) } 75%,99% { color:var(--zk-text) } 100% { color:var(--zk-text-3) } }
-@keyframes zkType { 0%,30% { width:0 } 44%,100% { width:100% } }
-@keyframes zkCaret { 0%,49% { opacity:1 } 50%,100% { opacity:0 } }
-@keyframes zkPop { 0%,52% { transform:scale(.4); opacity:0 } 57% { transform:scale(1.12); opacity:1 } 60%,100% { transform:scale(1); opacity:1 } }
+/* 1 Recovery story: the four timeline rows slide in at 2-5%, 6-9%, 10-13%, 14-17% */
+@keyframes zkT1 { 0%,2% { opacity:0; transform:translateX(-8px) } 5%,100% { opacity:1; transform:none } }
+@keyframes zkT2 { 0%,6% { opacity:0; transform:translateX(-8px) } 9%,100% { opacity:1; transform:none } }
+@keyframes zkT3 { 0%,10% { opacity:0; transform:translateX(-8px) } 13%,100% { opacity:1; transform:none } }
+@keyframes zkT4 { 0%,14% { opacity:0; transform:translateX(-8px) } 17%,100% { opacity:1; transform:none } }
+/* 3 Before and after: the "after" photo wipes across to 55% at 53-63% */
+@keyframes zkWipe { 0%,53% { width:0% } 63%,100% { width:55% } }
+/* 4 Tools in action: the clip's playback bar runs 77-98% */
+@keyframes zkScrub { 0%,77% { transform:scaleX(0) } 98%,100% { transform:scaleX(1) } }
