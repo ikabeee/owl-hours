@@ -201,6 +201,8 @@ draft media without consent or from another business's job.
 ## Guarantees the database enforces
 
 - Tenant isolation through RLS on every table (a test fails if a table is missing RLS).
+- Privileged code lives in the private schema; the REST API exposes only SECURITY INVOKER wrappers (tested).
+- Every foreign key has a covering index (tested).
 - A job and its events always belong to the business its handoff went to (composite foreign keys).
 - At most one offered or accepted handoff per conversation.
 - Webhook retries insert a message once (`wa_message_id` is unique; use `on conflict do nothing`).
@@ -208,10 +210,19 @@ draft media without consent or from another business's job.
 - Marketing drafts only use media with the customer's latest consent, from the business's own jobs.
 - Nothing is published without a reviewer (`reviewed_by`) on the draft.
 
+## Hosted project
+
+Supabase project `zukki` (ref `kphaigghspywgkemjhhy`, us-east-1, free plan),
+created 2026-10-28 with every migration above and `seed.sql` applied. The
+Supabase security advisor reports only "leaked password protection" (an Auth
+dashboard setting; owners sign in by magic link). The performance advisor
+reports only "unused index", expected before real traffic. Ask Ashwin for an
+invite to the project; keys are never committed.
+
 ## Setting up a Supabase project
 
 1. `supabase init` (keeps the existing `migrations/` and `seed.sql`), then `supabase link`.
-2. Enable `pg_cron` under Database > Extensions if you want the database to run the handoff timer.
+2. The first migration enables `pg_cron` where available, so the database runs the handoff timer every minute.
 3. `supabase db push` for a hosted project, or `supabase db reset` locally (also loads the seed).
 4. Clients select explicit columns from `customers` and `linked_accounts`; `select *` is denied because some columns are hidden.
 5. Regenerate types for the apps: `supabase gen types typescript --linked > packages/shared/src/database.types.ts`.

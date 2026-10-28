@@ -17,6 +17,32 @@ begin
   assert missing is null, 'tables without RLS: ' || missing;
 end $$;
 
+\echo '# no SECURITY DEFINER function in the API schema is callable by signed-in users'
+do $$
+declare exposed text;
+begin
+  select string_agg(p.proname, ', ') into exposed
+  from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+  where n.nspname = 'public' and p.prosecdef and has_function_privilege('authenticated', p.oid, 'execute');
+  assert exposed is null, 'definer functions exposed over REST: ' || exposed;
+end $$;
+
+\echo '# every foreign key has a covering index'
+do $$
+declare missing text;
+begin
+  select string_agg(c.conrelid::regclass || '.' || c.conname, ', ') into missing
+  from pg_constraint c
+  where c.contype = 'f' and c.connamespace = 'public'::regnamespace
+    and not exists (
+      select 1 from pg_index i
+      where i.indrelid = c.conrelid
+        and (i.indkey::int2[])[0:cardinality(c.conkey) - 1] @> c.conkey
+        and (i.indkey::int2[])[0:cardinality(c.conkey) - 1] <@ c.conkey
+    );
+  assert missing is null, 'foreign keys without an index: ' || missing;
+end $$;
+
 \echo '# an owner sees only conversations handed to their business'
 begin;
 set local role authenticated;
