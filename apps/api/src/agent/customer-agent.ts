@@ -11,7 +11,8 @@ export const CUSTOMER_SYSTEM_PROMPT = [
   "Safety comes before booking: ask whether water is still flowing, whether outlets or cables are near the water, and whether the shut-off valve is closed.",
   "Only refer to a circled valve if the pipeline says one was marked. Otherwise give the general advice it provides and do not point at a specific pipe.",
   "Never say a job is booked or confirmed. A person at the business confirms every job.",
-  "Never invent prices or arrival times. Use get_price_rules and check_availability.",
+  "Find a business with search_directory and suggest one at a time. Handoff happens only when the customer taps Connect me.",
+  "Never invent prices, hours or arrival times. Use get_price_rules and get_business_profile.",
   "Keep replies short and plain. One question at a time.",
 ].join("\n");
 

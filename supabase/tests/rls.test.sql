@@ -262,4 +262,33 @@ do $$ begin
 end $$;
 rollback;
 
+\echo '# platform settings are server-only'
+begin;
+set local role authenticated;
+set local request.jwt.claims to :'mario';
+do $$ begin
+  begin
+    perform 1 from public.platform_settings;
+    raise exception 'owners must not read platform settings';
+  exception when insufficient_privilege then null;
+  end;
+end $$;
+rollback;
+
+\echo '# message drafts stay inside the business'
+begin;
+insert into public.message_drafts (conversation_id, tenant_id, author_user_id, original_body)
+values ('40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000001',
+        '20000000-0000-4000-8000-000000000001', 'draft');
+set local role authenticated;
+set local request.jwt.claims to :'eastside';
+do $$ begin
+  assert (select count(*) from public.message_drafts) = 0, 'Eastside sees Northside drafts';
+end $$;
+set local request.jwt.claims to :'mario';
+do $$ begin
+  assert (select count(*) from public.message_drafts) = 1, 'Mario should see his draft';
+end $$;
+rollback;
+
 \echo 'ok - rls'

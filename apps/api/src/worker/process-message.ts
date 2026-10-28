@@ -7,6 +7,8 @@ import type { ValveResult } from "../ai/valve-step.ts";
 import { CUSTOMER_SYSTEM_PROMPT } from "../agent/customer-agent.ts";
 
 export type InboundMessage = {
+  // Resolved by the webhook from the sender; tools are scoped to it.
+  conversationId: string;
   type: "text" | "audio" | "image" | "video";
   text?: string;
   caption?: string;
@@ -20,7 +22,7 @@ export type PipelineDeps = {
   extractFrame: (videoPath: string) => Promise<string>;
   toDataUrl: (imagePath: string) => Promise<string>;
   markValve: (framePath: string, imageUrl: string) => Promise<ValveResult>;
-  runAgent: (messages: ChatMessage[]) => Promise<{ reply: string }>;
+  runAgent: (messages: ChatMessage[], conversationId: string) => Promise<{ reply: string }>;
 };
 
 export type PipelineResult = {
@@ -35,7 +37,7 @@ export async function processMessage(message: InboundMessage, deps: PipelineDeps
     { role: "system", content: CUSTOMER_SYSTEM_PROMPT },
     { role: "user", content: parts },
   ];
-  const { reply } = await deps.runAgent(messages);
+  const { reply } = await deps.runAgent(messages, message.conversationId);
   return { transcript, valve, reply };
 }
 

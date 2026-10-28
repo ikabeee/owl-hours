@@ -37,7 +37,14 @@ function fakeDeps(overrides: Partial<PipelineDeps> = {}) {
 describe("processMessage", () => {
   it("transcribes a voice note and hands the transcript to the agent", async () => {
     const { deps, agentRequests } = fakeDeps();
-    const result = await processMessage({ type: "audio", mediaId: "m1" }, deps);
+    let boundConversation = "";
+    deps.runAgent = async (messages, conversationId) => {
+      agentRequests.push(messages);
+      boundConversation = conversationId;
+      return { reply: "Turn the valve I circled clockwise." };
+    };
+    const result = await processMessage({ conversationId: "c1", type: "audio", mediaId: "m1" }, deps);
+    assert.equal(boundConversation, "c1", "tools are bound to the message's conversation");
 
     assert.equal(result.transcript, "Water is coming out under the sink");
     assert.equal(result.reply, "Turn the valve I circled clockwise.");
@@ -47,7 +54,7 @@ describe("processMessage", () => {
 
   it("marks the valve on a video frame and shows Spark the real frame", async () => {
     const { deps, agentRequests } = fakeDeps();
-    const result = await processMessage({ type: "video", mediaId: "v1", caption: "help" }, deps);
+    const result = await processMessage({ conversationId: "c1", type: "video", mediaId: "v1", caption: "help" }, deps);
 
     assert.equal(result.valve?.kind, "marked");
     const sent = JSON.stringify(agentRequests[0]);
@@ -60,7 +67,7 @@ describe("processMessage", () => {
     const { deps, agentRequests } = fakeDeps({
       markValve: async () => ({ kind: "fallback", advice: "Look under the sink." }),
     });
-    await processMessage({ type: "image", mediaId: "i1" }, deps);
+    await processMessage({ conversationId: "c1", type: "image", mediaId: "i1" }, deps);
     assert.match(JSON.stringify(agentRequests[0]), /could not be marked/);
   });
 
@@ -70,13 +77,13 @@ describe("processMessage", () => {
         throw new Error("should not download");
       },
     });
-    const result = await processMessage({ type: "text", text: "Is anyone there?" }, deps);
+    const result = await processMessage({ conversationId: "c1", type: "text", text: "Is anyone there?" }, deps);
     assert.equal(result.reply, "Turn the valve I circled clockwise.");
     assert.match(JSON.stringify(agentRequests[0]), /Is anyone there/);
   });
 
   it("rejects a media message with no media id", async () => {
     const { deps } = fakeDeps();
-    await assert.rejects(processMessage({ type: "audio" }, deps), /mediaId/);
+    await assert.rejects(processMessage({ conversationId: "c1", type: "audio" }, deps), /mediaId/);
   });
 });

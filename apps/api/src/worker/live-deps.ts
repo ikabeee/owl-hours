@@ -1,12 +1,15 @@
-// Real pipeline steps: Meta Model API (Spark, SAM 3.1, Voice Transcribe)
-// plus ffmpeg. Needs META_MODEL_API_KEY. WhatsApp media download is still
-// a stub until the WhatsApp slice lands.
+// Real pipeline steps: Meta Model API (Spark, SAM 3.1, Voice Transcribe),
+// ffmpeg and Supabase. Settings come from loadConfig() (apps/api/.env.example).
+// WhatsApp media download is still a stub until the WhatsApp slice lands.
 import { readFile } from "node:fs/promises";
 import { extname } from "node:path";
 import { createChatCompletion, createMetaClient, segmentImage, transcribeWav } from "@owl-hours/meta-models";
 import { markValve } from "../ai/valve-step.ts";
 import { runAgent } from "../agent/run-agent.ts";
-import { agentTools } from "../agent/tools.ts";
+import { createAgentTools } from "../agent/tools.ts";
+import { loadConfig, type ApiConfig } from "../config.ts";
+import { createServiceClient } from "../db/client.ts";
+import { createSupabaseRepository } from "../db/repository.ts";
 import { extractFrameArgs, overlayArgs, runFfmpeg, toWavArgs } from "../media/ffmpeg.ts";
 import type { PipelineDeps } from "./process-message.ts";
 
@@ -18,8 +21,9 @@ function withSuffix(path: string, suffix: string): string {
   return `${extension ? path.slice(0, -extension.length) : path}${suffix}`;
 }
 
-export function createLiveDeps(): PipelineDeps {
-  const client = createMetaClient();
+export function createLiveDeps(config: ApiConfig = loadConfig()): PipelineDeps {
+  const client = createMetaClient({ apiKey: config.metaModelApiKey });
+  const repo = createSupabaseRepository(createServiceClient(config));
 
   return {
     downloadMedia: async () => {
@@ -56,7 +60,11 @@ export function createLiveDeps(): PipelineDeps {
           return output;
         },
       }),
-    runAgent: (messages) =>
-      runAgent({ chat: (request) => createChatCompletion(client, request), tools: agentTools, messages }),
+    runAgent: (messages, conversationId) =>
+      runAgent({
+        chat: (request) => createChatCompletion(client, request),
+        tools: createAgentTools({ conversationId, repo }),
+        messages,
+      }),
   };
 }

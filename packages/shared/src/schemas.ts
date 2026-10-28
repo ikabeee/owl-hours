@@ -6,7 +6,7 @@ import { z } from "zod";
 export const priceRuleSchema = z
   .object({
     item: z.string().min(1),
-    kind: z.enum(["callout", "night_fee", "repair_range"]),
+    kind: z.enum(["callout", "night_fee", "repair_range", "extra_fee"]),
     min: z.number().int().nonnegative(),
     max: z.number().int().nonnegative(),
   })

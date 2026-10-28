@@ -118,6 +118,9 @@ values
   ('70000000-0000-4000-8000-000000000006', '40000000-0000-4000-8000-000000000002', null, 'customer', null,
    'My kitchen sink is dripping under the cabinet', null, 'wamid.seed.pedro.1', 'received', now());
 
+-- The video and voice note are media messages (message kinds migration).
+update public.messages set kind = 'media' where media_id is not null and body is null;
+
 insert into public.jobs (id, tenant_id, conversation_id, handoff_id, title, state, total_min, total_max, arrival_window, created_at)
 values
   ('80000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000001',

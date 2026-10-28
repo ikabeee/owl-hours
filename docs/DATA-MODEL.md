@@ -20,6 +20,8 @@ erDiagram
   conversations ||--o{ handoffs : "offered to"
   conversations |o--o| handoffs : "active_handoff_id"
   conversations ||--o{ messages : "contains"
+  conversations ||--o{ message_drafts : "polish drafts"
+  message_drafts |o--o| messages : "sent as"
   conversations ||--o{ media : "has"
   conversations ||--o{ customer_locations : "exact address"
   conversations ||--o{ consents : "grants"
@@ -110,6 +112,8 @@ erDiagram
     uuid tenant_id FK "null while with Zukki"
     message_sender sender
     text body
+    message_kind kind
+    jsonb payload
     bool polished
     uuid media_id FK
     text wa_message_id UK
@@ -162,6 +166,20 @@ erDiagram
     uuid user_id PK, FK
     text expo_token PK
   }
+  message_drafts {
+    uuid id PK
+    uuid conversation_id FK
+    uuid tenant_id FK
+    text original_body
+    text polished_body
+    message_draft_status status
+    uuid sent_message_id FK
+  }
+  platform_settings {
+    bool id PK "single row"
+    interval urgent_accept_window
+    interval normal_accept_window
+  }
 ```
 
 ## Who can do what
@@ -180,23 +198,36 @@ user's JWT, so row-level security is the tenant boundary. `anon` gets nothing.
 | handoffs, jobs, events | Read own. State changes only through the functions below. |
 | linked_accounts | Read own (no `token_secret_id`), owners can unlink. |
 | content_drafts | Read own; owners edit drafts; approval through `review_content_draft`. |
+| message_drafts | Read own business's drafts; insert only in an accepted handoff; never write `polished_body`. |
 | push_tokens | Own rows only. |
+| platform_settings | No access (server only). |
 
 ## Functions (call with `supabase.rpc(...)`)
 
 | Function | Caller | What it does |
 |---|---|---|
 | `search_directory(category, lat, lng, at?, exclude?, limit?, max_km?)` | API, app | Businesses accepting now, open or taking night jobs, whose service area covers the point. Closest first, then rating. |
-| `create_handoff(conversation_id, tenant_id)` | API only | Offers the request: 5-minute window if urgency is `now`, 30 otherwise. One open handoff per conversation. |
+| `search_directory_for_conversation(conversation_id, category, exclude?)` | API only | Same search from the customer's latest shared location, so coordinates never pass through the API or the model. `P0002` if no location yet. |
+| `create_handoff(conversation_id, tenant_id)` | API only | Offers the request. Window from `platform_settings` (defaults: 5 minutes if urgency is `now`, 30 otherwise). One open handoff per conversation. |
 | `accept_handoff(handoff_id)` | Owner | Accepts in time, or expires the offer if the window closed (returns status `expired`). |
 | `decline_handoff(handoff_id, reason?)` | Owner | Declines; the conversation goes back to matching. |
 | `expire_handoffs()` | API / pg_cron | Expires overdue offers (safe to run from several workers) and returns them so the API can offer the next business. |
 | `owner_transition_job(job_id, to_state, reason)` | Owner | Owner side of `packages/shared/src/job-states.ts`. Agent and customer moves stay in the API. |
+| `record_job_transition(job_id, from, to, actor, reason)` | API only | Agent and customer moves after the TypeScript validator. Compare-and-set: `40001` if the job changed since it was read. |
+| `send_message_draft(draft_id, use_polished)` | Owner | Option B: sends the owner's text or Zukki's version as a queued message (polished goes out as `interactive`). |
 | `review_content_draft(draft_id, approve)` | Owner | Approves or rejects a draft. |
 
 Errors come back with the Postgres code: `P0002` not found (or not yours),
 `22023` the state does not allow it, `23505` a second open handoff, `23514`
 draft media without consent or from another business's job.
+
+## For the WhatsApp integration
+
+- **Inbound:** insert each webhook message with `wa_message_id` and `delivery = 'received'`, using `on conflict (wa_message_id) do nothing`, so Meta's retries are stored once.
+- **Kinds:** `text`, `media` (with `media_id`), `interactive`, `button_reply` and `list_reply` (payload = the reply id and title), `location_request`, and `location`.
+- **Locations:** save the coordinates in `customer_locations` and store the message as `kind = 'location'` with `payload = {"customer_location_id": ...}`. The database rejects coordinates inside a message payload, because offered businesses can read messages before the customer approves a visit.
+- **Outbound:** owner replies arrive as `delivery = 'queued'` (index `messages_outbox_idx`). Send them, then update `delivery` and `wa_message_id`; status webhooks move it to `delivered`, `read` or `failed`. A polished reply has `kind = 'interactive'` and `payload.variant = 'polished_reply'`: send it with the "Written with Zukki, approved by <business>" footer and the Sounds good / Ask a question buttons.
+- **Media:** upload to the private `media` bucket at `conversations/<conversation_id>/<file>` and insert a `media` row.
 
 ## Guarantees the database enforces
 
@@ -208,6 +239,7 @@ draft media without consent or from another business's job.
 - Webhook retries insert a message once (`wa_message_id` is unique; use `on conflict do nothing`).
 - Every handoff and job change writes an audit row in the same transaction.
 - Marketing drafts only use media with the customer's latest consent, from the business's own jobs.
+- Exact customer coordinates never sit in a message; locations are stored separately and referenced by id.
 - Nothing is published without a reviewer (`reviewed_by`) on the draft.
 
 ## Hosted project
@@ -215,8 +247,9 @@ draft media without consent or from another business's job.
 Supabase project `zukki` (ref `kphaigghspywgkemjhhy`, us-east-1, free plan),
 created 2026-10-28 with every migration above and `seed.sql` applied. The
 Supabase security advisor reports only "leaked password protection" (an Auth
-dashboard setting; owners sign in by magic link). The performance advisor
-reports only "unused index", expected before real traffic. Ask Ashwin for an
+dashboard setting; owners sign in by magic link) and "RLS enabled, no policy" on
+`platform_settings`, which is intentional (server only). The performance
+advisor reports only "unused index", expected before real traffic. Ask Ashwin for an
 invite to the project; keys are never committed.
 
 ## Setting up a Supabase project
@@ -232,3 +265,4 @@ invite to the project; keys are never committed.
 - Demo city: the seed uses Cancun coordinates as a placeholder.
 - Matching weights beyond distance then rating (handoff open question 3).
 - Staff accounts: the `staff` role can read and chat but not edit prices or approve posts.
+- Businesses have one category each; multi-category businesses need a join table later.
