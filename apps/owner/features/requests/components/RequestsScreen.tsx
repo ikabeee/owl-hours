@@ -1,11 +1,10 @@
-// Screen 10 (HfPromote): ad preview from consented job photos.
-// Lands with the Could scope (ad studio).
+// Placeholder: OwRequests lands in the requests slice.
 import { StyleSheet, Text, View } from "react-native";
 
-export default function PromoteScreen() {
+export default function RequestsScreen() {
   return (
     <View style={styles.center}>
-      <Text style={styles.body}>Ad studio lands in the next slice.</Text>
+      <Text style={styles.body}>Requests lands in the next slice.</Text>
     </View>
   );
 }
