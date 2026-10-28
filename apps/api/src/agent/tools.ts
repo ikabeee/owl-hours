@@ -3,7 +3,7 @@
 // every write is checked against the shared job state machine before it
 // reaches the database.
 import { z } from "zod";
-import { JOB_STATES, ticketSchema, transitionJob } from "@owl-hours/shared";
+import { CATEGORIES, JOB_STATES, ticketSchema, transitionJob } from "@owl-hours/shared";
 import type { JobRow, ZukkiRepository } from "../db/repository.ts";
 
 export type AgentTool = {
@@ -24,7 +24,7 @@ const TICKET_EDITABLE_STATES = new Set(["requested", "triaged", "proposed"]);
 const businessId = z.string().uuid().describe("business_id returned by search_directory");
 const jobId = z.string().uuid();
 
-function defineTool<S extends z.ZodTypeAny>(tool: {
+export function defineTool<S extends z.ZodTypeAny>(tool: {
   name: string;
   description: string;
   input: S;
@@ -63,7 +63,7 @@ export function createAgentTools(ctx: ToolContext): AgentTool[] {
         "Businesses already suggested or offered in this chat are skipped automatically.",
       input: z
         .object({
-          category: z.string().regex(/^[a-z_]{2,32}$/).describe("e.g. plumbing"),
+          category: z.enum(CATEGORIES),
           exclude_business_ids: z.array(z.string().uuid()).max(20).optional()
             .describe("businesses already offered, for 'Show another option'"),
         })

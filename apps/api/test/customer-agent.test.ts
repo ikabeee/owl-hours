@@ -31,6 +31,15 @@ describe("customer agent copy", () => {
     assert.doesNotMatch(CUSTOMER_SYSTEM_PROMPT, /assistant for a small local plumbing business/);
   });
 
+  it("knows every directory category and keeps safety steps to home emergencies", () => {
+    for (const category of ["plumbing", "food", "beauty", "pets"]) {
+      assert.ok(CUSTOMER_SYSTEM_PROMPT.includes(category), category);
+    }
+    assert.match(CUSTOMER_SYSTEM_PROMPT, /Only for urgent home problems \(plumbing, electrical, locksmith\)/);
+    assert.match(CUSTOMER_SYSTEM_PROMPT, /Skip this for everything else/);
+    assert.match(CUSTOMER_SYSTEM_PROMPT, /call emergency services/);
+  });
+
   it("never says a job is booked", () => {
     assert.match(CUSTOMER_SYSTEM_PROMPT, /Never say a job is booked/);
   });
