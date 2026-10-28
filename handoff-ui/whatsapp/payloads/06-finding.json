@@ -1,0 +1,10 @@
+{
+  "messaging_product": "whatsapp",
+  "recipient_type": "individual",
+  "to": "{{customer_wa_id}}",
+  "type": "text",
+  "text": {
+    "preview_url": false,
+    "body": "Thanks. I'm finding a plumber who is open near you."
+  }
+}
