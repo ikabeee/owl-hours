@@ -303,3 +303,14 @@ slice, delegated with test-first discipline.
     zukkiSummary.
   - New requirement (not in the handoff): a structured list of possible
     faults on the request.
+- L28 (user, 2026-10-29): "Go".
+  - T3.1 RED approved: 23 new tests, 20 failing; existing 133 green.
+  - Approved answers:
+    - the media banner is the Astryx `Thumbnail` sized to the design's
+      326×128 via `style`;
+    - the ZukkiTag avatar reuses the owl `static` frame (no new binary);
+    - the Lightbox shows the thumbnail with "Video · 0:14" (no real video in
+      the demo);
+    - the sent time is device-local, as in D7.
+  - New copy approved: "Possible faults", "Likely", "Possible", "Photo".
+  - Tests locked (`t3.1-request-evidence`).
