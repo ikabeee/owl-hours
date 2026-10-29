@@ -18,7 +18,13 @@ export function createDirectory(db: SupabaseClient): Directory {
   return {
     matches: (conversationId, category) => whatsapp.findMatches(db, { conversationId, category }),
     connect: async (conversationId, businessId) => {
-      const offer = await whatsapp.connectBusiness(db, { conversationId, businessId });
+      const suggested = await whatsapp.suggestedQuote(db, businessId);
+      const offer = await whatsapp.connectBusiness(db, {
+        conversationId,
+        businessId,
+        suggestedMin: suggested?.min,
+        suggestedMax: suggested?.max,
+      });
       return { expiresAt: offer.expiresAt };
     },
   };

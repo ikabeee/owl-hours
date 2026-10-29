@@ -198,6 +198,30 @@ export async function findMatches(
   });
 }
 
+// The owner's starting point on the request card: the visit plus the
+// cheapest repair on the business's own price list. null with no prices.
+export async function suggestedQuote(db: SupabaseClient, tenantId: string): Promise<{ min: number; max: number } | null> {
+  const own = priceRows.parse(
+    unwrap(
+      await db
+        .from("price_rules")
+        .select("tenant_id, item, kind, min_amount, max_amount, currency, conditions")
+        .eq("tenant_id", tenantId),
+    ),
+  );
+  const visit = own.find((p) => p.kind === "callout");
+  const repair = own
+    .filter((p) => p.kind === "repair_range")
+    .reduce<(typeof own)[number] | null>((best, r) => (!best || r.min_amount < best.min_amount ? r : best), null);
+  if (!visit && !repair) {
+    return null;
+  }
+  return {
+    min: (visit?.min_amount ?? 0) + (repair?.min_amount ?? 0),
+    max: (visit?.max_amount ?? 0) + (repair?.max_amount ?? 0),
+  };
+}
+
 // "Connect me": offers the request to the business and starts its timer.
 export async function connectBusiness(
   db: SupabaseClient,

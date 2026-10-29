@@ -8,6 +8,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { ChatRequest } from "@owl-hours/meta-models";
 import { historyMessages, historyText } from "../src/orchestrator/history.ts";
+import { createDirectory } from "../src/orchestrator/live.ts";
 import { createMediaReader } from "../src/orchestrator/media.ts";
 import { createSerializer } from "../src/orchestrator/serial.ts";
 import { createConversationStore } from "../src/orchestrator/store.ts";
@@ -19,6 +20,36 @@ const CHAT = "40000000-0000-4000-8000-000000000001";
 const MEDIA = "60000000-0000-4000-8000-000000000001";
 const NORTHSIDE = "10000000-0000-4000-8000-000000000001";
 const quiet = { info: () => {}, warn: () => {}, error: () => {} };
+
+describe("createDirectory.connect", () => {
+  function directory(prices: Record<string, unknown>[]) {
+    const { client, calls } = fakeSupabase((call) => {
+      if (call.path === "/rest/v1/price_rules") return { body: prices };
+      if (call.path.endsWith("/rpc/create_handoff")) {
+        return { body: { id: "50000000-0000-4000-8000-000000000009", attempt: 1, expires_at: "2026-10-29T10:05:00Z", distance_km: 1.6 } };
+      }
+      return { status: 500, body: {} };
+    });
+    return { connect: createDirectory(client).connect, calls };
+  }
+  const row = (kind: string, min: number, max: number) =>
+    ({ tenant_id: NORTHSIDE, item: kind, kind, min_amount: min, max_amount: max, currency: "USD", conditions: null });
+
+  it("sends the owner a suggested quote: the visit plus the cheapest repair on their price list", async () => {
+    const { connect, calls } = directory([row("callout", 45, 45), row("repair_range", 90, 200), row("repair_range", 60, 120), row("night_fee", 25, 25)]);
+    const offer = await connect(CHAT, NORTHSIDE);
+    assert.equal(offer.expiresAt, "2026-10-29T10:05:00Z");
+    const handoff = calls.find((c) => c.path.endsWith("/rpc/create_handoff"));
+    assert.deepEqual(handoff?.body, { p_conversation_id: CHAT, p_tenant_id: NORTHSIDE, p_suggested_min: 105, p_suggested_max: 165 });
+  });
+
+  it("sends no suggestion when the business has no prices", async () => {
+    const { connect, calls } = directory([]);
+    await connect(CHAT, NORTHSIDE);
+    const handoff = calls.find((c) => c.path.endsWith("/rpc/create_handoff"));
+    assert.deepEqual(handoff?.body, { p_conversation_id: CHAT, p_tenant_id: NORTHSIDE, p_suggested_min: null, p_suggested_max: null });
+  });
+});
 
 describe("understandNeed", () => {
   it("asks Spark for structured JSON and maps it", async () => {

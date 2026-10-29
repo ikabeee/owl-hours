@@ -131,6 +131,19 @@ export async function listOffers(s: OwnerSession, status: string, limit = 50) {
   return withMediaLinks(s.db, rows, "media");
 }
 
+// One request card; 404 when it does not exist or belongs to another business.
+export async function getOffer(s: OwnerSession, offerId: string) {
+  const row = z
+    .record(z.unknown())
+    .nullable()
+    .parse(unwrap(await s.db.rpc("owner_offer", { p_handoff_id: offerId })));
+  if (!row) {
+    throw new HttpError(404, "not_found", "Request not found.");
+  }
+  const [offer] = await withMediaLinks(s.db, [row], "media");
+  return offer;
+}
+
 export async function acceptOffer(s: OwnerSession, offerId: string) {
   const offer = toOffer(handoffRow.parse(unwrap(await s.db.rpc("accept_handoff", { p_handoff_id: offerId }))));
   if (offer.status === "expired") {
