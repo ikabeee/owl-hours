@@ -98,3 +98,20 @@ it with a new one.
   `c_ana`; ids are not derivable by naming (`c_grace` belongs to `req_grace2`).
   A real backend creates the chat on accept and returns it.
 - **Consequences:** `OffersClient` gains `findConversationId(offerId)`.
+
+## D9 — Chat session and accept destinations (2026-10-29, T4.1)
+
+- **Decision:** the chat composer is a pure reducer (`features/chats/lib/composerMachine.ts`)
+  driven by a framework-free session (`features/chats/hooks/conversationSession.ts`);
+  `useConversation` is a thin `useSyncExternalStore` adapter returning
+  `loading | not_found | failed (retry) | ready (view)`. Sends are guarded while
+  one is in flight; a sent message is appended from the service result (no
+  reload); a rejected send restores the draft and shows "Something went wrong.";
+  a failed load renders `ChatLoadError` (owl `failed`, "Try again"). After Accept,
+  `destinationAfterAccept` (`features/requests/lib/acceptOutcome.ts`) maps
+  `not-offered → stay`, `accepted + chat → /chat/[id]`, `accepted + no chat → /chats`.
+- **Why:** the six non-blocking findings of the T4 review (L14); the owner app has
+  no React test setup, so the logic moved into units `node --test` can pin.
+- **Consequences:** `not_found` still renders nothing (no handoff copy for it);
+  the session is created inside the effect so React strict mode cannot leave a
+  disposed session in use.

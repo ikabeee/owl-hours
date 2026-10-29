@@ -26,6 +26,10 @@ slice, delegated with test-first discipline.
 - T4: chats slice (polish), S2-S3, route: delegated (Claude Sonnet 5.5,
   effort high, user's choice), branch `feat/owner-chats-slice`, status:
   done (GREEN)
+- T4.1: fix the 6 T4 review follow-ups (L14), S2-S3, route: delegated (user:
+  "deja agentes desarrollando"), 2 parallel units with disjoint surfaces:
+  U1 chats (items 1, 2, 4, 5, 6), U2 requests (item 3); Sonnet 5.5 high,
+  status: done (GREEN)
 - T5: jobs slice (quote), S2-S3
 - T6: content + business slices, S2-S3
 
@@ -110,3 +114,24 @@ slice, delegated with test-first discipline.
   (4) an empty thread renders "You accepted at Invalid Date";
   (5) the `useConversation` state machine has no test;
   (6) a failed load leaves a blank screen.
+- L15 (user, 2026-10-29): "Corrige esos 6 puntos, deja agentes
+  desarrollando". Item 5 (untested hook) is solved by extracting the
+  composer state machine into a pure `lib/` reducer tested with node --test
+  (the repo has no React test setup). Item 3 fallback: when an accepted offer
+  maps to no chat, navigate to the chats tab instead of staying put.
+- L16 (2026-10-29): T4.1 RED was 51 new tests (U1 48, U2 3), reviewed by the
+  operator and locked. The operator accepted the coders' proposals: a
+  framework-free session module, no reload after a send, and the failed-send
+  copy reused from §466. Both units reached GREEN in parallel; neither touched
+  a locked test, and each diff stayed in its surface.
+  Seam check (operator):
+  - owner `npm test`: 128/128;
+  - owner tsc: clean;
+  - `expo export`: OK;
+  - root `npm test`: 3/3;
+  - root typecheck: 5/5.
+  D9 is in `docs/DECISIONS.md`. The lock is removed.
+  Open items:
+  - `not_found` renders blank, because the handoff has no copy for it;
+  - none of this was run on a device or browser.
+  Next: T5 jobs slice.
