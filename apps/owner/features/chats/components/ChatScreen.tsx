@@ -6,7 +6,7 @@ import '@astryxdesign/theme-neutral/theme.css';
 import '@astryxdesign/theme-neutral/fonts.css';
 import '../../../shared/theme/zukki-theme.css';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { DOMProps } from 'expo/dom';
 import { Theme } from '@astryxdesign/core/theme';
 import { neutralTheme } from '@astryxdesign/theme-neutral/built';
@@ -24,6 +24,7 @@ import {
   ChatMessageList,
   ChatMessageMetadata,
   ChatSystemMessage,
+  useChatLayoutContext,
 } from '@astryxdesign/core/Chat';
 import { ArrowLeft } from 'lucide-react';
 import { Owl } from '../../../shared/mascot/Owl';
@@ -32,6 +33,7 @@ import type { PolishPreview } from '../../../shared/data/types.ts';
 import type { ComposerStep, SendOutcome, ThreadMessage } from '../lib/chatView.ts';
 import type { PolishChoice } from '../lib/ownerDelivery.ts';
 import { chatsCopys } from '../copys/chatsCopys';
+import { arrivedOwnMessage } from '../lib/followLatest.ts';
 
 export default function ChatScreen(props: {
   customerName: string;
@@ -65,6 +67,7 @@ export default function ChatScreen(props: {
               <ThreadEntry key={message.id} message={message} onOpenJob={props.onOpenJob} />
             ))}
           </ChatMessageList>
+          <FollowOwnMessages thread={props.thread} />
         </ChatLayout>
       </div>
     </Theme>
@@ -74,6 +77,27 @@ export default function ChatScreen(props: {
 // The DOM host shrinks the root to its content width, and ChatLayout's inline-size
 // containment contributes no width, so the root claims the full viewport explicitly.
 const pageStyle = { display: 'flex', flexDirection: 'column', width: '100%', height: '100dvh' } as const;
+
+// ChatLayout stops following once the keyboard or the dock moves the transcript,
+// so the owner's own message is brought into view explicitly after every send.
+function FollowOwnMessages(props: { thread: ThreadMessage[] }) {
+  const layout = useChatLayoutContext();
+  const previousLastId = useRef<string | undefined>(undefined);
+
+  useEffect(() => {
+    if (arrivedOwnMessage(previousLastId.current, props.thread)) {
+      requestAnimationFrame(() => scrollToEnd(layout?.scrollContainerRef.current));
+    }
+    previousLastId.current = props.thread.at(-1)?.id;
+  }, [props.thread, layout]);
+
+  return null;
+}
+
+function scrollToEnd(container: HTMLElement | null | undefined) {
+  const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  container?.scrollTo({ top: container.scrollHeight, behavior: prefersReducedMotion ? 'auto' : 'smooth' });
+}
 
 function TopBar(props: { customerName: string; onBack: () => Promise<void> }) {
   return (

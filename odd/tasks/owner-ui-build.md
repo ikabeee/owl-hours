@@ -180,3 +180,20 @@ slice, delegated with test-first discipline.
     In the other, the WebView accessibility tree was missing a visible text.
   - Observation: after a send, the new bubble sits under the dock until the
     owner scrolls; the scroll-down button shows.
+- L20 (user, 2026-10-29): "Arregla el scrol".
+  - Cause: ChatLayout follows new content only while locked at the bottom
+    (`useChatStreamScroll`). Keyboard and dock resizes unlock it, so the
+    owner's new bubble stayed under the dock.
+  - Fix: `arrivedOwnMessage` (pure, `lib/followLatest.ts`, 5 tests,
+    RED→GREEN) drives `FollowOwnMessages`, which scrolls ChatLayout's
+    `scrollContainerRef` to the end after each own send. Reduced motion
+    jumps instead of smooth-scrolling.
+  - Verified: option A passed alone on the simulator; the "On my way, 12:55
+    · sent as written" bubble is visible above the dock with the keyboard
+    open.
+  - Flow hardening:
+    - the subflow passes through /requests to remount the target;
+    - Enter submits instead of a Send tap.
+  - Still flaky in the full suite: dev LogBox "Unable to find the
+    'DomWebView' view" errors stack up across navigations and cover the
+    screen. Unit tests: 133/133.

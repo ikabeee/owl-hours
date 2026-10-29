@@ -1,9 +1,15 @@
-# Subflow: open a deep link in the running app. Every screen builds its demo
-# data on mount, so each flow starts from the seed without restarting Expo Go.
+# Subflow: open a deep link in the running app on a freshly mounted screen.
+# Every screen builds its demo data on mount, so passing through the requests
+# tab first remounts the target (reopening the current URL would keep stale
+# state such as an open keyboard) without restarting Expo Go.
 appId: host.exp.Exponent
 ---
 - launchApp:
     stopApp: false
+- openLink: "exp://127.0.0.1:8081/--/requests"
+- extendedWaitUntil:
+    visible: ".*Requests"
+    timeout: 60000
 - openLink: "exp://127.0.0.1:8081/--/${ROUTE}"
 - extendedWaitUntil:
     visible: ${WAIT_FOR}

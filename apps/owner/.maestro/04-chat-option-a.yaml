@@ -6,8 +6,8 @@ name: Option A sends the text as written
     env: { ROUTE: "chat/c_ana", WAIT_FOR: "via Zukki · WhatsApp" }
 - runFlow: subflows/dismiss-logbox.yaml
 - tapOn: "Message input"
-- inputText: "ok mario there 12:55, bringing the valve. 45 visit + 25 night, repair 60-90"
-- tapOn: "Send"
+- inputText: "On my way, 12:55"
+- pressKey: Enter
 - runFlow: subflows/dismiss-logbox.yaml
 - extendedWaitUntil:
     visible: ".*sent as written.*"
