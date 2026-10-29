@@ -19,3 +19,10 @@ last character (`04` shows "12:5"); the flow asserts the delivery label, not the
 
 Reproduce: start Metro (`npx expo start --ios` in `apps/owner`), then
 `JAVA_HOME=$(brew --prefix openjdk@17) maestro test .maestro --test-output-dir <dir>`.
+
+## Before the iOS fixes
+
+| Screenshot | What it shows |
+|---|---|
+| `before-blank-app.png` | Expo Router 58 rendered no tab screen (none declared): blank app |
+| `before-chat-half-width.png` | Chat collapsed to ~170 pt in the DOM host; "You accepted at" clipped |
