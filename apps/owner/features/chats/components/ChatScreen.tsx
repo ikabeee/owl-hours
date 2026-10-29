@@ -152,7 +152,11 @@ type FooterProps = Pick<
   'customerFirstName' | 'step' | 'preview' | 'polishEnabled' | 'polishFailed' | 'sendFailed' | 'onSend' | 'onSendChoice' | 'onSetPolishEnabled'
 >;
 
+// The draft lives here, not in Composer: Composer unmounts while polishing, and a
+// failed polish must still hand the owner's text back.
 function Footer(props: FooterProps) {
+  const [draft, setDraft] = useState('');
+
   return (
     <VStack gap={2} padding={3}>
       <Switch
@@ -161,12 +165,12 @@ function Footer(props: FooterProps) {
         isDisabled={props.step === 'polishing' || props.step === 'comparing'}
         changeAction={(enabled) => props.onSetPolishEnabled(enabled)}
       />
-      <FooterBody {...props} />
+      <FooterBody {...props} draft={draft} onDraftChange={setDraft} />
     </VStack>
   );
 }
 
-function FooterBody(props: FooterProps) {
+function FooterBody(props: FooterProps & DraftProps) {
   if (props.step === 'polishing') return <PolishingNotice />;
   if (props.step === 'comparing' && props.preview) {
     return (
@@ -181,7 +185,7 @@ function FooterBody(props: FooterProps) {
     <>
       {props.polishFailed && <Text style={errorTextStyle}>{chatsCopys.polishFailed}</Text>}
       {props.sendFailed && <Text style={errorTextStyle}>{chatsCopys.somethingWentWrong}</Text>}
-      <Composer customerFirstName={props.customerFirstName} onSend={props.onSend} />
+      <Composer customerFirstName={props.customerFirstName} onSend={props.onSend} draft={props.draft} onDraftChange={props.onDraftChange} />
     </>
   );
 }
@@ -223,18 +227,18 @@ const compareActionsStyle = { display: 'grid', gridTemplateColumns: '1fr 1.4fr',
 const DRAFT_KEPT_OUTCOMES: SendOutcome[] = ['polish_failed', 'send_failed', 'not_sent'];
 
 // The draft is cleared on submit; it comes back when nothing was sent or compared, so the owner can retry.
-function Composer(props: { customerFirstName: string; onSend: (text: string) => Promise<SendOutcome> }) {
-  const [draft, setDraft] = useState('');
+type DraftProps = { draft: string; onDraftChange: (draft: string) => void };
 
+function Composer(props: { customerFirstName: string; onSend: (text: string) => Promise<SendOutcome> } & DraftProps) {
   async function submit(text: string) {
     const outcome = await props.onSend(text);
-    if (DRAFT_KEPT_OUTCOMES.includes(outcome)) setDraft(text);
+    if (DRAFT_KEPT_OUTCOMES.includes(outcome)) props.onDraftChange(text);
   }
 
   return (
     <ChatComposer
-      value={draft}
-      onChange={setDraft}
+      value={props.draft}
+      onChange={props.onDraftChange}
       onSubmit={submit}
       placeholder={`${chatsCopys.writeToPlaceholder} ${props.customerFirstName}`}
     />
