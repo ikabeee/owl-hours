@@ -102,3 +102,11 @@ slice, delegated with test-first discipline.
   render (no device/browser run). Pending (handoff retirement rule):
   `OwChat`/`OwChatPolish` design pairs stay until the screen is verified
   visually (same as `OwRequest` after T3). Next: T5 jobs slice (quote).
+- L14 (2026-10-29): RDD review of `34267d2..ef12f65` (medium; user granted).
+  One lens (reliability), approved and acknowledged. Non-blocking follow-ups:
+  (1) `sendChoice` has no in-flight guard, so a double tap sends twice;
+  (2) polish-off `send` does not catch a rejection, so the draft is lost;
+  (3) accept succeeds but navigation is skipped when no chat maps to the offer;
+  (4) an empty thread renders "You accepted at Invalid Date";
+  (5) the `useConversation` state machine has no test;
+  (6) a failed load leaves a blank screen.
