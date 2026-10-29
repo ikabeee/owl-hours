@@ -1,0 +1,123 @@
+// Spec: odd/tasks/owner-content.md, S2, S3, and S4 requirements.
+// Service and fake client adapter for content drafts, published posts, and post approval.
+import { DEMO_NOW, accounts as mockAccounts, anaJob, business, drafts as mockDrafts } from "../../../shared/data/mock.ts";
+import type { ID, Job, PostDraft } from "../../../shared/data/types.ts";
+import { approvePost, regeneratePost } from "../lib/postApproval.ts";
+
+export type PostsClient = {
+  findPost(id: ID): Promise<PostDraft | null>;
+  savePost(post: PostDraft): Promise<void>;
+  listPosts(): Promise<PostDraft[]>;
+  findJob(id: ID): Promise<Job | null>;
+  getBusinessName?(): Promise<string>;
+};
+
+export type PostsServiceDeps = {
+  now?: () => string;
+};
+
+export type PostsService = {
+  getDrafts(): Promise<PostDraft[]>;
+  getDraft(id: ID): Promise<PostDraft | null>;
+  getPost(id: ID): Promise<PostDraft | null>;
+  getScheduled(): Promise<PostDraft[]>;
+  getPublished(): Promise<PostDraft[]>;
+  getJob(id: ID): Promise<Job | null>;
+  getBusinessName(): Promise<string>;
+  approve(
+    id: ID,
+    options?: {
+      caption?: string;
+      targets?: { facebook: boolean; instagram: boolean };
+    },
+  ): Promise<PostDraft | null>;
+  regenerate(id: ID): Promise<PostDraft | null>;
+};
+
+const SEED_PUBLISHED_POST: PostDraft = {
+  id: "post_published_water_heater",
+  title: "Water heater installed in one visit",
+  caption: "Water heater installed in one visit",
+  source: "job",
+  targets: { facebook: true, instagram: true },
+  status: "published",
+  publishedAt: "2026-10-20T10:00:00-05:00",
+};
+
+export function createPostsService(
+  client: PostsClient,
+  deps?: PostsServiceDeps,
+): PostsService {
+  const clock = deps?.now ?? (() => DEMO_NOW);
+
+  return {
+    getDrafts: async () => {
+      const posts = await client.listPosts();
+      return posts.filter((p) => p.status === "draft");
+    },
+    getDraft: async (id) => {
+      const post = await client.findPost(id);
+      return post?.status === "draft" ? post : null;
+    },
+    getPost: (id) => client.findPost(id),
+    getScheduled: async () => {
+      const posts = await client.listPosts();
+      return posts.filter((p) => p.status === "scheduled");
+    },
+    getPublished: async () => {
+      const posts = await client.listPosts();
+      return posts.filter((p) => p.status === "published");
+    },
+    getJob: (id) => client.findJob(id),
+    getBusinessName: async () => {
+      if (client.getBusinessName) {
+        return client.getBusinessName();
+      }
+      return business.name;
+    },
+    approve: async (id, options) => {
+      const post = await client.findPost(id);
+      const approved = post
+        ? approvePost(post, {
+            now: clock(),
+            caption: options?.caption,
+            targets: options?.targets,
+          })
+        : null;
+
+      if (approved) {
+        await client.savePost(approved);
+      }
+      return approved;
+    },
+    regenerate: async (id) => {
+      const post = await client.findPost(id);
+      return post ? regeneratePost(post) : null;
+    },
+  };
+}
+
+export function createFakePostsClient(): PostsClient {
+  const postsList: PostDraft[] = [
+    ...structuredClone(mockDrafts),
+    structuredClone(SEED_PUBLISHED_POST),
+  ];
+  const postsById = new Map<ID, PostDraft>(postsList.map((p) => [p.id, p]));
+  const jobsById = new Map<ID, Job>([[anaJob.id, structuredClone(anaJob)]]);
+
+  return {
+    findPost: async (id) => structuredClone(postsById.get(id) ?? null),
+    savePost: async (post) => {
+      postsById.set(post.id, structuredClone(post));
+    },
+    listPosts: async () => Array.from(postsById.values()).map((p) => structuredClone(p)),
+    findJob: async (id) => structuredClone(jobsById.get(id) ?? null),
+    getBusinessName: async () => {
+      const fb = mockAccounts.find((a) => a.kind === "facebook_page");
+      return fb?.name ?? business.name;
+    },
+  };
+}
+
+// Module-level shared client instance used as default across content hooks so approvals persist in session.
+export const defaultFakePostsClient: PostsClient = createFakePostsClient();
