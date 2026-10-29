@@ -1,0 +1,14 @@
+appId: host.exp.Exponent
+name: Decline leaves the request screen
+---
+- runFlow:
+    file: subflows/open.yaml
+    env: { ROUTE: "requests", WAIT_FOR: ".*Requests" }
+- runFlow: subflows/dismiss-logbox.yaml
+- openLink: "exp://127.0.0.1:8081/--/request/req_ana"
+- extendedWaitUntil:
+    visible: "Decline"
+    timeout: 30000
+- tapOn: "Decline"
+- assertNotVisible: "Accept and chat"
+- takeScreenshot: 06-after-decline

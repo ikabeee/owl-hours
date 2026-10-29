@@ -10,7 +10,7 @@ import { conversations, offers } from "../data/mock";
 
 type IconProps = { size?: number | string; color?: string };
 
-const TABS: { name: string; label: string; Icon: ComponentType<IconProps> }[] = [
+export const TABS: { name: string; label: string; Icon: ComponentType<IconProps> }[] = [
   { name: "requests", label: "Requests", Icon: Inbox },
   { name: "chats", label: "Chats", Icon: MessageCircle },
   { name: "jobs", label: "Jobs", Icon: Wrench },

@@ -142,3 +142,27 @@ slice, delegated with test-first discipline.
   accept leaves the owner on the request screen;
   (2) `ChatScreen.tsx:203-206`: restoring the draft overwrites text typed
   while a send was in flight, including after a refused second tap.
+- L18 (user, 2026-10-29): "Manda los PR's bajas maestro con el emulador de
+  IOS (ya ando en mi casa) para que hagas e2e de las pantallas y me muestres
+  los resultados. Antes de mandar PRs me mandas los ss".
+  Setup:
+  - iOS 27 simulator runtime downloaded;
+  - "Zukki iPhone" simulator (iPhone 16) created;
+  - Expo Go installed through `expo start --ios`;
+  - Maestro with JAVA_HOME=openjdk@17.
+  Flows are in `apps/owner/.maestro/`.
+  Shell bugs found and fixed (both predate T4):
+  - Expo Router 58 renders only the screens a layout declares, and
+    `app/(tabs)/_layout.tsx` declared none (blank app); TABS is now exported
+    and declared;
+  - "/" had no route, so a cold start landed on Jobs; `app/index.tsx` now
+    redirects to `/requests`.
+  E2E result: 4/6 pass (tabs, request detail, accept→chat, decline).
+  Open findings:
+  - (a) ChatScreen renders at about half width and the accepted-at line is
+    clipped ("AM");
+  - (b) Maestro `inputText` cannot type into the WebView composer, so
+    option A and option B are not verified e2e;
+  - (c) replacing a DOM screen while it loads logs "Unable to find the
+    'DomWebView' view with tag" (dev LogBox);
+  - (d) the Requests tab is still a placeholder.

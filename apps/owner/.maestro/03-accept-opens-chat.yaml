@@ -1,0 +1,15 @@
+appId: host.exp.Exponent
+name: Accept and chat opens Ana's conversation
+---
+- runFlow:
+    file: subflows/open.yaml
+    env: { ROUTE: "request/req_ana", WAIT_FOR: "Accept and chat" }
+- runFlow: subflows/dismiss-logbox.yaml
+- tapOn: "Accept and chat"
+- runFlow: subflows/dismiss-logbox.yaml
+- extendedWaitUntil:
+    visible: "via Zukki · WhatsApp"
+    timeout: 15000
+- assertVisible: "Ana L."
+- assertVisible: "Hi, is someone coming tonight?"
+- takeScreenshot: 03-chat-after-accept
