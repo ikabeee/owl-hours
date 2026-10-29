@@ -36,12 +36,13 @@ import { chatsCopys } from '../copys/chatsCopys';
 export default function ChatScreen(props: {
   customerName: string;
   customerFirstName: string;
-  acceptedAt: string;
+  acceptedAt: string | null;
   thread: ThreadMessage[];
   step: ComposerStep;
   preview: PolishPreview | null;
   polishEnabled: boolean;
   polishFailed: boolean;
+  sendFailed: boolean;
   insets: { top: number; bottom: number };
   onSend: (text: string) => Promise<SendOutcome>;
   onSendChoice: (choice: PolishChoice) => Promise<void>;
@@ -57,7 +58,9 @@ export default function ChatScreen(props: {
         <TopBar customerName={props.customerName} onBack={props.onBack} />
         <ChatLayout style={{ flex: 1, minHeight: 0 }} composer={<Footer {...props} />}>
           <ChatMessageList align="bottom">
-            <ChatSystemMessage>{chatsCopys.youAcceptedAt} {formatClockTime(props.acceptedAt)}</ChatSystemMessage>
+            {props.acceptedAt && (
+              <ChatSystemMessage>{chatsCopys.youAcceptedAt} {formatClockTime(props.acceptedAt)}</ChatSystemMessage>
+            )}
             {props.thread.map((message) => (
               <ThreadEntry key={message.id} message={message} onOpenJob={props.onOpenJob} />
             ))}
@@ -120,7 +123,7 @@ function OwnerMessage(props: { text: string; label: string | null }) {
 
 type FooterProps = Pick<
   Parameters<typeof ChatScreen>[0],
-  'customerFirstName' | 'step' | 'preview' | 'polishEnabled' | 'polishFailed' | 'onSend' | 'onSendChoice' | 'onSetPolishEnabled'
+  'customerFirstName' | 'step' | 'preview' | 'polishEnabled' | 'polishFailed' | 'sendFailed' | 'onSend' | 'onSendChoice' | 'onSetPolishEnabled'
 >;
 
 function Footer(props: FooterProps) {
@@ -139,11 +142,19 @@ function Footer(props: FooterProps) {
 
 function FooterBody(props: FooterProps) {
   if (props.step === 'polishing') return <PolishingNotice />;
-  if (props.step === 'comparing' && props.preview) return <PolishCompare preview={props.preview} onSendChoice={props.onSendChoice} />;
+  if (props.step === 'comparing' && props.preview) {
+    return (
+      <>
+        {props.sendFailed && <Text style={errorTextStyle}>{chatsCopys.somethingWentWrong}</Text>}
+        <PolishCompare preview={props.preview} onSendChoice={props.onSendChoice} />
+      </>
+    );
+  }
 
   return (
     <>
       {props.polishFailed && <Text style={errorTextStyle}>{chatsCopys.polishFailed}</Text>}
+      {props.sendFailed && <Text style={errorTextStyle}>{chatsCopys.somethingWentWrong}</Text>}
       <Composer customerFirstName={props.customerFirstName} onSend={props.onSend} />
     </>
   );
@@ -183,13 +194,15 @@ const errorTextStyle = { color: 'var(--color-error)' } as const;
 
 const compareActionsStyle = { display: 'grid', gridTemplateColumns: '1fr 1.4fr', gap: 8 } as const;
 
+const DRAFT_KEPT_OUTCOMES: SendOutcome[] = ['polish_failed', 'send_failed', 'not_sent'];
+
 // The draft is cleared on submit; it comes back when nothing was sent or compared, so the owner can retry.
 function Composer(props: { customerFirstName: string; onSend: (text: string) => Promise<SendOutcome> }) {
   const [draft, setDraft] = useState('');
 
   async function submit(text: string) {
     const outcome = await props.onSend(text);
-    if (outcome === 'polish_failed' || outcome === 'not_sent') setDraft(text);
+    if (DRAFT_KEPT_OUTCOMES.includes(outcome)) setDraft(text);
   }
 
   return (
