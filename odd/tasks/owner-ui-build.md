@@ -166,3 +166,17 @@ slice, delegated with test-first discipline.
   - (c) replacing a DOM screen while it loads logs "Unable to find the
     'DomWebView' view with tag" (dev LogBox);
   - (d) the Requests tab is still a placeholder.
+- L19 (user, 2026-10-29): "corrije el layout".
+  - Root cause: in the native DOM host, `.zukki-root` is a flex item that
+    shrinks to its content width. ChatLayout's `container-type: inline-size`
+    contributes 0, so the TopBar (~170 pt) set the width. Chromium web and
+    iOS Safari render full width.
+  - Fix: `width: 100%` on the ChatScreen root.
+  - Verified in Expo Go on the iOS simulator: full width, and "You accepted
+    at 12:05 AM" is intact.
+  - E2E: option B now passes end to end, since typing works at full width.
+  - Flaky: option A and accept→chat failed once. In one, the tap on Send
+    landed on the dev LogBox toast ("Unable to find the 'DomWebView' view").
+    In the other, the WebView accessibility tree was missing a visible text.
+  - Observation: after a send, the new bubble sits under the dock until the
+    owner scrolls; the scroll-down button shows.

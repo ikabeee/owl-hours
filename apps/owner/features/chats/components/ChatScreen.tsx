@@ -71,7 +71,9 @@ export default function ChatScreen(props: {
   );
 }
 
-const pageStyle = { display: 'flex', flexDirection: 'column', height: '100dvh' } as const;
+// The DOM host shrinks the root to its content width, and ChatLayout's inline-size
+// containment contributes no width, so the root claims the full viewport explicitly.
+const pageStyle = { display: 'flex', flexDirection: 'column', width: '100%', height: '100dvh' } as const;
 
 function TopBar(props: { customerName: string; onBack: () => Promise<void> }) {
   return (
