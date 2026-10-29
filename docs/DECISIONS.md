@@ -169,3 +169,28 @@ it with a new one.
     jobs hook mounts its own demo service.
   - The jobs demo clock starts at 12:07 AM (OwQuote's status bar), so the
     timeline stays in order; the requests hook keeps its own clock.
+
+## D12 — Content slice: drafts, post review, linked accounts (2026-10-29, T6a)
+
+- **Decision:** `features/content` owns `OwContent`, `OwPostReview` and
+  `OwAccounts`.
+  - One module-level fake posts client (`defaultFakePostsClient`) backs every
+    content hook, so an approval in post review shows in Content.
+  - Content reloads on focus (`useFocusEffect`).
+  - Approving moves a draft to `scheduled` when it has a future
+    `scheduledFor`, otherwise to `published`.
+  - Scheduled posts show in the Published list with their time
+    ("Today, 6:00 PM") as the meta line.
+  - `Content` is now a nested Stack (`(tabs)/content/_layout.tsx`), so
+    `accounts` keeps the tab bar; the tab route in `shared/shell/TabBar.tsx` is
+    `content`, not `content/index`.
+- **Why:** HANDOFF-RN-UI §7–8 and the operator's answers in
+  `odd/tasks/owner-content.md` L2: copy from the design HTML, data verbatim
+  from `mock.ts`, no `shared/data` edits while T5 edits `mock.ts`.
+- **Consequences:**
+  - Instagram shows the mock name "@northsideplumbing (professional)", not
+    the design's "· professional account".
+  - "Regenerate" returns the draft unchanged until Zukki's generator exists.
+  - The Published list has no empty state yet: the design has no copy for it.
+  - Coded by agy (Gemini 3.8 Flash High) test-first; the operator locked the
+    tests and reviewed one cleaner round.
