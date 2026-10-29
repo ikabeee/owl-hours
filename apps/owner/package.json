@@ -9,7 +9,7 @@
     "web": "expo start --web",
     "dev": "expo start --web",
     "build": "expo export --platform android",
-    "test": "node --test lib/tonight.test.ts",
+    "test": "node --test \"lib/**/*.test.ts\" \"features/**/*.test.ts\"",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
