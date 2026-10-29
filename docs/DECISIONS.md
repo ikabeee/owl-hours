@@ -70,3 +70,31 @@ it with a new one.
 - **Consequences:** swapping the fake for Supabase means a new `OffersClient`
   only; `acceptWindowMin` is injected too (urgent 300 s, other 1800 s), so
   `maxSeconds` is not hardcoded in the screen.
+
+## D7 — Chats slice contracts (2026-10-29)
+
+- **Decision:** `createConversationsService(client)` returns async
+  `{ getConversation, getMessages, sendMessage, sendPolishChoice }`.
+  `sendMessage(convId, text, {polish})` returns `{sent}` or a `PolishPreview`
+  (HANDOFF-RN-UI §9) and `null` for an unknown conversation; a preview appends
+  nothing. `sendPolishChoice(convId, preview, "mine" | "zukki")` sends option A
+  (`as_written`) or option B (`polished`, `ownerDraft` = original). The label
+  under an option B bubble is the §8 string "Written with Zukki, approved by
+  Northside" (no invented copy). The `c_ana` thread seeds from `anaMessages`
+  (m1, m2), so the owner types `OWNER_TEXT` live in the demo.
+  `useConversation(id, deps?)` is the only service consumer and owns the polish
+  switch (default off, not persisted) and `composing → polishing → comparing →
+  sent`. Default message ids come from a counter (no `crypto` on Hermes).
+- **Why:** user-approved answers to the T4 RED review (L12).
+- **Consequences:** the Settings default for polish and the metadata time are
+  not wired; "You accepted at" formats device-local time.
+
+## D8 — Accept opens the chat by offerId (2026-10-29)
+
+- **Decision:** `OffersService.findChat(offerId)` returns the conversation id
+  of an accepted offer (`null` otherwise); `useRequestOffer().accept()` returns
+  that id and the route navigates with it.
+- **Why:** the route built `c_${offerId}` (`c_req_ana`), but the conversation is
+  `c_ana`; ids are not derivable by naming (`c_grace` belongs to `req_grace2`).
+  A real backend creates the chat on accept and returns it.
+- **Consequences:** `OffersClient` gains `findConversationId(offerId)`.

@@ -23,7 +23,9 @@ slice, delegated with test-first discipline.
 - T3: requests slice: countdown lib + offers service + hook + copys, S2-S3,
   route: delegated (Claude Sonnet 5.5, effort high, user's choice), branch
   `feat/owner-requests-slice`, status: done (GREEN)
-- T4: chats slice (polish), S2-S3
+- T4: chats slice (polish), S2-S3, route: delegated (Claude Sonnet 5.5,
+  effort high, user's choice), branch `feat/owner-chats-slice`, status:
+  done (GREEN)
 - T5: jobs slice (quote), S2-S3
 - T6: content + business slices, S2-S3
 
@@ -72,3 +74,31 @@ slice, delegated with test-first discipline.
   (binary at `apps/owner/node_modules/.bin/expo`), root `npm test` 3/3,
   root typecheck 5/5. Lock removed. Not checked: the first "4:32" frame on a
   real render (no device/browser run). Next: T4 chats slice.
+- L10 (user, 2026-10-28): "Delégalo a Sonnet 5.5 en high, mismo flujo".
+  T4 assignment written into `docs/HANDOFF-OWNER-APP.md`. Operator findings:
+  `app/chat/[id].tsx` is missing although `app/request/[id].tsx:25`
+  navigates there (added to the GREEN surface). Correction: the operator
+  claimed `mock.ts` had no `c_ana` thread; it exports `anaMessages` (m1, m2)
+  at `shared/data/mock.ts:71` (coder found it).
+- L11 (2026-10-28): T4 RED by the Sonnet 5.5 coder: 43 new tests fail
+  (8 lib, 15 service, 20 copys), existing 30 pass, owner tsc clean. Lib and
+  service tests fail on stub throws, copys on assertions. 9 open questions
+  pending user review.
+- L12 (user, 2026-10-28): "Sí, apruébalos con esas respuestas, bloquéalos y
+  pasa a GREEN". Tests adjusted (B label = HANDOFF §8 string, seed =
+  `anaMessages`), RED 71/30/41, locked. GREEN by the coder (one run lost to
+  a network error, resumed): owner `npm test` 73/73 (operator re-ran),
+  owner tsc clean, `expo export` OK, root test + typecheck green. Operator
+  finding (open): `app/request/[id].tsx:25` navigates to `c_${offerId}` =
+  `c_req_ana`, but the conversation id is `c_ana`, so Accept opens a blank
+  chat. "You accepted at" uses device-local `toLocaleTimeString`.
+- L13 (user, 2026-10-29): chose "Accept returns conv". Operator, inline and
+  test-first: new `offersService.chat.test.ts` (4 tests) RED with
+  `findChat is not a function`, then GREEN. Added `findChat` +
+  `findConversationId`; the hook `accept` returns the chat id; the route
+  navigates with it. Gates: owner `npm test` 77/77, owner tsc clean,
+  `expo export` OK, root `npm test` 3/3 tasks, root typecheck 5/5. D7 and D8
+  in `docs/DECISIONS.md`. Lock removed. Not checked: chat screen on a real
+  render (no device/browser run). Pending (handoff retirement rule):
+  `OwChat`/`OwChatPolish` design pairs stay until the screen is verified
+  visually (same as `OwRequest` after T3). Next: T5 jobs slice (quote).
