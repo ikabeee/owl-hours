@@ -7,6 +7,7 @@ import type { Media } from '../../../shared/data/types';
 import { requestsCopys } from '../copys/requestsCopys';
 import { mediaDurationText } from '../lib/mediaDurationText';
 import { mediaFrameSource } from '../lib/mediaFrameSource';
+import { mediaAltText } from '../lib/mediaAltText';
 import './requestScreen.css';
 
 // Until the backend serves real URLs, the demo media ids resolve to the embedded frames.
@@ -20,19 +21,19 @@ export function CustomerMedia({ media }: { media: Media }) {
 
   return (
     <VStack gap={1}>
-      {frame && <MediaBanner frame={frame} caption={caption} />}
+      {frame && <MediaBanner frame={frame} caption={caption} alt={mediaAltText(media.kind)} />}
       <Text type="supporting">{caption}</Text>
     </VStack>
   );
 }
 
 // Owns the lightbox hook, so it only mounts when there is a frame to show.
-function MediaBanner({ frame, caption }: { frame: string; caption: string }) {
-  const lightbox = useLightbox({ media: { src: frame, alt: requestsCopys.videoFrameAlt, caption, type: 'image' } });
+function MediaBanner({ frame, caption, alt }: { frame: string; caption: string; alt: string }) {
+  const lightbox = useLightbox({ media: { src: frame, alt, caption, type: 'image' } });
 
   return (
     <>
-      <Thumbnail className="zukki-media-banner" src={frame} alt={requestsCopys.videoFrameAlt} onClick={() => lightbox.open()} />
+      <Thumbnail className="zukki-media-banner" src={frame} alt={alt} onClick={() => lightbox.open()} />
       {lightbox.element}
     </>
   );

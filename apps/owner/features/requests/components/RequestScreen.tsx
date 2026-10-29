@@ -20,6 +20,7 @@ import { Divider } from '@astryxdesign/core/Divider';
 import { Owl } from '../../../shared/mascot/Owl';
 import owlRunningRight from '../../../shared/mascot/owl/running-right';
 import owlStatic from '../../../shared/mascot/owl/static';
+import { sentTimeText } from '../lib/sentTimeText';
 import { requestsCopys } from '../copys/requestsCopys';
 import type { RequestOfferDetails } from '../hooks/useRequestOffer';
 import { CustomerMedia } from './CustomerMedia';
@@ -44,7 +45,7 @@ export default function RequestScreen(props: {
         <VStack gap={3} padding={4}>
           <VStack>
             <Heading level={1}>{requestsCopys.newRequest}</Heading>
-            <Text type="supporting">{requestsCopys.sentByZukki} · {formatClockTime(offer.offeredAt)}</Text>
+            <Text type="supporting">{sentLine(offer.offeredAt)}</Text>
           </VStack>
           <Card padding={4}>
             <HStack gap={2} align="center">
@@ -88,6 +89,8 @@ export default function RequestScreen(props: {
 }
 
 // Local clock time of an ISO instant, e.g. "12:05 AM" (device-local, like the chat; D7).
-function formatClockTime(iso: string) {
-  return new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+// "Sent by Zukki · 12:05 AM"; without a readable time, just "Sent by Zukki".
+function sentLine(offeredAt: string) {
+  const time = sentTimeText(offeredAt);
+  return time ? `${requestsCopys.sentByZukki} · ${time}` : requestsCopys.sentByZukki;
 }

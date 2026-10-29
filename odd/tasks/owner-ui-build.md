@@ -350,3 +350,15 @@ slice, delegated with test-first discipline.
     - the photo alt text says "video" (now reachable with real URLs);
     - an unknown likelihood throws;
     - the sent time is device-local.
+- L33 (user, 2026-10-29): "Corrígelos en este PR y haz squash and merge".
+  - The remaining review follow-ups are fixed test-first: 9 tests,
+    RED→GREEN, unit 172/172.
+  - Hook boundary: `lib/requestFaults` returns faults likely first,
+    defaults to [], and maps an unknown likelihood to "possible". The hook
+    uses it, so the screen never hits an unknown badge.
+  - Alt text: `lib/mediaAltText` gives a video "Frame from the customer's
+    video" and a photo "Photo from the customer" (new copy).
+  - Sent time: `lib/sentTimeText` uses the wall clock in the timestamp's
+    own offset ("12:05 AM" on any device). A malformed timestamp shows just
+    "Sent by Zukki".
+  - E2E 7/7.

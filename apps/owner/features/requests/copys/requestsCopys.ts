@@ -11,6 +11,7 @@ export const requestsCopys = {
   newRequest: "New request",
   sentByZukki: "Sent by Zukki",
   videoFrameAlt: "Frame from the customer's video",
+  photoAlt: "Photo from the customer",
   videoLabel: "Video",
   photoLabel: "Photo",
   zukkiName: "Zukki",

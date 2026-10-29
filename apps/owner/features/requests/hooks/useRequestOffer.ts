@@ -3,7 +3,7 @@ import { DEMO_NOW, business } from "../../../shared/data/mock.ts";
 import type { ID, OfferStatus, PossibleFault, RequestOffer } from "../../../shared/data/types.ts";
 import type { AcceptOutcome } from "../lib/acceptOutcome.ts";
 import { acceptWindowSeconds, formatCountdown, secondsLeft } from "../lib/countdown.ts";
-import { sortLikelyFirst } from "../lib/possibleFaults.ts";
+import { requestFaults } from "../lib/requestFaults.ts";
 import { createFakeOffersClient, createOffersService } from "../services/offersService.ts";
 import type { OffersService } from "../services/offersService.ts";
 
@@ -76,7 +76,7 @@ export function useRequestOffer(id: ID, deps?: Partial<RequestOfferDeps>): Reque
 
   const remaining = secondsLeft(offer.expiresAt, now);
   return {
-    offer: { ...offer, possibleFaults: sortLikelyFirst(offer.possibleFaults ?? []) },
+    offer: { ...offer, possibleFaults: requestFaults(offer) },
     status: offer.status,
     countdownText: formatCountdown(remaining),
     secondsLeft: remaining,
