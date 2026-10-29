@@ -1,0 +1,38 @@
+'use dom';
+
+import '@astryxdesign/core/reset.css';
+import '@astryxdesign/core/astryx.css';
+import '@astryxdesign/theme-neutral/theme.css';
+import '@astryxdesign/theme-neutral/fonts.css';
+import '../../../shared/theme/zukki-theme.css';
+
+import type { DOMProps } from 'expo/dom';
+import { Theme } from '@astryxdesign/core/theme';
+import { neutralTheme } from '@astryxdesign/theme-neutral/built';
+import { Button } from '@astryxdesign/core/Button';
+import { EmptyState } from '@astryxdesign/core/EmptyState';
+import { Owl } from '../../../shared/mascot/Owl';
+import owlFailed from '../../../shared/mascot/owl/failed';
+import { chatsCopys } from '../copys/chatsCopys';
+
+// Error state of the chat: the owl, one fixed sentence and a retry. Never the raw error.
+export default function ChatLoadError(props: {
+  insets: { top: number; bottom: number };
+  onRetry: () => Promise<void>;
+  dom?: DOMProps;
+}) {
+  const { insets } = props;
+  return (
+    <Theme theme={neutralTheme}>
+      <div className="zukki-root" style={{ ...pageStyle, paddingTop: insets.top, paddingBottom: insets.bottom }}>
+        <EmptyState
+          title={chatsCopys.somethingWentWrong}
+          icon={<Owl src={owlFailed} scale={0.6} clip />}
+          actions={<Button label={chatsCopys.tryAgain} variant="primary" size="lg" onClick={() => props.onRetry()} />}
+        />
+      </div>
+    </Theme>
+  );
+}
+
+const pageStyle = { display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100dvh' } as const;

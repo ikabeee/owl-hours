@@ -1,134 +1,68 @@
-import { useEffect, useState } from "react";
-import type { ID, Message, PolishPreview } from "../../../shared/data/types.ts";
-import { firstName } from "../lib/customerName.ts";
-import { deliveryLabel } from "../lib/ownerDelivery.ts";
+import { useEffect, useState, useSyncExternalStore } from "react";
+import type { ID } from "../../../shared/data/types.ts";
+import type { ChatView, ConversationSnapshot, SendOutcome } from "../lib/chatView.ts";
 import type { PolishChoice } from "../lib/ownerDelivery.ts";
-import type { ComposerStep, SendOutcome, ThreadMessage } from "../lib/chatView.ts";
 import { createConversationsService, createFakeConversationsClient } from "../services/conversationsService.ts";
-import type { ConversationsService, SendResult } from "../services/conversationsService.ts";
+import type { ConversationsService } from "../services/conversationsService.ts";
+import { createConversationSession } from "./conversationSession.ts";
+import type { ConversationSession } from "./conversationSession.ts";
 
 export type ConversationDeps = { service: ConversationsService };
 
-// Serializable by design: it crosses into the DOM component as props.
-export type ConversationView = {
-  customerName: string;
-  customerFirstName: string;
-  acceptedAt: string; // ISO instant of the first thread message (Zukki's summary is posted on accept)
-  thread: ThreadMessage[];
-  step: ComposerStep;
-  preview: PolishPreview | null; // set only while step is "comparing"
-  polishEnabled: boolean;
-  polishFailed: boolean;
+// Serializable by design: the chat crosses into the DOM component as props; the actions are top-level async callbacks.
+export type ConversationView = ChatView & {
   send: (text: string) => Promise<SendOutcome>;
   sendChoice: (choice: PolishChoice) => Promise<void>;
   setPolishEnabled: (enabled: boolean) => Promise<void>;
 };
 
-type Composer = { step: "composing" | "polishing" | "sent" } | { step: "comparing"; preview: PolishPreview };
+// "loading" and "not_found" draw nothing; "failed" draws the error state and retries the load.
+export type Conversation =
+  | { status: "loading" | "not_found" }
+  | { status: "failed"; retry: () => Promise<void> }
+  | { status: "ready"; view: ConversationView };
 
-type LoadedChat = { customerName: string; messages: Message[] };
+const LOADING: ConversationSnapshot = { status: "loading" };
+const NO_SESSION = { subscribe: () => () => {}, getSnapshot: () => LOADING };
 
-// Returns null while the chat loads, or when it does not exist.
-// The polish switch is hook state, default off, until Settings can provide the default.
-export function useConversation(id: ID, deps?: Partial<ConversationDeps>): ConversationView | null {
+// The polish switch is session state, default off, until Settings can provide the default.
+export function useConversation(id: ID, deps?: Partial<ConversationDeps>): Conversation {
   const [defaults] = useState(createDemoDeps);
-  const service = deps?.service ?? defaults.service;
+  const session = useSession(deps?.service ?? defaults.service, id);
+  const store = session ?? NO_SESSION;
+  const snapshot = useSyncExternalStore(store.subscribe, store.getSnapshot);
+  if (!session) return { status: "loading" };
 
-  const [chat, setChat] = useState<LoadedChat | null>(null);
-  const [composer, setComposer] = useState<Composer>({ step: "composing" });
-  const [polishEnabled, setPolishEnabled] = useState(false);
-  const [polishFailed, setPolishFailed] = useState(false);
+  return toConversation(session, snapshot);
+}
+
+// One session per service and id; the previous one is disposed so its late results are ignored.
+function useSession(service: ConversationsService, id: ID): ConversationSession | null {
+  const [owned, setOwned] = useState<{ service: ConversationsService; id: ID; session: ConversationSession } | null>(null);
 
   useEffect(() => {
-    let isCurrent = true;
-    loadChat(service, id).then((loaded) => {
-      if (isCurrent) setChat(loaded);
-    });
-    return () => {
-      isCurrent = false;
-    };
+    const session = createConversationSession(service, id);
+    setOwned({ service, id, session });
+    void session.load();
+    return session.dispose;
   }, [service, id]);
 
-  async function reloadThread() {
-    setChat(await loadChat(service, id));
-  }
+  return owned?.service === service && owned.id === id ? owned.session : null;
+}
 
-  async function send(text: string): Promise<SendOutcome> {
-    setPolishFailed(false);
-    if (polishEnabled) return preparePolish(text);
-
-    const result = await service.sendMessage(id, text, { polish: false });
-    if (!result) return "not_sent";
-
-    await reloadThread();
-    setComposer({ step: "sent" });
-    return "sent";
-  }
-
-  async function preparePolish(text: string): Promise<SendOutcome> {
-    setComposer({ step: "polishing" });
-    try {
-      const result = await service.sendMessage(id, text, { polish: true });
-      if (!result || isSent(result)) return backToComposing("not_sent");
-
-      setComposer({ step: "comparing", preview: result });
-      return "comparing";
-    } catch {
-      setPolishFailed(true);
-      return backToComposing("polish_failed");
-    }
-  }
-
-  function backToComposing(outcome: SendOutcome): SendOutcome {
-    setComposer({ step: "composing" });
-    return outcome;
-  }
-
-  async function sendChoice(choice: PolishChoice) {
-    if (composer.step !== "comparing") return;
-
-    const sent = await service.sendPolishChoice(id, composer.preview, choice);
-    if (!sent) return;
-
-    await reloadThread();
-    setComposer({ step: "sent" });
-  }
-
-  async function changePolishEnabled(enabled: boolean) {
-    setPolishEnabled(enabled);
-    setPolishFailed(false);
-  }
-
-  if (!chat) return null;
+function toConversation(session: ConversationSession, snapshot: ConversationSnapshot): Conversation {
+  if (snapshot.status === "failed") return { status: "failed", retry: session.load };
+  if (snapshot.status !== "ready") return { status: snapshot.status };
 
   return {
-    customerName: chat.customerName,
-    customerFirstName: firstName(chat.customerName),
-    acceptedAt: chat.messages[0]?.sentAt ?? "",
-    thread: chat.messages.map(withDeliveryLabel),
-    step: composer.step,
-    preview: composer.step === "comparing" ? composer.preview : null,
-    polishEnabled,
-    polishFailed,
-    send,
-    sendChoice,
-    setPolishEnabled: changePolishEnabled,
+    status: "ready",
+    view: {
+      ...snapshot.chat,
+      send: session.send,
+      sendChoice: session.sendChoice,
+      setPolishEnabled: async (enabled) => session.setPolishEnabled(enabled),
+    },
   };
-}
-
-async function loadChat(service: ConversationsService, id: ID): Promise<LoadedChat | null> {
-  const [conversation, messages] = await Promise.all([service.getConversation(id), service.getMessages(id)]);
-  if (!conversation || !messages) return null;
-
-  return { customerName: conversation.customerName, messages };
-}
-
-function isSent(result: SendResult): result is { sent: Message } {
-  return "sent" in result;
-}
-
-function withDeliveryLabel(message: Message): ThreadMessage {
-  return { ...message, deliveryLabel: deliveryLabel(message) };
 }
 
 function createDemoDeps(): ConversationDeps {

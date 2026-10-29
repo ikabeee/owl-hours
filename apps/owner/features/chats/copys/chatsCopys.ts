@@ -23,6 +23,9 @@ const copys = {
   // polish states
   polishing: "Polishing…",
   polishFailed: "Couldn't polish. Send yours or try again.",
+  // error state, HANDOFF-RN-UI.md section 8 "Every screen also needs"
+  somethingWentWrong: "Something went wrong.",
+  tryAgain: "Try again",
 } as const;
 
 // The string index signature lets tests and tooling walk the copys by key name.
