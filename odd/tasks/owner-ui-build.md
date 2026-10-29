@@ -245,3 +245,18 @@ slice, delegated with test-first discipline.
   #15 and #16 request `size:exception`: each is one work unit, about half
   tests, and splitting them means rewriting history. Merge order:
   #15 → #16 → #17. Next: T5 jobs slice.
+- L24 (2026-10-29): RDD review of the whole stack (user granted).
+  - Blocking finding, CRITICAL, R3-polish-failed-draft-lost: with polish
+    on, a failed polish lost the draft because Composer unmounts while
+    polishing.
+  - Correction 5ff2753, 20 lines: the draft is lifted into Footer, which
+    stays mounted.
+  - Validation: the first validator run died ("transport failed: signal:
+    killed"); the same slot was reoffered and the second run approved.
+    Acknowledged.
+  - Checks: unit 133/133, tsc clean; e2e A, B and accept 3/3.
+  - Non-blocking follow-ups:
+    (1) a rejected `findChat` after a committed accept leaves the owner
+    stranded;
+    (2) restoring the draft overwrites text typed during an in-flight send;
+    (3) `not_found` chat is a blank screen.
