@@ -1,0 +1,20 @@
+appId: host.exp.Exponent
+name: Request shows the customer's evidence and the possible faults
+---
+- runFlow:
+    file: subflows/open.yaml
+    env: { ROUTE: "request/req_ana", WAIT_FOR: "Accept and chat" }
+- runFlow: subflows/dismiss-logbox.yaml
+- assertVisible: "New request"
+- assertVisible: ".*The toilet won't stop running.*"
+- takeScreenshot: 07-request-evidence-top
+- swipe: { start: "50%, 75%", end: "50%, 25%" }
+- waitForAnimationToEnd
+- assertVisible: "Possible faults"
+- assertVisible: "Worn fill valve"
+- assertVisible: "Likely"
+- assertVisible: "Float set too high"
+- takeScreenshot: 07-request-possible-faults
+- tapOn: "Frame from the customer's video"
+- waitForAnimationToEnd
+- takeScreenshot: 07-request-media-lightbox

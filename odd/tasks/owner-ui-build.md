@@ -314,3 +314,12 @@ slice, delegated with test-first discipline.
     - the sent time is device-local, as in D7.
   - New copy approved: "Possible faults", "Likely", "Possible", "Photo".
   - Tests locked (`t3.1-request-evidence`).
+- L29 (2026-10-29): T3.1 GREEN.
+  - The coder built the evidence UI, the possible faults list (Badge) and
+    `sortLikelyFirst` / `mediaDurationText` in lib.
+  - The operator added the sticky bottom action bar: the longer card had
+    pushed Decline / Accept and chat off screen, and 3 e2e flows failed
+    until it was in place.
+  - New e2e flow `07-request-evidence`.
+  - Checks: unit 156/156, tsc clean, e2e 7/7.
+  - D10 is in `docs/DECISIONS.md`. Lock removed.

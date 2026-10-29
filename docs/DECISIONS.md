@@ -115,3 +115,26 @@ it with a new one.
 - **Consequences:** `not_found` still renders nothing (no handoff copy for it);
   the session is created inside the effect so React strict mode cannot leave a
   disposed session in use.
+
+## D10 — Request evidence and possible faults (2026-10-29, T3.1)
+
+- **Decision:** the request detail shows the customer's evidence. That is:
+  - an Astryx `Thumbnail` banner of the first media item, which opens a
+    `Lightbox`;
+  - the customer's quote in italics;
+  - Zukki's summary with the owl tag;
+  - a structured "Possible faults" list. Each fault is
+    `{ label, likelihood: "likely" | "possible" }`; `sortLikelyFirst` puts
+    likely faults first, and each one shows as a `Badge`.
+
+  Decline / Accept and chat are a sticky bottom bar. Media frames are
+  data-URI modules (`assets/img/`), like the owl.
+- **Why:** HANDOFF-RN-UI §8 planned the media, quote and summary, and T3
+  never built them. The user added the faults list (L27). The handoff's
+  "Screen frame" makes the footer the bottom action bar.
+- **Consequences:**
+  - `RequestOffer.possibleFaults` is optional, and Zukki's pipeline must
+    fill it.
+  - The `Thumbnail` banner is a CSS override of Astryx's 64px square
+    (`requestScreen.css`).
+  - The demo Lightbox shows the video frame, not a video.

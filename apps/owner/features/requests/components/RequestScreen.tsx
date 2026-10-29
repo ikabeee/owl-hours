@@ -15,14 +15,18 @@ import { Heading, Text } from '@astryxdesign/core/Text';
 import { Button } from '@astryxdesign/core/Button';
 import { ProgressBar } from '@astryxdesign/core/ProgressBar';
 import { StatusDot } from '@astryxdesign/core/StatusDot';
+import { Avatar } from '@astryxdesign/core/Avatar';
+import { Divider } from '@astryxdesign/core/Divider';
 import { Owl } from '../../../shared/mascot/Owl';
 import owlRunningRight from '../../../shared/mascot/owl/running-right';
+import owlStatic from '../../../shared/mascot/owl/static';
 import { requestsCopys } from '../copys/requestsCopys';
-
-type Offer = { title: string; customerName: string; distanceKm: number; zukkiSummary: string };
+import type { RequestOfferDetails } from '../hooks/useRequestOffer';
+import { CustomerMedia } from './CustomerMedia';
+import { PossibleFaults } from './PossibleFaults';
 
 export default function RequestScreen(props: {
-  offer: Offer;
+  offer: RequestOfferDetails;
   countdownText: string;
   secondsLeft: number;
   maxSeconds: number;
@@ -33,10 +37,15 @@ export default function RequestScreen(props: {
   dom?: DOMProps;
 }) {
   const { offer, insets, isExpired } = props;
+  const firstMedia = offer.media[0];
   return (
     <Theme theme={neutralTheme}>
-      <div className="zukki-root" style={{ paddingTop: insets.top, paddingBottom: insets.bottom, minHeight: '100vh' }}>
+      <div className="zukki-root" style={{ paddingTop: insets.top, paddingBottom: insets.bottom, minHeight: '100vh', width: '100%' }}>
         <VStack gap={3} padding={4}>
+          <VStack>
+            <Heading level={1}>{requestsCopys.newRequest}</Heading>
+            <Text type="supporting">{requestsCopys.sentByZukki} · {formatClockTime(offer.offeredAt)}</Text>
+          </VStack>
           <Card padding={4}>
             <HStack gap={2} align="center">
               <Owl src={owlRunningRight} scale={0.42} clip />
@@ -56,11 +65,19 @@ export default function RequestScreen(props: {
                 <StatusDot variant="error" label={requestsCopys.urgent} />
                 <Text type="supporting">{offer.customerName} · {offer.distanceKm} {requestsCopys.approximateDistance}</Text>
               </HStack>
-              <Heading level={1}>{offer.title}</Heading>
+              <Heading level={1} accessibilityLevel={2}>{offer.title}</Heading>
+              {firstMedia && <CustomerMedia media={firstMedia} />}
+              {offer.customerQuote && <Text color="secondary" style={{ fontStyle: 'italic' }}>"{offer.customerQuote}"</Text>}
+              <Divider />
+              <HStack gap={1} align="center">
+                <Avatar size="xsm" src={owlStatic} alt="" />
+                <Text type="label">{requestsCopys.zukkiName}</Text>
+              </HStack>
               <Text>{offer.zukkiSummary}</Text>
+              <PossibleFaults faults={offer.possibleFaults} />
             </VStack>
           </Card>
-          <div className="zukki-actions">
+          <div className="zukki-actions zukki-request-footer">
             <Button label={requestsCopys.decline} variant="secondary" size="lg" width="100%" isDisabled={isExpired} onClick={() => props.onDecline()} />
             <Button label={requestsCopys.acceptAndChat} variant="primary" size="lg" width="100%" isDisabled={isExpired} onClick={() => props.onAccept()} />
           </div>
@@ -68,4 +85,9 @@ export default function RequestScreen(props: {
       </div>
     </Theme>
   );
+}
+
+// Local clock time of an ISO instant, e.g. "12:05 AM" (device-local, like the chat; D7).
+function formatClockTime(iso: string) {
+  return new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 }
