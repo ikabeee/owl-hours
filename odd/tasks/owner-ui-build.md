@@ -135,3 +135,10 @@ slice, delegated with test-first discipline.
   - `not_found` renders blank, because the handoff has no copy for it;
   - none of this was run on a device or browser.
   Next: T5 jobs slice.
+- L17 (2026-10-29): RDD review of the whole branch `34267d2..89b37ba` (medium;
+  user granted). One lens (reliability), approved and acknowledged.
+  Non-blocking follow-ups:
+  (1) `useRequestOffer.ts:63-67`: a rejected `findChat` after a committed
+  accept leaves the owner on the request screen;
+  (2) `ChatScreen.tsx:203-206`: restoring the draft overwrites text typed
+  while a send was in flight, including after a refused second tap.
