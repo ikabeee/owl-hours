@@ -278,3 +278,17 @@ slice, delegated with test-first discipline.
       the field shows "Polishing…";
     - the Switch is removed.
   - Checks: E2E 6/6 (flows tap "Message" index 1), unit 133/133, tsc clean.
+- L26 (user, 2026-10-29): "Haz squash and merge, y empezamos una nuvea
+  sesion".
+  - #15 → #16 → #17 → #18 are squash-merged into main in order. Each
+    branch is rebased onto main with `--onto` after the previous squash.
+  - Upstream: expo/expo#52503 (issue) and expo/expo#52509 (fix PR). Remove
+    `LogBox.ignoreLogs` in `app/_layout.tsx` once a release ships the fix.
+  - Open follow-ups from the reviews:
+    - a rejected `findChat` after a committed accept strands the owner;
+    - restoring the draft overwrites text typed during an in-flight send;
+    - `not_found` chat is a blank screen;
+    - the message field is single-line.
+  - Next: T5 jobs slice (quote). E2E runs with Maestro on the "Zukki
+    iPhone" simulator: `npx expo start --ios` in `apps/owner`, then
+    `maestro test .maestro` with JAVA_HOME=openjdk@17.
