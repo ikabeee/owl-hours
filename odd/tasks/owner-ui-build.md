@@ -332,3 +332,11 @@ slice, delegated with test-first discipline.
   (3) the alt text always says "video frame", even for photos;
   (4) an unknown likelihood value would throw;
   (5) "Sent by Zukki" shows device-local time, unasserted by e2e.
+- L31 (user, 2026-10-29): "Sí, corrige la 2 y abre el PR".
+  - Follow-up (2) fixed: `lib/mediaFrameSource` (4 tests, RED→GREEN)
+    resolves a demo id to its frame and keeps https/data URLs; anything
+    else returns null.
+  - `CustomerMedia` then shows only the caption, so no blank banner is
+    drawn. The lightbox hook moved into `MediaBanner`, which mounts only
+    when there is a frame.
+  - Checks: unit 160/160, tsc clean, request e2e flows 3/3.
