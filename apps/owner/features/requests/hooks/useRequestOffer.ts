@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { DEMO_NOW, business } from "../../../shared/data/mock.ts";
-import type { ID, OfferStatus, RequestOffer } from "../../../shared/data/types.ts";
+import type { ID, OfferStatus, PossibleFault, RequestOffer } from "../../../shared/data/types.ts";
 import type { AcceptOutcome } from "../lib/acceptOutcome.ts";
 import { acceptWindowSeconds, formatCountdown, secondsLeft } from "../lib/countdown.ts";
+import { requestFaults } from "../lib/requestFaults.ts";
 import { createFakeOffersClient, createOffersService } from "../services/offersService.ts";
 import type { OffersService } from "../services/offersService.ts";
 
@@ -14,9 +15,14 @@ export type RequestOfferDeps = {
   acceptWindowMin: { urgent: number; other: number };
 };
 
+export type RequestOfferDetails = Pick<
+  RequestOffer,
+  "title" | "customerName" | "distanceKm" | "zukkiSummary" | "media" | "customerQuote" | "offeredAt"
+> & { possibleFaults: PossibleFault[] };
+
 // Serializable by design: it crosses into the DOM component as props.
 export type RequestOfferView = {
-  offer: Pick<RequestOffer, "title" | "customerName" | "distanceKm" | "zukkiSummary">;
+  offer: RequestOfferDetails;
   status: OfferStatus;
   countdownText: string;
   secondsLeft: number;
@@ -70,7 +76,7 @@ export function useRequestOffer(id: ID, deps?: Partial<RequestOfferDeps>): Reque
 
   const remaining = secondsLeft(offer.expiresAt, now);
   return {
-    offer,
+    offer: { ...offer, possibleFaults: requestFaults(offer) },
     status: offer.status,
     countdownText: formatCountdown(remaining),
     secondsLeft: remaining,

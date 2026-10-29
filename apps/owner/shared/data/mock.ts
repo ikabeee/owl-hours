@@ -42,6 +42,11 @@ export const offers: RequestOffer[] = [
     media: [{ kind: "video", url: "bath-leak-video", thumbUrl: "bath-leak", durationS: 14 }],
     customerQuote: "The toilet won't stop running and water is reaching the hallway.",
     zukkiSummary: "Valve closed, no cables near the water. Likely a worn fill valve. From your prices: $130–160.",
+    possibleFaults: [
+      { label: "Worn fill valve", likelihood: "likely" },
+      { label: "Flapper not sealing", likelihood: "possible" },
+      { label: "Float set too high", likelihood: "possible" },
+    ],
     suggestedQuote: { min: 130, max: 160 },
     offeredAt: "2026-10-28T00:05:00-05:00",
     expiresAt: "2026-10-28T00:10:00-05:00",

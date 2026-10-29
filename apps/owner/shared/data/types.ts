@@ -38,6 +38,10 @@ export type DeclineReason = "busy" | "too_far" | "not_offered" | "other";
 
 export type Media = { kind: "video" | "photo"; url: string; thumbUrl: string; durationS?: number };
 
+// Zukki's diagnosis from the customer's evidence, shown to the owner as a short list.
+export type FaultLikelihood = "likely" | "possible";
+export type PossibleFault = { label: string; likelihood: FaultLikelihood };
+
 export type RequestOffer = {
   id: ID;
   customerName: string;             // first name + initial only: "Ana L."
@@ -48,6 +52,7 @@ export type RequestOffer = {
   media: Media[];
   customerQuote?: string;           // transcript of the voice note
   zukkiSummary: string;             // "Valve closed, no cables near the water…"
+  possibleFaults?: PossibleFault[]; // absent when Zukki could not diagnose from the evidence
   suggestedQuote: MoneyRange;
   offeredAt: ISODate;
   expiresAt: ISODate;               // countdown is computed from this, never stored client-side

@@ -30,6 +30,8 @@ slice, delegated with test-first discipline.
   "deja agentes desarrollando"), 2 parallel units with disjoint surfaces:
   U1 chats (items 1, 2, 4, 5, 6), U2 requests (item 3); Sonnet 5.5 high,
   status: done (GREEN)
+- T3.1: request evidence + possible faults, S2-S3, route: delegated (Claude
+  Sonnet 5.5, effort high), branch `feat/owner-request-evidence`
 - T5: jobs slice (quote), S2-S3
 - T6: content + business slices, S2-S3
 
@@ -292,3 +294,71 @@ slice, delegated with test-first discipline.
   - Next: T5 jobs slice (quote). E2E runs with Maestro on the "Zukki
     iPhone" simulator: `npx expo start --ios` in `apps/owner`, then
     `maestro test .maestro` with JAVA_HOME=openjdk@17.
+- L27 (user, 2026-10-29): "me referia al handoff que se le enviaba al
+  owner business en la app" / "Agrega también la lista de posibles fallas.
+  Y tenemos que agregarlo a la UI".
+  - Gap: HANDOFF-RN-UI §8 "Request detail" asks for "video `Thumbnail`
+    (→ `Lightbox`)", "the customer's quote in italics" and "`ZukkiTag` +
+    summary". T3's RequestScreen renders only the title, name, distance and
+    zukkiSummary.
+  - New requirement (not in the handoff): a structured list of possible
+    faults on the request.
+- L28 (user, 2026-10-29): "Go".
+  - T3.1 RED approved: 23 new tests, 20 failing; existing 133 green.
+  - Approved answers:
+    - the media banner is the Astryx `Thumbnail` sized to the design's
+      326×128 via `style`;
+    - the ZukkiTag avatar reuses the owl `static` frame (no new binary);
+    - the Lightbox shows the thumbnail with "Video · 0:14" (no real video in
+      the demo);
+    - the sent time is device-local, as in D7.
+  - New copy approved: "Possible faults", "Likely", "Possible", "Photo".
+  - Tests locked (`t3.1-request-evidence`).
+- L29 (2026-10-29): T3.1 GREEN.
+  - The coder built the evidence UI, the possible faults list (Badge) and
+    `sortLikelyFirst` / `mediaDurationText` in lib.
+  - The operator added the sticky bottom action bar: the longer card had
+    pushed Decline / Accept and chat off screen, and 3 e2e flows failed
+    until it was in place.
+  - New e2e flow `07-request-evidence`.
+  - Checks: unit 156/156, tsc clean, e2e 7/7.
+  - D10 is in `docs/DECISIONS.md`. Lock removed.
+- L30 (2026-10-29): RDD review of T3.1 (medium; user granted). One lens
+  (reliability), approved and acknowledged. Non-blocking follow-ups:
+  (1) no test drives `useRequestOffer` to prove sorted faults or the
+      empty-list default;
+  (2) `CustomerMedia` renders a blank banner for any media that is not
+      the demo frame (no fallback);
+  (3) the alt text always says "video frame", even for photos;
+  (4) an unknown likelihood value would throw;
+  (5) "Sent by Zukki" shows device-local time, unasserted by e2e.
+- L31 (user, 2026-10-29): "Sí, corrige la 2 y abre el PR".
+  - Follow-up (2) fixed: `lib/mediaFrameSource` (4 tests, RED→GREEN)
+    resolves a demo id to its frame and keeps https/data URLs; anything
+    else returns null.
+  - `CustomerMedia` then shows only the caption, so no blank banner is
+    drawn. The lightbox hook moved into `MediaBanner`, which mounts only
+    when there is a frame.
+  - Checks: unit 160/160, tsc clean, request e2e flows 3/3.
+- L32 (2026-10-29): RDD review of T3.1 plus the banner fix (user granted),
+  approved and acknowledged.
+  - It found that `mediaFrameSource` resolved inherited property names
+    ("constructor") to a Function.
+  - Fixed with `Object.hasOwn` (3 tests, RED→GREEN; unit 163/163).
+  - Still open from the review:
+    - no test drives the hook;
+    - the photo alt text says "video" (now reachable with real URLs);
+    - an unknown likelihood throws;
+    - the sent time is device-local.
+- L33 (user, 2026-10-29): "Corrígelos en este PR y haz squash and merge".
+  - The remaining review follow-ups are fixed test-first: 9 tests,
+    RED→GREEN, unit 172/172.
+  - Hook boundary: `lib/requestFaults` returns faults likely first,
+    defaults to [], and maps an unknown likelihood to "possible". The hook
+    uses it, so the screen never hits an unknown badge.
+  - Alt text: `lib/mediaAltText` gives a video "Frame from the customer's
+    video" and a photo "Photo from the customer" (new copy).
+  - Sent time: `lib/sentTimeText` uses the wall clock in the timestamp's
+    own offset ("12:05 AM" on any device). A malformed timestamp shows just
+    "Sent by Zukki".
+  - E2E 7/7.
