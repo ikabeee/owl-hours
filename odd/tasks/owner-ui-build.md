@@ -32,7 +32,10 @@ slice, delegated with test-first discipline.
   status: done (GREEN)
 - T3.1: request evidence + possible faults, S2-S3, route: delegated (Claude
   Sonnet 5.5, effort high), branch `feat/owner-request-evidence`
-- T5: jobs slice (quote), S2-S3
+- T5: jobs slice: quote modal + job detail + chat SuggestionRow entry,
+  S2-S3, route: delegated (Claude Sonnet 5.5, effort high, same flow as
+  T3/T4), branch `feat/owner-jobs-quote`, status: done (GREEN)
+- T5.1: Jobs list (`OwJobs`) + finish (`OwJobDone`), S2-S3
 - T6: content + business slices, S2-S3
 
 ## Log
@@ -362,3 +365,56 @@ slice, delegated with test-first discipline.
     own offset ("12:05 AM" on any device). A malformed timestamp shows just
     "Sent by Zukki".
   - E2E 7/7.
+- L34 (user, 2026-10-29): "Vamos con T5"; scope chosen: "Quote + detail".
+  - T5 = `OwQuote` (modal, `chat/[id]/quote`) + `OwJob` (`job/[id]`) + the
+    `SuggestionRow` "Review" in the chat, so the demo path reaches the quote
+    and "View job and evidence" stops being a no-op.
+  - `OwJobs` and `OwJobDone` move to T5.1.
+  - Assignment: `docs/HANDOFF-OWNER-APP.md` "T5 assignment".
+- L35 (user, 2026-10-29): Q2 "Simulated approval (Recommended)"; the rest
+  approved with the operator's answers.
+  - RED by the coder: 87 new tests, 86 failing; existing 172 green; tsc
+    clean (operator re-ran: 259/173/86).
+  - Answers:
+    - (1) `on_site` shows "Finish" disabled until T5.1; pre-approval statuses
+      show a disabled button with no next status;
+    - (2) `sendQuote` marks `quoted`; the demo fake client then approves for
+      Ana (`customer_approved` + "Quote sent and approved"); the real service
+      stops at `quoted`;
+    - (3) refusals return `null`; the hook gates "Send quote" with
+      `canSendQuote`;
+    - (4) `updateJobStatus` allows only the next owner step; `done` is T5.1;
+    - (5) new copy approved: "Use whole numbers above 0. The first number
+      can't be higher than the second.";
+    - (6)-(7) copy templated by first name and distance; `Job` gains optional
+      `approvedAt` and `distanceKm` (`shared/data`, additive);
+    - (8) pending timeline steps derived from the status;
+    - (9) duplicated helpers (clock time, first name, money range) move to
+      `shared/lib/` now;
+    - (10) a failed suggestion lookup means "no suggestion";
+    - (11) `getQuoteDraft("c_carlos")` is `null`.
+- L36 (user, 2026-10-29): "Approve and go GREEN".
+  - Adjusted RED: 268 tests, 94 failing, existing 172 green, tsc clean;
+    `shared/lib` 10/10 failing (not yet in the `test` script).
+  - Answers: footer hidden before approval, "Finish" disabled at `done`;
+    `en_route` appends "On the way" (new RED test file); both steps pending
+    before approval; one approval entry; distance as a number; no distance
+    → "Shared after Ana approved".
+  - Tests locked (`t5-jobs-quote`).
+- L37 (2026-10-29): T5 GREEN by the coder; no locked test touched.
+  - Gates: owner `npm test` 306/306 (script now includes `shared/**`),
+    owner tsc clean, `expo export --platform ios` OK. Root `npm test` and
+    typecheck fail only in `api`, `whatsapp` and `meta-models` on missing
+    installs (`packages/whatsapp` has no `node_modules`); environmental,
+    not this diff.
+  - Operator e2e review found two defects, fixed inline:
+    - "Review" was truncated ("Revi…"): `SuggestionRow` now lets the text
+      wrap and keeps the button's width;
+    - "On the way" read 12:05 AM, before the 12:07 approval: the jobs demo
+      clock now starts at 12:07 (test-first, `demoJobsService.test.ts`).
+  - E2E: full suite 8/9 (`03-accept-opens-chat` flaky, passed alone);
+    08 and 09 pass. Evidence: `.maestro/evidence/2026-10-29-jobs-quote/`.
+  - `OwQuote` handoff pair retired; `OwJob` stays until T5.1 builds Finish.
+  - D11 in `docs/DECISIONS.md`. Lock removed.
+  - Not covered: a rejected `getQuoteDraft`/`getJob` leaves a blank screen
+    (no error state yet).

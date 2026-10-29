@@ -35,6 +35,7 @@ import type { ComposerStep, SendOutcome, ThreadMessage } from '../lib/chatView.t
 import type { PolishChoice } from '../lib/ownerDelivery.ts';
 import { chatsCopys } from '../copys/chatsCopys';
 import { arrivedOwnMessage } from '../lib/followLatest.ts';
+import { SuggestionRow } from './SuggestionRow';
 
 export default function ChatScreen(props: {
   customerName: string;
@@ -46,11 +47,14 @@ export default function ChatScreen(props: {
   polishEnabled: boolean;
   polishFailed: boolean;
   sendFailed: boolean;
+  hasJob: boolean; // "View job and evidence" opens the conversation's job, so it shows only when there is one
+  suggestedQuoteText: string | null; // "$130–160" for the SuggestionRow; null when Zukki suggests nothing
   insets: { top: number; bottom: number };
   onSend: (text: string) => Promise<SendOutcome>;
   onSendChoice: (choice: PolishChoice) => Promise<void>;
   onSetPolishEnabled: (enabled: boolean) => Promise<void>;
   onOpenJob: () => Promise<void>;
+  onReviewQuote: () => Promise<void>;
   onBack: () => Promise<void>;
   dom?: DOMProps;
 }) {
@@ -65,7 +69,7 @@ export default function ChatScreen(props: {
               <ChatSystemMessage>{chatsCopys.youAcceptedAt} {formatClockTime(props.acceptedAt)}</ChatSystemMessage>
             )}
             {props.thread.map((message) => (
-              <ThreadEntry key={message.id} message={message} onOpenJob={props.onOpenJob} />
+              <ThreadEntry key={message.id} message={message} onOpenJob={props.hasJob ? props.onOpenJob : null} />
             ))}
           </ChatMessageList>
           <FollowOwnMessages thread={props.thread} />
@@ -112,20 +116,21 @@ function TopBar(props: { customerName: string; onBack: () => Promise<void> }) {
   );
 }
 
-function ThreadEntry(props: { message: ThreadMessage; onOpenJob: () => Promise<void> }) {
+function ThreadEntry(props: { message: ThreadMessage; onOpenJob: (() => Promise<void>) | null }) {
   const { message } = props;
   if (message.from === 'zukki') return <ZukkiSummary text={message.text} onOpenJob={props.onOpenJob} />;
   if (message.from === 'customer') return <CustomerMessage text={message.text} />;
   return <OwnerMessage text={message.text} label={message.deliveryLabel} />;
 }
 
-function ZukkiSummary(props: { text: string; onOpenJob: () => Promise<void> }) {
+function ZukkiSummary(props: { text: string; onOpenJob: (() => Promise<void>) | null }) {
+  const { onOpenJob } = props;
   return (
     <Card padding={3}>
       <VStack gap={1}>
         <Text type="label">{chatsCopys.zukkiName}</Text>
         <Text type="supporting">{props.text}</Text>
-        <Button label={chatsCopys.viewJobAndEvidence} variant="ghost" size="lg" onClick={() => props.onOpenJob()} />
+        {onOpenJob && <Button label={chatsCopys.viewJobAndEvidence} variant="ghost" size="lg" onClick={() => onOpenJob()} />}
       </VStack>
     </Card>
   );
@@ -150,7 +155,17 @@ function OwnerMessage(props: { text: string; label: string | null }) {
 
 type FooterProps = Pick<
   Parameters<typeof ChatScreen>[0],
-  'customerFirstName' | 'step' | 'preview' | 'polishEnabled' | 'polishFailed' | 'sendFailed' | 'onSend' | 'onSendChoice' | 'onSetPolishEnabled'
+  | 'customerFirstName'
+  | 'step'
+  | 'preview'
+  | 'polishEnabled'
+  | 'polishFailed'
+  | 'sendFailed'
+  | 'suggestedQuoteText'
+  | 'onSend'
+  | 'onSendChoice'
+  | 'onSetPolishEnabled'
+  | 'onReviewQuote'
 >;
 
 // The draft lives here, not in Composer: Composer unmounts while polishing, and a
@@ -160,6 +175,9 @@ function Footer(props: FooterProps) {
 
   return (
     <VStack gap={2} padding={3}>
+      {props.suggestedQuoteText && props.step !== 'comparing' && (
+        <SuggestionRow quoteText={props.suggestedQuoteText} onReview={props.onReviewQuote} />
+      )}
       <FooterBody {...props} draft={draft} onDraftChange={setDraft} />
     </VStack>
   );

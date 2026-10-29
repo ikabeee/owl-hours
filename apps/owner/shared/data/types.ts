@@ -95,6 +95,8 @@ export type Job = {
   customerName: string;
   technician: string;
   address?: string;                 // present from customer_approved on
+  distanceKm?: number;              // from the business to the customer, shown with the address
+  approvedAt?: ISODate;             // when the customer approved the quote
   quote: Quote;
   finalTotal?: Money;
   status: JobStatus;

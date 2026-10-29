@@ -70,7 +70,8 @@ instead of editing it.
 | T2 | Restructure `apps/owner` into features × 5 concerns | `apps/owner/**` (moves only, no behavior change; `lib/` untouched) | Gates only |
 | T3 | Requests slice (list + detail on real structure) | `features/requests/**`, `shared/data/**` if needed | Yes (above) |
 | T4 | Chats slice (thread + polish A/B) | `features/chats/**` | Yes |
-| T5 | Jobs slice (quote + job detail) | `features/jobs/**` | Yes |
+| T5 | Jobs slice (quote + job detail + chat SuggestionRow) | see T5 assignment | Yes |
+| T5.1 | Jobs list + finish | `features/jobs/**` | Yes |
 | T6 | Content + business slices | `features/content/**`, `features/business/**` | Yes |
 
 One task at a time, in order. After each: gates green + a short report
@@ -184,6 +185,105 @@ callbacks), and the route.
 
 **Report:** RED output first; after GREEN the four gates with observed
 results and a one-line diff summary per file. Do not commit.
+
+## T5 assignment (Claude Sonnet 5.5 subagent, effort high): quote + job detail
+
+**Spec.** Demo path step "quote", plus the job the chat links to. Sources:
+`handoff-ui/owner-app/HANDOFF-RN-UI.md` §8 "Quote (`OwQuote`), modal" and
+"Job detail (`OwJob`)", §5 (`NumberInput`, `MetadataList`, `SuggestionRow`,
+`Timeline`), §7 flows "Chat" and "Job", §9 `sendQuote(convId, quote)`,
+`useJob(id)`, `updateJobStatus(id, status)`. Copy and layout from
+`design/html/OwQuote.dc.html`, `OwJob.dc.html` and the suggestion row in
+`OwChat.dc.html` ("Zukki suggests sending the quote: $130–160", "Review").
+
+- Quote: "Filled in by Zukki from your prices. Change anything.";
+  "Leaking toilet · Ana L."; editable lines Visit $45, Night fee $25, Fill
+  valve repair $60–90; "Estimated total $130–160", recalculated live;
+  `MetadataList` Arrival 12:55–1:25 AM, Technician Mario R., Note "Excludes
+  floor damage"; "Ana approves it in WhatsApp. Nothing is booked until she
+  does."; footer Cancel + "Send quote". Validation: "min ≤ max, positive
+  whole numbers"; "Send quote" is disabled while any line is invalid.
+- Total rule: total min = sum of line minimums, total max = sum of line
+  maximums (same invariant as `packages/shared/src/schemas.ts` `quoteSchema`).
+  A single-amount line counts as min = max.
+- Job detail: title + "Approved by Ana at 12:07 AM" (success); address card
+  "128 Palm Ave, apt 4", "Shared after Ana approved · 1.2 km", Map; technician
+  row "Mario R." with Change; `MetadataList` Quote $130–160, Arrival
+  12:55–1:25 AM; `Timeline` from `job.timeline`. Primary button follows the
+  status: `customer_approved` "Start trip" → `en_route` "I'm here" →
+  `on_site`; disabled after `done`.
+- Location privacy (AGENTS.md): the address is shown only from
+  `customer_approved` on; before that the card shows no street address.
+- Chat: a `SuggestionRow` above the composer ("Zukki suggests sending the
+  quote: $130–160" + ghost "Review") opens `chat/[id]/quote`; "View job and
+  evidence" opens `job/[id]` for the conversation's job.
+
+Operator decisions (do not reopen):
+- No new dependency: `apps/owner` does not import `@owl-hours/shared` or zod;
+  the total math is a pure `features/jobs/lib/` function.
+- No feature imports another. The chat learns its job id and suggested quote
+  from its own service (fake client reads `shared/data/mock.ts`: `anaJob`,
+  `offers`); the jobs feature owns the quote draft, `sendQuote` and job status.
+- Modal: declare `chat/[id]/quote` with `presentation: "modal"` in the root
+  Stack (https://docs.expo.dev/router/advanced/modals/).
+- "Send quote" returns to the chat (`router.back()`) after a successful send.
+  The quote message inside the chat thread and the Jobs "Waiting for … to
+  approve" line need a store shared by both features; they move to T5.1.
+- The "Finish" button and `job/[id]/finish` move to T5.1; T5's footer holds
+  only the status button.
+- Times are wall-clock in the timestamp's own offset, like
+  `features/requests/lib/sentTimeText.ts` (D7/L33).
+
+Out of T5: `OwJobs` (keep `JobsScreen` placeholder), `OwJobDone`, Change
+technician (no-op is fine, a Toast is not required), Map (static, no-op).
+
+**Edit surface.** `apps/owner/features/jobs/**`; `apps/owner/features/chats/**`
+only for the `SuggestionRow`, the chat's job id and suggested quote, and their
+tests; in GREEN only, new routes `apps/owner/app/chat/[id]/quote.tsx` and
+`apps/owner/app/job/[id].tsx`, `apps/owner/app/chat/[id].tsx` (wire
+`onOpenJob` and `onReviewQuote`), `apps/owner/app/_layout.tsx` (modal
+screen), and new Maestro flows under `apps/owner/.maestro/`. Do not touch
+`shared/`, `lib/`, other features, or locked tests; report gaps instead.
+
+**Write these tests first, show them failing (RED), then stop for review:**
+
+1. `features/jobs/lib/*.test.ts` (pure): quote totals from lines ($45 + $25 +
+   $60–90 = $130–160; a changed line recalculates); line validation (min >
+   max, zero, negative, non-integer are invalid); money range text
+   ("$130–160", "$45"); job status → primary action label and next status,
+   disabled at `done`; address visibility per status.
+2. `features/jobs/services/jobsService.test.ts` (fake client, same shape as
+   `features/requests/services/offersService.ts`): `getQuoteDraft("c_ana")`
+   returns the demo lines and metadata, unknown conversation → `null`;
+   `sendQuote` with a valid quote resolves and marks the job `quoted`, an
+   invalid quote is refused; `getJob("job_ana")`, unknown → `null`;
+   `updateJobStatus` moves `customer_approved` → `en_route` and refuses a
+   transition that skips a step.
+3. `features/jobs/copys/jobsCopys.test.ts`: every referenced key exists and
+   is non-empty; demo strings verbatim: `"Filled in by Zukki from your
+   prices. Change anything."`, `"Send quote"`, `"Ana approves it in WhatsApp.
+   Nothing is booked until she does."`, `"Start trip"`, `"I'm here"`,
+   `"Shared after Ana approved · 1.2 km"`.
+4. `features/chats/` tests for the suggestion: the `c_ana` conversation
+   exposes job id `job_ana` and suggested quote `$130–160`; a conversation
+   with no job exposes neither; `"Zukki suggests sending the quote:"` and
+   `"Review"` copy verbatim.
+
+List every open question with the RED report (for example: what the primary
+button shows at `on_site`, and whether `sendQuote` on an already quoted job is
+allowed).
+
+**Then implement (GREEN):** `lib/`, `services/jobsService.ts` (injected
+client, fake by default, domain types from `shared/data/types.ts`),
+`hooks/useQuoteDraft.ts` and `hooks/useJob.ts` (only service consumers),
+`copys/jobsCopys.ts`, `components/QuoteScreen.tsx` and
+`components/JobScreen.tsx` (DOM, serializable props, top-level async
+callbacks, Astryx controls per §5, 48px buttons, body ≥ 16px), the chat
+`SuggestionRow`, the routes, and Maestro flows for chat → Review → Send
+quote → back to chat, and chat → View job → Start trip → "I'm here".
+
+**Report:** RED output first; after GREEN the gates with observed results,
+e2e results, and a one-line diff summary per file. Do not commit.
 
 ## Environment notes (this machine)
 

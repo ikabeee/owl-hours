@@ -1,14 +1,18 @@
-import { OWNER_TEXT, POLISHED_TEXT, anaMessages, conversations as seedConversations } from "../../../shared/data/mock.ts";
-import type { Conversation, ID, ISODate, Message, PolishPreview } from "../../../shared/data/types.ts";
+import { OWNER_TEXT, POLISHED_TEXT, anaJob, anaMessages, conversations as seedConversations, offers as seedOffers } from "../../../shared/data/mock.ts";
+import type { Conversation, ID, ISODate, Message, MoneyRange, PolishPreview } from "../../../shared/data/types.ts";
 import { buildAsWrittenMessage, buildChosenMessage } from "../lib/ownerDelivery.ts";
 import type { MessageStamp, PolishChoice } from "../lib/ownerDelivery.ts";
 
 export type ConversationsClient = {
   findConversation(id: ID): Promise<Conversation | null>;
+  findQuoteSuggestion(conversationId: ID): Promise<QuoteSuggestion | null>;
   listMessages(conversationId: ID): Promise<Message[]>;
   saveMessage(conversationId: ID, message: Message): Promise<void>;
   polish(text: string): Promise<PolishPreview>;
 };
+
+// Zukki's suggestion for a conversation that has a job: which job, and the quote it proposes.
+export type QuoteSuggestion = { jobId: ID; suggestedQuote: MoneyRange };
 
 export type ConversationsDeps = {
   now: () => ISODate;
@@ -20,6 +24,7 @@ export type SendResult = { sent: Message } | PolishPreview;
 
 export type ConversationsService = {
   getConversation(id: ID): Promise<Conversation | null>;
+  getQuoteSuggestion(conversationId: ID): Promise<QuoteSuggestion | null>;
   getMessages(conversationId: ID): Promise<Message[] | null>;
   sendMessage(conversationId: ID, text: string, options: { polish: boolean }): Promise<SendResult | null>;
   sendPolishChoice(conversationId: ID, preview: PolishPreview, choice: PolishChoice): Promise<Message | null>;
@@ -44,6 +49,8 @@ export function createConversationsService(
 
   return {
     getConversation: (id) => client.findConversation(id),
+
+    getQuoteSuggestion: (conversationId) => client.findQuoteSuggestion(conversationId),
 
     getMessages: async (conversationId) =>
       (await hasConversation(conversationId)) ? client.listMessages(conversationId) : null,
@@ -71,6 +78,7 @@ export function createFakeConversationsClient(): ConversationsClient {
   return {
     findConversation: async (id) => structuredClone(conversationsById.get(id) ?? null),
     listMessages: async (conversationId) => structuredClone(threadsById.get(conversationId) ?? []),
+    findQuoteSuggestion: async (conversationId) => findDemoQuoteSuggestion(conversationsById.get(conversationId)),
     saveMessage: async (conversationId, message) => {
       const thread = threadsById.get(conversationId) ?? [];
       threadsById.set(conversationId, [...thread, structuredClone(message)]);
@@ -81,6 +89,14 @@ export function createFakeConversationsClient(): ConversationsClient {
       language: "English",
     }),
   };
+}
+
+// Zukki suggests the quote of the offer behind a conversation, but only when that conversation has a job.
+function findDemoQuoteSuggestion(conversation: Conversation | undefined): QuoteSuggestion | null {
+  if (!conversation || anaJob.conversationId !== conversation.id) return null;
+
+  const offer = seedOffers.find((candidate) => candidate.id === conversation.offerId);
+  return offer ? { jobId: anaJob.id, suggestedQuote: { ...offer.suggestedQuote } } : null;
 }
 
 // Wall clock and a per-service counter; no crypto, so it also runs on Hermes.

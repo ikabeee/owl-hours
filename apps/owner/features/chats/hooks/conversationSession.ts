@@ -2,12 +2,13 @@
 // useConversation is a thin React adapter over it.
 import type { ID, Message } from "../../../shared/data/types.ts";
 import { firstName } from "../lib/customerName.ts";
+import { moneyRangeText } from "../../../shared/lib/moneyText.ts";
 import type { ChatView, ConversationSnapshot, SendOutcome } from "../lib/chatView.ts";
 import { canStartChoice, canStartSend, composerReducer, initialComposerState } from "../lib/composerMachine.ts";
 import type { ComposerEvent, ComposerState } from "../lib/composerMachine.ts";
 import { deliveryLabel } from "../lib/ownerDelivery.ts";
 import type { PolishChoice } from "../lib/ownerDelivery.ts";
-import type { ConversationsService, SendResult } from "../services/conversationsService.ts";
+import type { ConversationsService, QuoteSuggestion, SendResult } from "../services/conversationsService.ts";
 
 export type ConversationSession = {
   getSnapshot: () => ConversationSnapshot; // same reference until something changes
@@ -19,7 +20,9 @@ export type ConversationSession = {
   dispose: () => void; // results that arrive afterwards are ignored
 };
 
-type LoadState = { status: "loading" | "not_found" | "failed" } | { status: "ready"; customerName: string; messages: Message[] };
+type LoadState =
+  | { status: "loading" | "not_found" | "failed" }
+  | { status: "ready"; customerName: string; messages: Message[]; suggestion: QuoteSuggestion | null };
 
 export function createConversationSession(service: ConversationsService, id: ID): ConversationSession {
   let loadState: LoadState = { status: "loading" };
@@ -138,12 +141,25 @@ export function createConversationSession(service: ConversationsService, id: ID)
 
 async function fetchChat(service: ConversationsService, id: ID): Promise<LoadState> {
   try {
-    const [conversation, messages] = await Promise.all([service.getConversation(id), service.getMessages(id)]);
+    const [conversation, messages, suggestion] = await Promise.all([
+      service.getConversation(id),
+      service.getMessages(id),
+      findSuggestionOrNone(service, id),
+    ]);
     if (!conversation || !messages) return { status: "not_found" };
 
-    return { status: "ready", customerName: conversation.customerName, messages };
+    return { status: "ready", customerName: conversation.customerName, messages, suggestion };
   } catch {
     return { status: "failed" };
+  }
+}
+
+// The suggestion is a convenience: a failed lookup means "no suggestion", never a failed chat.
+async function findSuggestionOrNone(service: ConversationsService, id: ID): Promise<QuoteSuggestion | null> {
+  try {
+    return await service.getQuoteSuggestion(id);
+  } catch {
+    return null;
   }
 }
 
@@ -154,7 +170,7 @@ function buildSnapshot(loadState: LoadState, composer: ComposerState): Conversat
 }
 
 function buildChatView(
-  { customerName, messages }: Extract<LoadState, { status: "ready" }>,
+  { customerName, messages, suggestion }: Extract<LoadState, { status: "ready" }>,
   composer: ComposerState,
 ): ChatView {
   return {
@@ -163,6 +179,8 @@ function buildChatView(
     acceptedAt: messages[0]?.sentAt ?? null,
     thread: messages.map((message) => ({ ...message, deliveryLabel: deliveryLabel(message) })),
     step: composer.step,
+    jobId: suggestion?.jobId ?? null,
+    suggestedQuoteText: suggestion ? moneyRangeText(suggestion.suggestedQuote) : null,
     preview: composer.preview,
     polishEnabled: composer.polishEnabled,
     polishFailed: composer.polishFailed,

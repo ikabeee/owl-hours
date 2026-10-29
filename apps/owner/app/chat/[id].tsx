@@ -28,11 +28,16 @@ export default function ChatRoute() {
       polishEnabled={view.polishEnabled}
       polishFailed={view.polishFailed}
       sendFailed={view.sendFailed}
+      hasJob={view.jobId !== null}
+      suggestedQuoteText={view.suggestedQuoteText}
       insets={safeInsets}
       onSend={view.send}
       onSendChoice={view.sendChoice}
       onSetPolishEnabled={view.setPolishEnabled}
-      onOpenJob={async () => {}} // the job screen lands in T5
+      onOpenJob={async () => {
+        if (view.jobId) router.push({ pathname: '/job/[id]', params: { id: view.jobId } });
+      }}
+      onReviewQuote={async () => router.push({ pathname: '/chat/[id]/quote', params: { id } })}
       onBack={async () => router.back()}
       dom={domHost}
     />

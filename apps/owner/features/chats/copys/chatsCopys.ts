@@ -7,6 +7,9 @@ const copys = {
   youAcceptedAt: "You accepted at",
   zukkiName: "Zukki",
   viewJobAndEvidence: "View job and evidence",
+  // suggestion row above the composer
+  zukkiSuggestsQuote: "Zukki suggests sending the quote:",
+  reviewQuote: "Review",
   // composer
   messageLabel: "Message",
   writeToPlaceholder: "Write to",

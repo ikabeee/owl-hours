@@ -138,3 +138,34 @@ it with a new one.
   - The `Thumbnail` banner is a CSS override of Astryx's 64px square
     (`requestScreen.css`).
   - The demo Lightbox shows the video frame, not a video.
+
+## D11 — Quote modal, job detail and the chat suggestion (2026-10-29, T5)
+
+- **Decision:** the jobs feature owns the quote and the job.
+  - `chat/[id]/quote` is a modal route (`presentation: "modal"` in the root
+    Stack). The DOM screen edits the lines locally and recalculates the
+    total live; the hook builds the `Quote` and sends it once.
+  - The total is the sum of the line minimums and maximums, the invariant
+    of `packages/shared` `quoteSchema`, written as a pure
+    `features/jobs/lib` function: `apps/owner` takes no new dependency.
+  - `job/[id]` shows the address only from `customer_approved` on. The
+    primary button follows the status: "Start trip" → "I'm here" →
+    "Finish" (disabled until T5.1). The footer is hidden before approval.
+    `en_route` appends "On the way" to the timeline.
+  - The demo fake client approves a sent quote for the customer, since the
+    WhatsApp approval does not exist yet. The real service contract stops
+    at `quoted`.
+  - The chat learns its job id and suggested quote from its own service,
+    so no feature imports another. A failed lookup means no suggestion.
+  - Clock time, first name and money range text moved to `shared/lib/`
+    (two callers each); the owner `test` script runs `shared/**`.
+  - `Job` gains optional `approvedAt` and `distanceKm`.
+- **Why:** the demo path reaches the quote from the chat, and "View job and
+  evidence" needed a target (HANDOFF-RN-UI §7, §8). The user chose the
+  simulated approval (L35).
+- **Consequences:**
+  - The quote message in the chat thread and the Jobs "Waiting for … to
+    approve" line need a store shared by chats and jobs (T5.1). Today each
+    jobs hook mounts its own demo service.
+  - The jobs demo clock starts at 12:07 AM (OwQuote's status bar), so the
+    timeline stays in order; the requests hook keeps its own clock.
