@@ -25,7 +25,10 @@ export default function RootLayout() {
 
   return (
     <SafeAreaProvider>
-      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: "#f1f1f1" } }} />
+      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: "#f1f1f1" } }}>
+        {/* OwQuote slides up over the chat: https://docs.expo.dev/router/advanced/modals/ */}
+        <Stack.Screen name="chat/[id]/quote" options={{ presentation: "modal" }} />
+      </Stack>
     </SafeAreaProvider>
   );
 }

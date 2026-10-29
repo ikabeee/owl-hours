@@ -1,0 +1,31 @@
+appId: host.exp.Exponent
+name: View job and evidence opens the job, Start trip then I'm here
+---
+- runFlow:
+    file: subflows/open.yaml
+    env: { ROUTE: "chat/c_ana", WAIT_FOR: "View job and evidence" }
+- runFlow: subflows/dismiss-logbox.yaml
+- tapOn: "View job and evidence"
+- runFlow: subflows/dismiss-logbox.yaml
+- extendedWaitUntil:
+    visible: "Approved by Ana at 12:07 AM"
+    timeout: 15000
+- assertVisible: "128 Palm Ave, apt 4"
+- assertVisible: "Shared after Ana approved · 1.2 km"
+- assertVisible: "Start trip"
+- takeScreenshot: 09-job-detail
+- tapOn: "Start trip"
+- runFlow: subflows/dismiss-logbox.yaml
+- extendedWaitUntil:
+    visible: "I'm here"
+    timeout: 10000
+- assertNotVisible: "Start trip"
+- takeScreenshot: 09-job-en-route
+- tapOn: "I'm here"
+- runFlow: subflows/dismiss-logbox.yaml
+# At on_site the primary reads "Finish" and stays disabled until T5.1.
+- extendedWaitUntil:
+    visible: "Finish"
+    timeout: 10000
+- assertNotVisible: "I'm here"
+- takeScreenshot: 09-job-on-site

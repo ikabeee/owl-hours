@@ -17,6 +17,8 @@ export type ChatView = {
   thread: ThreadMessage[];
   step: ComposerStep;
   preview: PolishPreview | null; // set only while step is "comparing"
+  jobId: string | null; // the job "View job and evidence" opens; null when the conversation has none
+  suggestedQuoteText: string | null; // "$130–160" for the SuggestionRow; null when Zukki suggests nothing
   polishEnabled: boolean;
   polishFailed: boolean;
   sendFailed: boolean;

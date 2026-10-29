@@ -85,6 +85,8 @@ export const anaJob: Job = {
   customerName: "Ana L.",
   technician: "Mario R.",
   address: "128 Palm Ave, apt 4",
+  distanceKm: 1.2,
+  approvedAt: "2026-10-28T00:07:00-05:00",
   quote: {
     lines: [
       { label: "Visit", amount: 45 },

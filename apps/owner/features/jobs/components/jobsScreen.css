@@ -1,0 +1,23 @@
+/* HANDOFF-RN-UI "Screen frame": the footer is the bottom action bar, so Cancel / Send quote and the
+   job's status button stay on screen while the content scrolls. */
+.zukki-jobs-footer {
+  position: sticky;
+  bottom: 0;
+  margin-inline: calc(-1 * var(--spacing-4, 16px));
+  padding: 12px var(--spacing-4, 16px);
+  background: var(--color-background-body);
+  border-top: 1px solid var(--color-border, rgba(0, 0, 0, 0.08));
+}
+.zukki-jobs-footer-single { display: block; }
+
+.zukki-success { color: var(--color-success); }
+
+/* Quote lines: the label takes the free space, the amount fields keep their width. */
+.zukki-quote-line { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 48px; }
+
+/* Timeline (HANDOFF-RN-UI section 6, "Timeline"): time column, dot, text. Rows still ahead are muted. */
+.zukki-timeline-row { display: flex; align-items: center; gap: 12px; min-height: 32px; }
+.zukki-timeline-time { width: 76px; flex-shrink: 0; font-variant-numeric: tabular-nums; }
+.zukki-timeline-dot { width: 10px; height: 10px; border-radius: 9999px; flex-shrink: 0; background: var(--color-accent); }
+.zukki-timeline-row-pending { opacity: 0.55; }
+.zukki-timeline-row-pending .zukki-timeline-dot { background: transparent; border: 2px solid var(--color-border-emphasized, #d4d4d4); box-sizing: border-box; }

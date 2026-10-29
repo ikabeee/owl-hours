@@ -1,0 +1,31 @@
+appId: host.exp.Exponent
+name: Review opens the quote, Send quote returns to the chat
+---
+- runFlow:
+    file: subflows/open.yaml
+    env: { ROUTE: "chat/c_ana", WAIT_FOR: "Polish with Zukki" }
+- runFlow: subflows/dismiss-logbox.yaml
+- assertVisible: ".*Zukki suggests sending the quote.*130.160.*"
+- takeScreenshot: 08-chat-suggestion-row
+- tapOn: "Review"
+- runFlow: subflows/dismiss-logbox.yaml
+- extendedWaitUntil:
+    visible: "Send a quote"
+    timeout: 15000
+- assertVisible: "Filled in by Zukki from your prices. Change anything."
+- assertVisible: "Leaking toilet · Ana L."
+- assertVisible: "Estimated total"
+- assertVisible: ".*130.160.*"
+- assertVisible: "12:55–1:25 AM"
+- assertVisible: "Mario R."
+- assertVisible: "Excludes floor damage"
+- assertVisible: "Ana approves it in WhatsApp. Nothing is booked until she does."
+- takeScreenshot: 08-quote-modal
+- tapOn: "Send quote"
+- runFlow: subflows/dismiss-logbox.yaml
+# router.back() returns to the chat, which is still mounted behind the modal.
+- extendedWaitUntil:
+    visible: "Polish with Zukki"
+    timeout: 15000
+- assertNotVisible: "Send a quote"
+- takeScreenshot: 08-chat-after-quote
