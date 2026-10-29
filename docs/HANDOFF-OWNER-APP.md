@@ -77,14 +77,17 @@ One task at a time, in order. After each: gates green + a short report
 (command → observed result). The operator (parent session) runs git and
 reviews; you never commit.
 
-## T3 assignment (Muse Spark 1.3 contributor): requests slice
+## T3 assignment (Claude Sonnet 5.5 subagent, effort high): requests slice
 
 **Spec.** `features/requests/` serves the owner request flow (demo path steps
 4–5): the hook loads the live offer; the detail screen counts down from
 `expiresAt`; Accept/Decline transition the offer; all visible text comes from
 `copys/`.
 
-**Edit surface.** `apps/owner/features/requests/**` only. Shared state enters
+**Edit surface.** `apps/owner/features/requests/**`, plus the `test` script in
+`apps/owner/package.json` (widen it to
+`node --test "lib/**/*.test.ts" "features/**/*.test.ts"` so the new tests run
+under `npm test`). Shared state enters
 via props (DOM serializable-props rule). Do not touch `app/`, `shared/`,
 `lib/`, or other features; if something looks missing there, report it.
 
@@ -93,7 +96,8 @@ via props (DOM serializable-props rule). Do not touch `app/`, `shared/`,
 1. `features/requests/lib/countdown.test.ts`
    - `formatCountdown(272)` → `"4:32"` (demo value).
    - `formatCountdown(0)` → `"0:00"`; negative input clamps to `"0:00"`.
-   - `secondsLeft("2026-10-28T00:05:00-05:00", "2026-10-28T00:05:28-05:00")` → `272`.
+   - `secondsLeft("2026-10-28T00:10:00-05:00", "2026-10-28T00:05:28-05:00")` → `272`
+     (`req_ana.expiresAt` from `shared/data/mock.ts`; `now` is injected).
    - `secondsLeft` past `expiresAt` → `0` (never negative).
 2. `features/requests/services/offersService.test.ts` (fake client, seeded
    from `shared/data/mock.ts`)

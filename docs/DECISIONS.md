@@ -52,3 +52,21 @@ it with a new one.
 - **Decision:** coders are, for now, the **Muse Spark 1.3 contributor** (behavior slices with tests, T3 onward) and **agy (Antigravity, Gemini 3.8 Flash)** (mechanical sweeps and audits, T2). This session orchestrates, reviews every iteration, and runs git.
 - **Why:** user directive (2026-10-28); no Claude subscription plan applies (D4).
 - **Consequences:** each harness works only inside its declared edit surface in `docs/HANDOFF-OWNER-APP.md`; the operator re-runs the gates before accepting a diff.
+
+## D6 — Requests slice contracts (2026-10-28)
+
+- **Decision:** `createOffersService(client)` returns async `{ getOffer, accept, decline }`
+  over a small `OffersClient` (`findOffer`, `saveOffer`); `createFakeOffersClient()`
+  seeds a `structuredClone` of `mock.ts` offers per instance. Only an `offered`
+  offer can be answered; any other status or unknown id resolves to `null`.
+  Copys are a flat `as const` object `requestsCopys` (`acceptWithin`,
+  `countdownLabel`, `ignoredNotice`, `urgent`, `approximateDistance`, `decline`,
+  `acceptAndChat`). `useRequestOffer(id, deps?)` takes `{ service, clock,
+  acceptWindowMin }`; the default clock starts at `DEMO_NOW` and advances with
+  real time since mount, ticking once per second.
+- **Why:** the demo offer expires in 2026, so a real `Date.now()` would render
+  0:00; the service holds no clock (the backend owns the final expiry rule);
+  the hook disables Accept and Decline at 0:00.
+- **Consequences:** swapping the fake for Supabase means a new `OffersClient`
+  only; `acceptWindowMin` is injected too (urgent 300 s, other 1800 s), so
+  `maxSeconds` is not hardcoded in the screen.

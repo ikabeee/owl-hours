@@ -20,7 +20,9 @@ slice, delegated with test-first discipline.
 
 - T1: this doc + handoff + DECISIONS seed, S1-S4, route: inline
 - T2: restructure to features×5-concerns (behavior-preserving), S1-S2
-- T3: requests slice: countdown lib + offers service + hook + copys, S2-S3
+- T3: requests slice: countdown lib + offers service + hook + copys, S2-S3,
+  route: delegated (Claude Sonnet 5.5, effort high, user's choice), branch
+  `feat/owner-requests-slice`, status: done (GREEN)
 - T4: chats slice (polish), S2-S3
 - T5: jobs slice (quote), S2-S3
 - T6: content + business slices, S2-S3
@@ -46,3 +48,27 @@ slice, delegated with test-first discipline.
   stay queued in `docs/HANDOFF-OWNER-APP.md`; they are not part of this PR.
   UI verified live at `http://localhost:8097/request/req_ana` (HTTP 200).
   Status stays `in-progress` until T3–T6 land.
+- L7 (user, 2026-10-28): "Usaremos claude sonnet 5.5 en high siguien el
+  mismo flujo de ODD". Before launch the operator fixed two defects in the
+  T3 assignment: the `secondsLeft` example used `expiresAt` 00:05:00 (past
+  `now`, so 0, not 272); corrected to `req_ana.expiresAt` 00:10:00. The
+  owner `test` script ran only `lib/tonight.test.ts`; the coder widens it to
+  include `features/**/*.test.ts` (added to the edit surface). Open for T3:
+  whether an `offered` offer past `expiresAt` can be accepted (not specified).
+- L8 (user, 2026-10-28): "Sí, apruebo los tests, bloquéalos y pasa al
+  GREEN". Approval covers the operator's answers to the RED open questions:
+  (1) no clock in the service; the hook disables Accept at 0:00 and the
+  backend owns the final rule; (2) design strings the screen does not render
+  today stay out of T3; (3) the `RequestsScreen` list placeholder stays out
+  of T3. Tests locked via `.claude/tests.lock`. GREEN edit surface adds
+  `app/request/[id].tsx` (the route must wire the hook; it holds a hardcoded
+  offer today). Operator finding for GREEN: `RequestScreen.tsx:45` hardcodes
+  `max={300}`; derive it from `acceptWindowMin` (urgent 5 / other 30 min).
+- L9 (2026-10-28): T3 GREEN by the Sonnet 5.5 coder; locked tests unchanged.
+  Operator review fix: hook `accept`/`decline` now return a boolean and the
+  route navigates only after a successful transition (previously it
+  navigated to the chat even when the offer was no longer `offered`).
+  Gates: owner `npm test` 30/30, owner tsc clean, `expo export` OK
+  (binary at `apps/owner/node_modules/.bin/expo`), root `npm test` 3/3,
+  root typecheck 5/5. Lock removed. Not checked: the first "4:32" frame on a
+  real render (no device/browser run). Next: T4 chats slice.
