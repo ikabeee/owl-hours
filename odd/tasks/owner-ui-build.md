@@ -30,6 +30,8 @@ slice, delegated with test-first discipline.
   "deja agentes desarrollando"), 2 parallel units with disjoint surfaces:
   U1 chats (items 1, 2, 4, 5, 6), U2 requests (item 3); Sonnet 5.5 high,
   status: done (GREEN)
+- T3.1: request evidence + possible faults, S2-S3, route: delegated (Claude
+  Sonnet 5.5, effort high), branch `feat/owner-request-evidence`
 - T5: jobs slice (quote), S2-S3
 - T6: content + business slices, S2-S3
 
@@ -292,3 +294,12 @@ slice, delegated with test-first discipline.
   - Next: T5 jobs slice (quote). E2E runs with Maestro on the "Zukki
     iPhone" simulator: `npx expo start --ios` in `apps/owner`, then
     `maestro test .maestro` with JAVA_HOME=openjdk@17.
+- L27 (user, 2026-10-29): "me referia al handoff que se le enviaba al
+  owner business en la app" / "Agrega también la lista de posibles fallas.
+  Y tenemos que agregarlo a la UI".
+  - Gap: HANDOFF-RN-UI §8 "Request detail" asks for "video `Thumbnail`
+    (→ `Lightbox`)", "the customer's quote in italics" and "`ZukkiTag` +
+    summary". T3's RequestScreen renders only the title, name, distance and
+    zukkiSummary.
+  - New requirement (not in the handoff): a structured list of possible
+    faults on the request.
