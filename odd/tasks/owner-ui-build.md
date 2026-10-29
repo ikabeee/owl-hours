@@ -340,3 +340,13 @@ slice, delegated with test-first discipline.
     drawn. The lightbox hook moved into `MediaBanner`, which mounts only
     when there is a frame.
   - Checks: unit 160/160, tsc clean, request e2e flows 3/3.
+- L32 (2026-10-29): RDD review of T3.1 plus the banner fix (user granted),
+  approved and acknowledged.
+  - It found that `mediaFrameSource` resolved inherited property names
+    ("constructor") to a Function.
+  - Fixed with `Object.hasOwn` (3 tests, RED→GREEN; unit 163/163).
+  - Still open from the review:
+    - no test drives the hook;
+    - the photo alt text says "video" (now reachable with real URLs);
+    - an unknown likelihood throws;
+    - the sent time is device-local.
