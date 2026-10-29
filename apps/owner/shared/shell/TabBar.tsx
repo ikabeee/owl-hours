@@ -14,7 +14,7 @@ export const TABS: { name: string; label: string; Icon: ComponentType<IconProps>
   { name: "requests", label: "Requests", Icon: Inbox },
   { name: "chats", label: "Chats", Icon: MessageCircle },
   { name: "jobs", label: "Jobs", Icon: Wrench },
-  { name: "content/index", label: "Content", Icon: LayoutGrid },
+  { name: "content", label: "Content", Icon: LayoutGrid },
   { name: "business/index", label: "Business", Icon: Store },
 ];
 

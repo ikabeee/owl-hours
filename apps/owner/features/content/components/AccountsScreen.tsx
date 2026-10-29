@@ -1,0 +1,138 @@
+'use dom';
+
+import '@astryxdesign/core/reset.css';
+import '@astryxdesign/core/astryx.css';
+import '@astryxdesign/theme-neutral/theme.css';
+import '@astryxdesign/theme-neutral/fonts.css';
+import '../../../shared/theme/zukki-theme.css';
+
+import type { DOMProps } from 'expo/dom';
+import { Theme } from '@astryxdesign/core/theme';
+import { neutralTheme } from '@astryxdesign/theme-neutral/built';
+import { VStack } from '@astryxdesign/core/Layout';
+import { Card } from '@astryxdesign/core/Card';
+import { Text } from '@astryxdesign/core/Text';
+import { Button } from '@astryxdesign/core/Button';
+import { Check, X } from 'lucide-react';
+import { contentCopys } from '../copys/contentCopys';
+import type { LinkedAccount } from '../../../shared/data/types';
+import ContentTopBar from './ContentTopBar';
+
+const CAN_DO_ITEMS = [
+  { icon: 'check', text: contentCopys.canDoDrafts, color: 'var(--color-success)' },
+  { icon: 'check', text: contentCopys.canDoTiming, color: 'var(--color-success)' },
+  { icon: 'x', text: contentCopys.cannotPublish, color: 'var(--color-error)' },
+] as const;
+
+export default function AccountsScreen(props: {
+  accounts: LinkedAccount[];
+  insets: { top: number; bottom: number };
+  onBack: () => Promise<void>;
+  onSeeDrafts: () => Promise<void>;
+  dom?: DOMProps;
+}) {
+  const { insets, accounts } = props;
+
+  return (
+    <Theme theme={neutralTheme}>
+      <div
+        className="zukki-root"
+        style={{
+          paddingTop: insets.top,
+          paddingBottom: insets.bottom,
+          minHeight: '100vh',
+          display: 'flex',
+          flexDirection: 'column',
+          background: 'var(--color-background-body)',
+        }}
+      >
+        <ContentTopBar
+          title={contentCopys.linkedAccounts}
+          subtitle={contentCopys.linkedAccountsSubtitle}
+          onBack={props.onBack}
+        />
+
+        {/* Content body */}
+        <div style={{ flex: 1, padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {/* Accounts list card */}
+          <Card padding={4}>
+            <VStack gap={0}>
+              {accounts.map((account, index) => {
+                const label = contentCopys.accountLabels[account.kind];
+                const subtitle = account.name;
+
+                return (
+                  <div
+                    key={account.kind}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 12,
+                      padding: '14px 0',
+                      borderTop: index === 0 ? 'none' : '1px solid var(--color-border)',
+                    }}
+                  >
+                    <VStack gap={0} style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 16, fontWeight: 600 }}>{label}</Text>
+                      <Text type="supporting" style={{ fontSize: 14 }}>
+                        {subtitle}
+                      </Text>
+                    </VStack>
+                    <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-text-primary)' }}>
+                      {contentCopys.connected}
+                    </span>
+                  </div>
+                );
+              })}
+            </VStack>
+          </Card>
+
+          {/* What Zukki can do */}
+          <Card padding={4}>
+            <VStack gap={3}>
+              <Text style={{ fontSize: 17, fontWeight: 700 }}>
+                {contentCopys.whatZukkiCanDo}
+              </Text>
+              {CAN_DO_ITEMS.map((item, index) => (
+                <div
+                  key={index}
+                  style={{
+                    display: 'flex',
+                    gap: 10,
+                    alignItems: 'flex-start',
+                    fontSize: 15,
+                    lineHeight: 1.4,
+                  }}
+                >
+                  {item.icon === 'check' ? (
+                    <Check
+                      size={18}
+                      color={item.color}
+                      strokeWidth={2.4}
+                      style={{ flexShrink: 0, marginTop: 2 }}
+                    />
+                  ) : (
+                    <X
+                      size={18}
+                      color={item.color}
+                      strokeWidth={2.4}
+                      style={{ flexShrink: 0, marginTop: 2 }}
+                    />
+                  )}
+                  <span>{item.text}</span>
+                </div>
+              ))}
+            </VStack>
+          </Card>
+
+          <Button
+            label={contentCopys.seeTodaysDrafts}
+            variant="primary"
+            size="lg"
+            onClick={() => void props.onSeeDrafts()}
+          />
+        </div>
+      </div>
+    </Theme>
+  );
+}
