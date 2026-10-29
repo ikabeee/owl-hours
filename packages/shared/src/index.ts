@@ -12,3 +12,5 @@ export {
   ticketSchema,
 } from "./schemas.ts";
 export type { PriceRule, Quote, QuoteLine, Ticket } from "./schemas.ts";
+export { CATEGORIES, HOME_EMERGENCY_CATEGORIES, categoryFromListReply, isCategory } from "./categories.ts";
+export type { Category } from "./categories.ts";

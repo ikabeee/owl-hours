@@ -1,26 +1,23 @@
-// Zukki API entry point. Wires routes; run with the serve command below.
 import { Hono } from "hono";
-import { createStore } from "./store.ts";
-import { jobsRoutes } from "./routes/jobs.ts";
-import { studioRoutes } from "./routes/studio.ts";
-import { voiceRoutes } from "./routes/voice.ts";
-import { whatsappRoutes } from "./routes/whatsapp.ts";
+import { whatsappRoutes, whatsappUnavailable, type WebhookDeps } from "./routes/whatsapp.ts";
+import { v1Routes, v1Unavailable, type V1Deps } from "./routes/v1.ts";
+import type { Unavailable } from "./v1-live.ts";
 
-export function createApp() {
-  const store = createStore();
+export type AppOptions = {
+  v1?: V1Deps | Unavailable | undefined;
+  whatsapp?: WebhookDeps | Unavailable | undefined;
+};
+
+// Public surface: /health, the WhatsApp webhook (signed by Meta) and /v1
+// (owner routes need a Supabase login, internal routes need the server key).
+export function createApp(options: AppOptions = {}) {
   const app = new Hono();
 
   app.get("/health", (c) => c.json({ ok: true }));
-  app.route("/jobs", jobsRoutes(store));
-  app.route("/webhooks/whatsapp", whatsappRoutes(receiveMessage));
-  app.route("/voice", voiceRoutes());
-  app.route("/studio", studioRoutes());
+  const v1 = options.v1 ?? { unavailable: "The v1 API is not configured on this server." };
+  app.route("/v1", "unavailable" in v1 ? v1Unavailable(v1.unavailable) : v1Routes(v1));
+  const whatsapp = options.whatsapp ?? { unavailable: "WhatsApp is not configured on this server." };
+  app.route("/webhooks/whatsapp", "unavailable" in whatsapp ? whatsappUnavailable(whatsapp.unavailable) : whatsappRoutes(whatsapp));
 
-  return { app, store };
+  return { app };
 }
-
-export function receiveMessage(_body: unknown): void {
-  // The worker drains this in the next slice; the webhook already answered.
-}
-
-export default createApp().app;

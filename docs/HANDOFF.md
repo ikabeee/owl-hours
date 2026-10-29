@@ -113,8 +113,8 @@ WhatsApp Cloud API ──webhook──▶ api (Node + Hono) ──▶ queue/work
 
 ```
 apps/owner          Expo app (screens 04, 05, 07, 10 + onboarding)
-apps/api            Hono server: routes/whatsapp.ts, routes/jobs.ts, routes/voice.ts, routes/studio.ts
-                    worker/process-message.ts, agent/{customer-agent,business-agent}.ts, agent/tools/*
+apps/api            Hono server: server.ts (listener), routes/whatsapp.ts, routes/v1*.ts (docs/API.md)
+                    worker/process-message.ts, agent/customer-agent.ts, agent/tools/*
 packages/shared     job-states.ts, zod schemas (Ticket, Quote, PriceRules), types
 packages/meta-models client.ts, muse-spark.ts, sam.ts, voice.ts, muse-image.ts
 supabase/           migrations, seed.sql (Northside, Mario, Ana, the demo request)

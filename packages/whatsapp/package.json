@@ -2,7 +2,14 @@
   "name": "@owl-hours/whatsapp",
   "version": "0.0.0",
   "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
   "scripts": {
+    "test": "node --test test/client.test.ts test/signature.test.ts test/webhook.test.ts",
     "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "zod": "^3"
   }
 }
