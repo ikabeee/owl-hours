@@ -12,7 +12,7 @@ export default function ChatRoute() {
   const safeInsets = { top: insets.top, bottom: insets.bottom };
 
   if (conversation.status === 'failed') {
-    return <ChatLoadError insets={safeInsets} onRetry={conversation.retry} dom={{ style: { flex: 1 } }} />;
+    return <ChatLoadError insets={safeInsets} onRetry={conversation.retry} dom={domHost} />;
   }
   if (conversation.status !== 'ready') return null;
 
@@ -34,7 +34,11 @@ export default function ChatRoute() {
       onSetPolishEnabled={view.setPolishEnabled}
       onOpenJob={async () => {}} // the job screen lands in T5
       onBack={async () => router.back()}
-      dom={{ style: { flex: 1 } }}
+      dom={domHost}
     />
   );
 }
+
+// Expo's DOM wrapper defaults to contentInsetAdjustmentBehavior "automatic", which adds the
+// safe area on top of the insets the screens already pad, so the screens own the insets alone.
+const domHost = { style: { flex: 1 }, contentInsetAdjustmentBehavior: 'never' } as const;

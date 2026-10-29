@@ -15,9 +15,9 @@ import { Card } from '@astryxdesign/core/Card';
 import { Heading, Text } from '@astryxdesign/core/Text';
 import { Button } from '@astryxdesign/core/Button';
 import { IconButton } from '@astryxdesign/core/IconButton';
-import { Switch } from '@astryxdesign/core/Switch';
+import { InputGroup } from '@astryxdesign/core/InputGroup';
+import { TextInput } from '@astryxdesign/core/TextInput';
 import {
-  ChatComposer,
   ChatLayout,
   ChatMessage,
   ChatMessageBubble,
@@ -26,9 +26,10 @@ import {
   ChatSystemMessage,
   useChatLayoutContext,
 } from '@astryxdesign/core/Chat';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, ArrowUp } from 'lucide-react';
 import { Owl } from '../../../shared/mascot/Owl';
 import owlRunning from '../../../shared/mascot/owl/running';
+import owlStatic from '../../../shared/mascot/owl/static';
 import type { PolishPreview } from '../../../shared/data/types.ts';
 import type { ComposerStep, SendOutcome, ThreadMessage } from '../lib/chatView.ts';
 import type { PolishChoice } from '../lib/ownerDelivery.ts';
@@ -58,7 +59,7 @@ export default function ChatScreen(props: {
     <Theme theme={neutralTheme}>
       <div className="zukki-root" style={{ ...pageStyle, paddingTop: insets.top, paddingBottom: insets.bottom }}>
         <TopBar customerName={props.customerName} onBack={props.onBack} />
-        <ChatLayout style={{ flex: 1, minHeight: 0 }} composer={<Footer {...props} />}>
+        <ChatLayout density="compact" style={{ flex: 1, minHeight: 0 }} composer={<Footer {...props} />}>
           <ChatMessageList align="bottom">
             {props.acceptedAt && (
               <ChatSystemMessage>{chatsCopys.youAcceptedAt} {formatClockTime(props.acceptedAt)}</ChatSystemMessage>
@@ -159,19 +160,12 @@ function Footer(props: FooterProps) {
 
   return (
     <VStack gap={2} padding={3}>
-      <Switch
-        label={chatsCopys.polishSwitchLabel}
-        value={props.polishEnabled}
-        isDisabled={props.step === 'polishing' || props.step === 'comparing'}
-        changeAction={(enabled) => props.onSetPolishEnabled(enabled)}
-      />
       <FooterBody {...props} draft={draft} onDraftChange={setDraft} />
     </VStack>
   );
 }
 
 function FooterBody(props: FooterProps & DraftProps) {
-  if (props.step === 'polishing') return <PolishingNotice />;
   if (props.step === 'comparing' && props.preview) {
     return (
       <>
@@ -181,23 +175,47 @@ function FooterBody(props: FooterProps & DraftProps) {
     );
   }
 
+  const isPolishing = props.step === 'polishing';
   return (
     <>
       {props.polishFailed && <Text style={errorTextStyle}>{chatsCopys.polishFailed}</Text>}
       {props.sendFailed && <Text style={errorTextStyle}>{chatsCopys.somethingWentWrong}</Text>}
-      <Composer customerFirstName={props.customerFirstName} onSend={props.onSend} draft={props.draft} onDraftChange={props.onDraftChange} />
+      <Composer
+        customerFirstName={props.customerFirstName}
+        onSend={props.onSend}
+        draft={props.draft}
+        onDraftChange={props.onDraftChange}
+        isPolishing={isPolishing}
+        zukkiToggle={<ZukkiToggle isOn={props.polishEnabled} isPolishing={isPolishing} onToggle={props.onSetPolishEnabled} />}
+      />
     </>
   );
 }
 
-function PolishingNotice() {
+// Replaces the "Polish with Zukki" switch: Zukki on means Send polishes first.
+// While polishing, Zukki is busy, not disabled: the owl keeps its color and runs.
+function ZukkiToggle(props: { isOn: boolean; isPolishing: boolean; onToggle: (enabled: boolean) => Promise<void> }) {
   return (
-    <HStack gap={2} align="center">
-      <Owl src={owlRunning} scale={0.3} clip />
-      <Text>{chatsCopys.polishing}</Text>
-    </HStack>
+    <IconButton
+      label={chatsCopys.polishSwitchLabel}
+      aria-pressed={props.isOn}
+      aria-busy={props.isPolishing}
+      variant="secondary"
+      size="lg"
+      onClick={() => (props.isPolishing ? undefined : props.onToggle(!props.isOn))}
+      icon={
+        <span style={props.isOn || props.isPolishing ? undefined : zukkiOffStyle}>
+          <Owl src={props.isPolishing ? owlRunning : owlStatic} scale={0.17} clip />
+        </span>
+      }
+    />
   );
 }
+
+const zukkiOffStyle = { filter: 'grayscale(1)', opacity: 0.5 } as const;
+
+const composerSlotStyle = { flex: 1, minWidth: 0 } as const;
+const roundStyle = { borderRadius: 9999 } as const;
 
 function PolishCompare(props: { preview: PolishPreview; onSendChoice: (choice: PolishChoice) => Promise<void> }) {
   return (
@@ -229,19 +247,51 @@ const DRAFT_KEPT_OUTCOMES: SendOutcome[] = ['polish_failed', 'send_failed', 'not
 // The draft is cleared on submit; it comes back when nothing was sent or compared, so the owner can retry.
 type DraftProps = { draft: string; onDraftChange: (draft: string) => void };
 
-function Composer(props: { customerFirstName: string; onSend: (text: string) => Promise<SendOutcome> } & DraftProps) {
-  async function submit(text: string) {
+// WhatsApp-style row: one pill (Zukki toggle + message field) and a round Send outside it.
+function Composer(
+  props: {
+    customerFirstName: string;
+    onSend: (text: string) => Promise<SendOutcome>;
+    isPolishing: boolean;
+    zukkiToggle: React.ReactNode;
+  } & DraftProps,
+) {
+  const canSend = props.draft.trim() !== '' && !props.isPolishing;
+
+  async function submit() {
+    if (!canSend) return;
+    const text = props.draft.trim();
+    props.onDraftChange('');
     const outcome = await props.onSend(text);
     if (DRAFT_KEPT_OUTCOMES.includes(outcome)) props.onDraftChange(text);
   }
 
   return (
-    <ChatComposer
-      value={props.draft}
-      onChange={props.onDraftChange}
-      onSubmit={submit}
-      placeholder={`${chatsCopys.writeToPlaceholder} ${props.customerFirstName}`}
-    />
+    <HStack gap={2} align="center">
+      <div className="zukki-pill" style={composerSlotStyle}>
+        <InputGroup label={chatsCopys.messageLabel} isLabelHidden size="lg">
+          {props.zukkiToggle}
+          <TextInput
+            label={chatsCopys.messageLabel}
+            isLabelHidden
+            size="lg"
+            value={props.draft}
+            onChange={props.onDraftChange}
+            onEnter={submit}
+            placeholder={props.isPolishing ? chatsCopys.polishing : `${chatsCopys.writeToPlaceholder} ${props.customerFirstName}`}
+          />
+        </InputGroup>
+      </div>
+      <IconButton
+        label={chatsCopys.sendLabel}
+        icon={<ArrowUp size={22} />}
+        variant="primary"
+        size="lg"
+        isDisabled={!canSend}
+        onClick={submit}
+        style={roundStyle}
+      />
+    </HStack>
   );
 }
 

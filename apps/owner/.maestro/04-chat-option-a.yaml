@@ -3,9 +3,9 @@ name: Option A sends the text as written
 ---
 - runFlow:
     file: subflows/open.yaml
-    env: { ROUTE: "chat/c_ana", WAIT_FOR: "Message input" }
+    env: { ROUTE: "chat/c_ana", WAIT_FOR: "Polish with Zukki" }
 - runFlow: subflows/dismiss-logbox.yaml
-- tapOn: "Message input"
+- tapOn: { text: "Message", index: 1 }
 - inputText: "On my way, 12:55"
 # The keyboard's accessory bar covers Send, so close the keyboard first.
 # A dropped tap leaves the draft in place, so sending again is safe.
