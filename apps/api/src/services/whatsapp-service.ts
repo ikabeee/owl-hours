@@ -256,10 +256,16 @@ export async function claimOutbox(db: SupabaseClient, limit = 20) {
   return z.array(z.record(z.unknown())).parse(unwrap(await db.rpc("claim_outbox", { p_limit: limit })));
 }
 
-export async function recordOutboundResult(db: SupabaseClient, messageId: string, waMessageId: string | null) {
+// retry: the send failed in a way that may pass (busy, down, no answer);
+// the database queues it again with backoff, up to 5 tries.
+export async function recordOutboundResult(db: SupabaseClient, messageId: string, waMessageId: string | null, retry = false) {
   const row = z
     .object({ id: uuid, delivery: z.string(), wa_message_id: z.string().nullable() })
-    .parse(unwrap(await db.rpc("record_outbound_result", { p_message_id: messageId, p_wa_message_id: waMessageId })));
+    .parse(
+      unwrap(
+        await db.rpc("record_outbound_result", { p_message_id: messageId, p_wa_message_id: waMessageId, p_retry: retry }),
+      ),
+    );
   return { id: row.id, status: row.delivery, waMessageId: row.wa_message_id };
 }
 
