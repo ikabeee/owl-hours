@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { DEMO_NOW, business } from "../../../shared/data/mock.ts";
 import type { ID, OfferStatus, RequestOffer } from "../../../shared/data/types.ts";
+import type { AcceptOutcome } from "../lib/acceptOutcome.ts";
 import { acceptWindowSeconds, formatCountdown, secondsLeft } from "../lib/countdown.ts";
 import { createFakeOffersClient, createOffersService } from "../services/offersService.ts";
 import type { OffersService } from "../services/offersService.ts";
@@ -21,7 +22,7 @@ export type RequestOfferView = {
   secondsLeft: number;
   maxSeconds: number;
   isExpired: boolean;
-  accept: () => Promise<ID | null>; // the chat to open; null when the offer was no longer "offered"
+  accept: () => Promise<AcceptOutcome>;
   decline: () => Promise<boolean>;
 };
 
@@ -59,9 +60,10 @@ export function useRequestOffer(id: ID, deps?: Partial<RequestOfferDeps>): Reque
     return true;
   }
 
-  async function acceptAndFindChat() {
-    if (!(await answer(service.accept))) return null;
-    return service.findChat(id);
+  async function acceptAndFindChat(): Promise<AcceptOutcome> {
+    if (!(await answer(service.accept))) return { kind: "not-offered" };
+
+    return { kind: "accepted", chatId: await service.findChat(id) };
   }
 
   if (!offer) return null;
