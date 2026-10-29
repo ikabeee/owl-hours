@@ -323,3 +323,12 @@ slice, delegated with test-first discipline.
   - New e2e flow `07-request-evidence`.
   - Checks: unit 156/156, tsc clean, e2e 7/7.
   - D10 is in `docs/DECISIONS.md`. Lock removed.
+- L30 (2026-10-29): RDD review of T3.1 (medium; user granted). One lens
+  (reliability), approved and acknowledged. Non-blocking follow-ups:
+  (1) no test drives `useRequestOffer` to prove sorted faults or the
+      empty-list default;
+  (2) `CustomerMedia` renders a blank banner for any media that is not
+      the demo frame (no fallback);
+  (3) the alt text always says "video frame", even for photos;
+  (4) an unknown likelihood value would throw;
+  (5) "Sent by Zukki" shows device-local time, unasserted by e2e.
