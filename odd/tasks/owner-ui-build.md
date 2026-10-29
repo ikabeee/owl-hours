@@ -197,3 +197,30 @@ slice, delegated with test-first discipline.
   - Still flaky in the full suite: dev LogBox "Unable to find the
     'DomWebView' view" errors stack up across navigations and cover the
     screen. Unit tests: 133/133.
+- L21 (user, 2026-10-29): "Por que esta ese error?" then "Sí, haz las tres".
+  - Cause: expo@58 `src/dom/webview-wrapper.tsx` `emit()` calls
+    `injectJavaScript` (an iOS AsyncFunction in
+    `@expo/dom-webview/ios/DomWebViewModule.swift:133`) without a catch.
+    When the WebView is already unmounted, expo-modules-core rejects with
+    "Unable to find the 'DomWebView' view with tag".
+  - Our triggers:
+    - DOM actions that navigate before returning (Accept, Decline, Back);
+    - fast deep-link navigation (e2e).
+  - (1) `shared/navigation/leaveAfterReturning` defers navigation one
+    macrotask (2 tests, RED→GREEN, node mock timers). It is used by the
+    request and chat routes. The test script now includes
+    `shared/**/*.test.ts`.
+  - (2) `LogBox.ignoreLogs` for exactly that message in `app/_layout.tsx`;
+    it still reaches the console.
+  - (3) Upstream: #50679 (same bug, Android) was closed by expo-bot for a
+    missing repro, not fixed; #49173 (Android cold start) is open. Ours
+    reproduces on iOS. A valid report needs a public minimal repro repo,
+    which awaits the user's go-ahead.
+  - Flows:
+    - wait on "Message input" (a stable a11y label);
+    - close the keyboard ("Done") before tapping Send, inside `retry`,
+      because the accessory bar covers Send.
+  - E2E: 6/6 in the final full run; the chat flows passed 3/3 in
+    isolation. Unit tests: 135/135.
+  - Note: XCUITest typing into the WebView once dropped the last character
+    ("12:5").

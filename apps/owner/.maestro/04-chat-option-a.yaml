@@ -3,13 +3,21 @@ name: Option A sends the text as written
 ---
 - runFlow:
     file: subflows/open.yaml
-    env: { ROUTE: "chat/c_ana", WAIT_FOR: "via Zukki · WhatsApp" }
+    env: { ROUTE: "chat/c_ana", WAIT_FOR: "Message input" }
 - runFlow: subflows/dismiss-logbox.yaml
 - tapOn: "Message input"
 - inputText: "On my way, 12:55"
-- pressKey: Enter
-- runFlow: subflows/dismiss-logbox.yaml
-- extendedWaitUntil:
-    visible: ".*sent as written.*"
-    timeout: 10000
+# The keyboard's accessory bar covers Send, so close the keyboard first.
+# A dropped tap leaves the draft in place, so sending again is safe.
+- retry:
+    maxRetries: 2
+    commands:
+      - tapOn:
+          text: "Done"
+          optional: true
+      - tapOn: "Send"
+      - runFlow: subflows/dismiss-logbox.yaml
+      - extendedWaitUntil:
+          visible: ".*sent as written.*"
+          timeout: 10000
 - takeScreenshot: 04-chat-option-a-sent

@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import RequestScreen from '../../features/requests/components/RequestScreen';
 import { destinationAfterAccept } from '../../features/requests/lib/acceptOutcome';
+import { leaveAfterReturning } from '../../shared/navigation/leaveAfterReturning';
 import { useRequestOffer } from '../../features/requests/hooks/useRequestOffer';
 
 export default function RequestRoute() {
@@ -24,13 +25,15 @@ export default function RequestRoute() {
         const destination = destinationAfterAccept(await request.accept());
         if (destination.kind === 'stay') return;
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        if (destination.kind === 'chat') router.replace({ pathname: '/chat/[id]', params: { id: destination.chatId } });
-        else router.replace('/chats');
+        leaveAfterReturning(() => {
+          if (destination.kind === 'chat') router.replace({ pathname: '/chat/[id]', params: { id: destination.chatId } });
+          else router.replace('/chats');
+        });
       }}
       onDecline={async () => {
         if (!(await request.decline())) return;
         await Haptics.selectionAsync();
-        router.back();
+        leaveAfterReturning(() => router.back());
       }}
       dom={{ style: { flex: 1 } }}
     />
