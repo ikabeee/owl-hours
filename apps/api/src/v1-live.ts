@@ -13,7 +13,8 @@ import { createRespondDeps } from "./orchestrator/live.ts";
 import type { NoticeDeps } from "./orchestrator/notices.ts";
 import { respond } from "./orchestrator/respond.ts";
 import { createSerializer } from "./orchestrator/serial.ts";
-import { handleEvents, type Logger } from "./whatsapp/inbound.ts";
+import type { RecoverDeps } from "./orchestrator/recover.ts";
+import { handleEvents, runTurn, type Logger } from "./whatsapp/inbound.ts";
 import type { OutboxDeps } from "./whatsapp/outbox.ts";
 import { createLiveDeps } from "./worker/live-deps.ts";
 
@@ -24,6 +25,8 @@ export type LiveDeps = {
   // Set when both the database and WhatsApp are configured.
   outbox: OutboxDeps | null;
   notices: NoticeDeps | null;
+  // Replays messages a restart dropped (set with notices).
+  recovery: RecoverDeps | null;
 };
 
 export function createLiveV1Deps(config: ApiConfig = loadConfig(), whatsapp?: WhatsAppClient): V1Deps {
@@ -44,7 +47,7 @@ export function loadLiveDeps(env: Record<string, string | undefined> = process.e
     config = loadConfig(env);
   } catch (error) {
     const reason = reasonOf(error);
-    return { v1: { unavailable: reason }, whatsapp: { unavailable: reason }, outbox: null, notices: null };
+    return { v1: { unavailable: reason }, whatsapp: { unavailable: reason }, outbox: null, notices: null, recovery: null };
   }
   let waConfig: WhatsAppConfig | null = null;
   let waReason = "";
@@ -58,13 +61,15 @@ export function loadLiveDeps(env: Record<string, string | undefined> = process.e
     : undefined;
   const v1 = createLiveV1Deps(config, client);
   if (!waConfig || !client) {
-    return { v1, whatsapp: { unavailable: waReason }, outbox: null, notices: null };
+    return { v1, whatsapp: { unavailable: waReason }, outbox: null, notices: null, recovery: null };
   }
   const zukki =
     v1.chat && v1.pipeline
       ? createRespondDeps({ db: v1.serviceDb, chat: v1.chat, pipeline: v1.pipeline, whatsapp: client, log })
       : null;
   const serial = createSerializer(log);
+  const respondTo = zukki ? (ctx: Parameters<typeof respond>[1], turn: Parameters<typeof respond>[2]) => respond(zukki, ctx, turn) : undefined;
+  const enqueue = (conversationId: string, task: () => Promise<void>) => void serial(conversationId, task);
   return {
     v1,
     whatsapp: {
@@ -76,8 +81,8 @@ export function loadLiveDeps(env: Record<string, string | undefined> = process.e
             db: v1.serviceDb,
             client,
             storeMedia: (path, bytes, contentType) => uploadMedia(v1.serviceDb, path, bytes, contentType),
-            enqueue: (conversationId, task) => void serial(conversationId, task),
-            respond: zukki ? (ctx, turn) => respond(zukki, ctx, turn) : undefined,
+            enqueue,
+            respond: respondTo,
             log,
           },
           events,
@@ -86,6 +91,9 @@ export function loadLiveDeps(env: Record<string, string | undefined> = process.e
     },
     outbox: { db: v1.serviceDb, client, log },
     notices: zukki ? { db: v1.serviceDb, store: zukki.store, directory: zukki.directory, log } : null,
+    recovery: respondTo
+      ? { db: v1.serviceDb, enqueue, run: (ctx, turn) => runTurn({ db: v1.serviceDb, respond: respondTo }, ctx, turn), log }
+      : null,
   };
 }
 
