@@ -418,3 +418,6 @@ slice, delegated with test-first discipline.
   - D11 in `docs/DECISIONS.md`. Lock removed.
   - Not covered: a rejected `getQuoteDraft`/`getJob` leaves a blank screen
     (no error state yet).
+- L38 (user, 2026-10-29): "Abre PR pero muestrame los outputs e2e de la
+  UI". PR #23 (`feat/owner-jobs-quote`, 3dffc57 + ecd31bc) with the six
+  e2e screenshots inline. Next: T5.1 (Jobs list, finish, shared store).
