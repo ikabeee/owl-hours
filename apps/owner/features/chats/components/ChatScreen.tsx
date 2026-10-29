@@ -6,7 +6,7 @@ import '@astryxdesign/theme-neutral/theme.css';
 import '@astryxdesign/theme-neutral/fonts.css';
 import '../../../shared/theme/zukki-theme.css';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { DOMProps } from 'expo/dom';
 import { Theme } from '@astryxdesign/core/theme';
 import { neutralTheme } from '@astryxdesign/theme-neutral/built';
@@ -24,6 +24,7 @@ import {
   ChatMessageList,
   ChatMessageMetadata,
   ChatSystemMessage,
+  useChatLayoutContext,
 } from '@astryxdesign/core/Chat';
 import { ArrowLeft } from 'lucide-react';
 import { Owl } from '../../../shared/mascot/Owl';
@@ -32,6 +33,7 @@ import type { PolishPreview } from '../../../shared/data/types.ts';
 import type { ComposerStep, SendOutcome, ThreadMessage } from '../lib/chatView.ts';
 import type { PolishChoice } from '../lib/ownerDelivery.ts';
 import { chatsCopys } from '../copys/chatsCopys';
+import { arrivedOwnMessage } from '../lib/followLatest.ts';
 
 export default function ChatScreen(props: {
   customerName: string;
@@ -65,13 +67,37 @@ export default function ChatScreen(props: {
               <ThreadEntry key={message.id} message={message} onOpenJob={props.onOpenJob} />
             ))}
           </ChatMessageList>
+          <FollowOwnMessages thread={props.thread} />
         </ChatLayout>
       </div>
     </Theme>
   );
 }
 
-const pageStyle = { display: 'flex', flexDirection: 'column', height: '100dvh' } as const;
+// The DOM host shrinks the root to its content width, and ChatLayout's inline-size
+// containment contributes no width, so the root claims the full viewport explicitly.
+const pageStyle = { display: 'flex', flexDirection: 'column', width: '100%', height: '100dvh' } as const;
+
+// ChatLayout stops following once the keyboard or the dock moves the transcript,
+// so the owner's own message is brought into view explicitly after every send.
+function FollowOwnMessages(props: { thread: ThreadMessage[] }) {
+  const layout = useChatLayoutContext();
+  const previousLastId = useRef<string | undefined>(undefined);
+
+  useEffect(() => {
+    if (arrivedOwnMessage(previousLastId.current, props.thread)) {
+      requestAnimationFrame(() => scrollToEnd(layout?.scrollContainerRef.current));
+    }
+    previousLastId.current = props.thread.at(-1)?.id;
+  }, [props.thread, layout]);
+
+  return null;
+}
+
+function scrollToEnd(container: HTMLElement | null | undefined) {
+  const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  container?.scrollTo({ top: container.scrollHeight, behavior: prefersReducedMotion ? 'auto' : 'smooth' });
+}
 
 function TopBar(props: { customerName: string; onBack: () => Promise<void> }) {
   return (
@@ -126,7 +152,11 @@ type FooterProps = Pick<
   'customerFirstName' | 'step' | 'preview' | 'polishEnabled' | 'polishFailed' | 'sendFailed' | 'onSend' | 'onSendChoice' | 'onSetPolishEnabled'
 >;
 
+// The draft lives here, not in Composer: Composer unmounts while polishing, and a
+// failed polish must still hand the owner's text back.
 function Footer(props: FooterProps) {
+  const [draft, setDraft] = useState('');
+
   return (
     <VStack gap={2} padding={3}>
       <Switch
@@ -135,12 +165,12 @@ function Footer(props: FooterProps) {
         isDisabled={props.step === 'polishing' || props.step === 'comparing'}
         changeAction={(enabled) => props.onSetPolishEnabled(enabled)}
       />
-      <FooterBody {...props} />
+      <FooterBody {...props} draft={draft} onDraftChange={setDraft} />
     </VStack>
   );
 }
 
-function FooterBody(props: FooterProps) {
+function FooterBody(props: FooterProps & DraftProps) {
   if (props.step === 'polishing') return <PolishingNotice />;
   if (props.step === 'comparing' && props.preview) {
     return (
@@ -155,7 +185,7 @@ function FooterBody(props: FooterProps) {
     <>
       {props.polishFailed && <Text style={errorTextStyle}>{chatsCopys.polishFailed}</Text>}
       {props.sendFailed && <Text style={errorTextStyle}>{chatsCopys.somethingWentWrong}</Text>}
-      <Composer customerFirstName={props.customerFirstName} onSend={props.onSend} />
+      <Composer customerFirstName={props.customerFirstName} onSend={props.onSend} draft={props.draft} onDraftChange={props.onDraftChange} />
     </>
   );
 }
@@ -197,18 +227,18 @@ const compareActionsStyle = { display: 'grid', gridTemplateColumns: '1fr 1.4fr',
 const DRAFT_KEPT_OUTCOMES: SendOutcome[] = ['polish_failed', 'send_failed', 'not_sent'];
 
 // The draft is cleared on submit; it comes back when nothing was sent or compared, so the owner can retry.
-function Composer(props: { customerFirstName: string; onSend: (text: string) => Promise<SendOutcome> }) {
-  const [draft, setDraft] = useState('');
+type DraftProps = { draft: string; onDraftChange: (draft: string) => void };
 
+function Composer(props: { customerFirstName: string; onSend: (text: string) => Promise<SendOutcome> } & DraftProps) {
   async function submit(text: string) {
     const outcome = await props.onSend(text);
-    if (DRAFT_KEPT_OUTCOMES.includes(outcome)) setDraft(text);
+    if (DRAFT_KEPT_OUTCOMES.includes(outcome)) props.onDraftChange(text);
   }
 
   return (
     <ChatComposer
-      value={draft}
-      onChange={setDraft}
+      value={props.draft}
+      onChange={props.onDraftChange}
       onSubmit={submit}
       placeholder={`${chatsCopys.writeToPlaceholder} ${props.customerFirstName}`}
     />

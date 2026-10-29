@@ -1,0 +1,11 @@
+appId: host.exp.Exponent
+name: Request detail counts down and offers Accept and Decline
+---
+- runFlow:
+    file: subflows/open.yaml
+    env: { ROUTE: "request/req_ana", WAIT_FOR: "Accept and chat" }
+- runFlow: subflows/dismiss-logbox.yaml
+- assertVisible: "Accept within"
+- assertVisible: "Decline"
+- assertVisible: "If you don't answer, Zukki offers the job to the next business."
+- takeScreenshot: 02-request-req_ana

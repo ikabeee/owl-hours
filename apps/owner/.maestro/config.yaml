@@ -1,0 +1,4 @@
+# Maestro workspace: runs every flow in this folder against Expo Go.
+# Start Metro first: `npx expo start --ios` (from apps/owner).
+flows:
+  - "*.yaml"

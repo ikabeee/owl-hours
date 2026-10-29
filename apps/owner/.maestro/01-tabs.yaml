@@ -1,0 +1,14 @@
+appId: host.exp.Exponent
+name: Tab shell shows the five tabs
+---
+- runFlow:
+    file: subflows/open.yaml
+    env: { ROUTE: "requests", WAIT_FOR: ".*Requests" }
+- runFlow: subflows/dismiss-logbox.yaml
+- assertVisible: ".*Chats"
+- assertVisible: "Jobs"
+- assertVisible: "Content"
+- assertVisible: "Business"
+- takeScreenshot: 01-requests-tab
+- tapOn: ".*Chats"
+- takeScreenshot: 01-chats-tab

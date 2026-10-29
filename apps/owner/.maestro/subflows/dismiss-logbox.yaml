@@ -1,0 +1,10 @@
+# Subflow: close the dev-only LogBox overlay if a console error covers the screen.
+# Known trigger: replacing a DOM screen that is still loading rejects
+# "Unable to find the 'DomWebView' view" (logged in odd/tasks/owner-ui-build.md).
+appId: host.exp.Exponent
+---
+- runFlow:
+    when:
+      visible: "Console Error"
+    commands:
+      - tapOn: "Dismiss"

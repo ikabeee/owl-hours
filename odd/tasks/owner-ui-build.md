@@ -142,3 +142,121 @@ slice, delegated with test-first discipline.
   accept leaves the owner on the request screen;
   (2) `ChatScreen.tsx:203-206`: restoring the draft overwrites text typed
   while a send was in flight, including after a refused second tap.
+- L18 (user, 2026-10-29): "Manda los PR's bajas maestro con el emulador de
+  IOS (ya ando en mi casa) para que hagas e2e de las pantallas y me muestres
+  los resultados. Antes de mandar PRs me mandas los ss".
+  Setup:
+  - iOS 27 simulator runtime downloaded;
+  - "Zukki iPhone" simulator (iPhone 16) created;
+  - Expo Go installed through `expo start --ios`;
+  - Maestro with JAVA_HOME=openjdk@17.
+  Flows are in `apps/owner/.maestro/`.
+  Shell bugs found and fixed (both predate T4):
+  - Expo Router 58 renders only the screens a layout declares, and
+    `app/(tabs)/_layout.tsx` declared none (blank app); TABS is now exported
+    and declared;
+  - "/" had no route, so a cold start landed on Jobs; `app/index.tsx` now
+    redirects to `/requests`.
+  E2E result: 4/6 pass (tabs, request detail, accept→chat, decline).
+  Open findings:
+  - (a) ChatScreen renders at about half width and the accepted-at line is
+    clipped ("AM");
+  - (b) Maestro `inputText` cannot type into the WebView composer, so
+    option A and option B are not verified e2e;
+  - (c) replacing a DOM screen while it loads logs "Unable to find the
+    'DomWebView' view with tag" (dev LogBox);
+  - (d) the Requests tab is still a placeholder.
+- L19 (user, 2026-10-29): "corrije el layout".
+  - Root cause: in the native DOM host, `.zukki-root` is a flex item that
+    shrinks to its content width. ChatLayout's `container-type: inline-size`
+    contributes 0, so the TopBar (~170 pt) set the width. Chromium web and
+    iOS Safari render full width.
+  - Fix: `width: 100%` on the ChatScreen root.
+  - Verified in Expo Go on the iOS simulator: full width, and "You accepted
+    at 12:05 AM" is intact.
+  - E2E: option B now passes end to end, since typing works at full width.
+  - Flaky: option A and accept→chat failed once. In one, the tap on Send
+    landed on the dev LogBox toast ("Unable to find the 'DomWebView' view").
+    In the other, the WebView accessibility tree was missing a visible text.
+  - Observation: after a send, the new bubble sits under the dock until the
+    owner scrolls; the scroll-down button shows.
+- L20 (user, 2026-10-29): "Arregla el scrol".
+  - Cause: ChatLayout follows new content only while locked at the bottom
+    (`useChatStreamScroll`). Keyboard and dock resizes unlock it, so the
+    owner's new bubble stayed under the dock.
+  - Fix: `arrivedOwnMessage` (pure, `lib/followLatest.ts`, 5 tests,
+    RED→GREEN) drives `FollowOwnMessages`, which scrolls ChatLayout's
+    `scrollContainerRef` to the end after each own send. Reduced motion
+    jumps instead of smooth-scrolling.
+  - Verified: option A passed alone on the simulator; the "On my way, 12:55
+    · sent as written" bubble is visible above the dock with the keyboard
+    open.
+  - Flow hardening:
+    - the subflow passes through /requests to remount the target;
+    - Enter submits instead of a Send tap.
+  - Still flaky in the full suite: dev LogBox "Unable to find the
+    'DomWebView' view" errors stack up across navigations and cover the
+    screen. Unit tests: 133/133.
+- L21 (user, 2026-10-29): "Por que esta ese error?" then "Sí, haz las tres".
+  - Cause: expo@58 `src/dom/webview-wrapper.tsx` `emit()` calls
+    `injectJavaScript` (an iOS AsyncFunction in
+    `@expo/dom-webview/ios/DomWebViewModule.swift:133`) without a catch.
+    When the WebView is already unmounted, expo-modules-core rejects with
+    "Unable to find the 'DomWebView' view with tag".
+  - Our triggers:
+    - DOM actions that navigate before returning (Accept, Decline, Back);
+    - fast deep-link navigation (e2e).
+  - (1) `shared/navigation/leaveAfterReturning` defers navigation one
+    macrotask (2 tests, RED→GREEN, node mock timers). It is used by the
+    request and chat routes. The test script now includes
+    `shared/**/*.test.ts`.
+  - (2) `LogBox.ignoreLogs` for exactly that message in `app/_layout.tsx`;
+    it still reaches the console.
+  - (3) Upstream: #50679 (same bug, Android) was closed by expo-bot for a
+    missing repro, not fixed; #49173 (Android cold start) is open. Ours
+    reproduces on iOS. A valid report needs a public minimal repro repo,
+    which awaits the user's go-ahead.
+  - Flows:
+    - wait on "Message input" (a stable a11y label);
+    - close the keyboard ("Done") before tapping Send, inside `retry`,
+      because the accessory bar covers Send.
+  - E2E: 6/6 in the final full run; the chat flows passed 3/3 in
+    isolation. Unit tests: 135/135.
+  - Note: XCUITest typing into the WebView once dropped the last character
+    ("12:5").
+- L22 (user, 2026-10-29): "Go ahead y muestra las evidencias ademas
+  necesito las capturas de los tests e2e en el historial de git".
+  - E2E screenshots are committed in `apps/owner/.maestro/evidence/`
+    (f12f6cc).
+  - Upstream repro https://github.com/ikabeee/expo-dom-ios-mount-rejection-repro
+    shows that mounting one DOM component rejects on 3 of 3 iOS cold starts.
+    It needs no interaction or navigation. Issue
+    https://github.com/expo/expo/issues/52503.
+  - Correction to L21: the repro's navigate-inside-action tap did NOT
+    reject (error count unchanged), so the real cause is the mount race of
+    the `$$props` `emit`, not unmount. `leaveAfterReturning` therefore had
+    no proven effect and is reverted. `ignoreLogs` stays, with its comment
+    pointing to #52503.
+  - After the revert: E2E 6/6, unit 133/133, tsc clean.
+- L23 (2026-10-29): stacked PRs to main, cut at the commit boundaries:
+  - #15 T4 chats slice (`feat/owner-chats-t4`, +1052/-7);
+  - #16 T4.1 review fixes (`fix/owner-chats-t4-review`, +1051/-136);
+  - #17 iOS e2e fixes plus evidence (`fix/owner-ios-e2e`, +359/-5).
+  #15 and #16 request `size:exception`: each is one work unit, about half
+  tests, and splitting them means rewriting history. Merge order:
+  #15 → #16 → #17. Next: T5 jobs slice.
+- L24 (2026-10-29): RDD review of the whole stack (user granted).
+  - Blocking finding, CRITICAL, R3-polish-failed-draft-lost: with polish
+    on, a failed polish lost the draft because Composer unmounts while
+    polishing.
+  - Correction 5ff2753, 20 lines: the draft is lifted into Footer, which
+    stays mounted.
+  - Validation: the first validator run died ("transport failed: signal:
+    killed"); the same slot was reoffered and the second run approved.
+    Acknowledged.
+  - Checks: unit 133/133, tsc clean; e2e A, B and accept 3/3.
+  - Non-blocking follow-ups:
+    (1) a rejected `findChat` after a committed accept leaves the owner
+    stranded;
+    (2) restoring the draft overwrites text typed during an in-flight send;
+    (3) `not_found` chat is a blank screen.
