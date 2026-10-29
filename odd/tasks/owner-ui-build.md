@@ -238,3 +238,10 @@ slice, delegated with test-first discipline.
     no proven effect and is reverted. `ignoreLogs` stays, with its comment
     pointing to #52503.
   - After the revert: E2E 6/6, unit 133/133, tsc clean.
+- L23 (2026-10-29): stacked PRs to main, cut at the commit boundaries:
+  - #15 T4 chats slice (`feat/owner-chats-t4`, +1052/-7);
+  - #16 T4.1 review fixes (`fix/owner-chats-t4-review`, +1051/-136);
+  - #17 iOS e2e fixes plus evidence (`fix/owner-ios-e2e`, +359/-5).
+  #15 and #16 request `size:exception`: each is one work unit, about half
+  tests, and splitting them means rewriting history. Merge order:
+  #15 → #16 → #17. Next: T5 jobs slice.
