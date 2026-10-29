@@ -8,7 +8,7 @@ name: Accept and chat opens Ana's conversation
 - tapOn: "Accept and chat"
 - runFlow: subflows/dismiss-logbox.yaml
 - extendedWaitUntil:
-    visible: "Message input"
+    visible: "Polish with Zukki"
     timeout: 15000
 - assertVisible: "Ana L."
 - assertVisible: "Hi, is someone coming tonight?"

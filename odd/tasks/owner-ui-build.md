@@ -260,3 +260,21 @@ slice, delegated with test-first discipline.
     stranded;
     (2) restoring the draft overwrites text typed during an in-flight send;
     (3) `not_found` chat is a blank screen.
+- L25 (user, 2026-10-29): "hay demasiado padding en las pantallas", "Muchos
+  espacios en blanco", "No necesitamos un switch para polish, sino que sea
+  un icono que cargue y muestra a zukki interactuando", "copia este layout
+  de whatsapp pero manteniendo el mismo estilo de ui", "esta perfecto,
+  mientras pule zukki debe estar 'trabajando'".
+  - Padding: the DOM routes pass `contentInsetAdjustmentBehavior: 'never'`.
+    Expo's wrapper default "automatic" added the safe area on top of the
+    screens' own insets.
+  - White space: ChatLayout `density="compact"`.
+  - Composer:
+    - an Astryx InputGroup pill (`.zukki-pill` sets `--radius-element`)
+      holding the Zukki owl IconButton toggle (`aria-pressed`) and a
+      TextInput labelled "Message";
+    - a round primary Send outside the pill;
+    - while polishing the owl runs in color (`aria-busy`, not disabled) and
+      the field shows "Polishing…";
+    - the Switch is removed.
+  - Checks: E2E 6/6 (flows tap "Message" index 1), unit 133/133, tsc clean.

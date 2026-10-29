@@ -32,7 +32,11 @@ export default function RequestRoute() {
         await Haptics.selectionAsync();
         router.back();
       }}
-      dom={{ style: { flex: 1 } }}
+      dom={domHost}
     />
   );
 }
+
+// Expo's DOM wrapper defaults to contentInsetAdjustmentBehavior "automatic", which adds the
+// safe area on top of the insets the screens already pad, so the screens own the insets alone.
+const domHost = { style: { flex: 1 }, contentInsetAdjustmentBehavior: 'never' } as const;
