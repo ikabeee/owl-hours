@@ -2,7 +2,6 @@
 import { useLocalSearchParams, router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import ChatLoadError from '../../features/chats/components/ChatLoadError';
-import { leaveAfterReturning } from '../../shared/navigation/leaveAfterReturning';
 import ChatScreen from '../../features/chats/components/ChatScreen';
 import { useConversation } from '../../features/chats/hooks/useConversation';
 
@@ -34,7 +33,7 @@ export default function ChatRoute() {
       onSendChoice={view.sendChoice}
       onSetPolishEnabled={view.setPolishEnabled}
       onOpenJob={async () => {}} // the job screen lands in T5
-      onBack={async () => leaveAfterReturning(() => router.back())}
+      onBack={async () => router.back()}
       dom={{ style: { flex: 1 } }}
     />
   );

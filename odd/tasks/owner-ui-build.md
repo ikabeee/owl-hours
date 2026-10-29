@@ -224,3 +224,17 @@ slice, delegated with test-first discipline.
     isolation. Unit tests: 135/135.
   - Note: XCUITest typing into the WebView once dropped the last character
     ("12:5").
+- L22 (user, 2026-10-29): "Go ahead y muestra las evidencias ademas
+  necesito las capturas de los tests e2e en el historial de git".
+  - E2E screenshots are committed in `apps/owner/.maestro/evidence/`
+    (f12f6cc).
+  - Upstream repro https://github.com/ikabeee/expo-dom-ios-mount-rejection-repro
+    shows that mounting one DOM component rejects on 3 of 3 iOS cold starts.
+    It needs no interaction or navigation. Issue
+    https://github.com/expo/expo/issues/52503.
+  - Correction to L21: the repro's navigate-inside-action tap did NOT
+    reject (error count unchanged), so the real cause is the mount race of
+    the `$$props` `emit`, not unmount. `leaveAfterReturning` therefore had
+    no proven effect and is reverted. `ignoreLogs` stays, with its comment
+    pointing to #52503.
+  - After the revert: E2E 6/6, unit 133/133, tsc clean.

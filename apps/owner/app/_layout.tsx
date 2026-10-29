@@ -7,10 +7,11 @@ import { LogBox } from "react-native";
 
 SplashScreen.preventAutoHideAsync();
 
-// Expo's DOM bridge (expo@58 webview-wrapper `emit`) does not catch the rejection when it
-// injects into a WebView that a navigation already unmounted. It is harmless (the payload
-// has no reader left) and still reaches the console; only the dev overlay ignores it.
-// leaveAfterReturning removes the in-app trigger; remove this once Expo catches it upstream.
+// Expo's DOM bridge (expo@58 webview-wrapper `emit`) sends props from a useEffect through
+// injectJavaScript, an iOS async view function that rejects until the native view is
+// registered, and never catches it. Every DOM screen mount can log this harmless rejection.
+// It still reaches the console; only the dev overlay ignores it. Remove once
+// https://github.com/expo/expo/issues/52503 is fixed.
 LogBox.ignoreLogs(["Unable to find the 'DomWebView' view with tag"]);
 
 export default function RootLayout() {
