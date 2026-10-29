@@ -1,11 +1,11 @@
 ---
-status: in-progress
+status: done
 ---
 
 # Business slice: profile, prices, settings (T6b)
 
 Objective: build `OwBusiness`, `OwPrices` and `OwSettings` in `apps/owner/features/business`.
-Branch `feat/owner-content-business` (worktree `owl-hours-worktrees/owner-content-business`), coder: muse
+Branch `feat/owner-business` (worktree `owl-hours-worktrees/owner-content-business`), coder: muse
 (`muse-spark-1.3-contributor`, effort `xhigh`), test runner `node --test` (the owner `test` script).
 
 ## Specs
@@ -40,7 +40,7 @@ Copy and layout come from `handoff-ui/owner-app/design/html/{OwBusiness,OwPrices
 
 ## Tasks
 
-- T6b.1: business slice, S1–S6, route: delegated to muse (user's harness choice), status: RED pending
+- T6b.1: business slice, S1–S6, route: delegated to muse (user's harness choice), status: done (GREEN, reviewed)
 
 ## Log
 
@@ -49,3 +49,20 @@ Copy and layout come from `handoff-ui/owner-app/design/html/{OwBusiness,OwPrices
   then "Arranca pero antes entrar a la delegacion necesito meter al git ignore el graphify".
   - Split: T6a content → agy, T6b business → muse, in one worktree from `main` (df478a3) with disjoint
     surfaces, because T5 runs in another session in the main checkout.
+- L2 (user, 2026-10-29): "Sí, apruebo ambos, mándalos a GREEN".
+  - Rule: copy from the handoff HTML, data verbatim from `mock.ts` (no `shared/` edits; T5 edits `mock.ts`).
+  - Answers: Hours row "Mon–Sat, 8 AM–8 PM · urgent jobs at night"; Prices row = first three prices with
+    full labels ("Unclog a drain from $80"); `BusinessSettings` lives in `services/businessService.ts`
+    with the coder's field names; switch seed on, on, on, off (HTML `aria-checked`); feature-local demo
+    values in the fake client: `importedServices: 12`, `areaLabel: "Northside"`; copys key names approved.
+  - RED: 5 files, 5 failing on import, existing 172 green. Tests adjusted by the operator, then locked.
+- L3 (operator, 2026-10-29): GREEN + one cleaner round.
+  - GREEN: muse implemented lib, services, hooks, copys, the three DOM screens and routes; locked-test checksums
+    unchanged.
+  - Review (Opus, independent): 4 blockers (state lost between screens, glue words in lib, placeholder logo and
+    map although the assets exist, Settings label/value merged) and 8 advisories; one cleaner round fixed all.
+  - Gates (operator re-run): owner `tsc` clean; `npm test` 5/5; `npm run typecheck` 5/5; `expo export --platform
+    android --clear` OK.
+  - Pending: the owl-only empty state renders an empty `<h3>` (`EmptyState title=""`); the Business screen loads
+    twice on first mount (focus reload); `logoNorthside.ts` made byte-identical on `feat/owner-content` (b124694).
+  - Next objective: 5. Onboarding (T7, `feat/owner-onboarding`, GREEN running).

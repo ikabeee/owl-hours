@@ -194,3 +194,31 @@ it with a new one.
   - The Published list has no empty state yet: the design has no copy for it.
   - Coded by agy (Gemini 3.8 Flash High) test-first; the operator locked the
     tests and reviewed one cleaner round.
+
+## D13 — Business slice: profile, prices, settings (2026-10-29, T6b)
+
+- **Decision:** `features/business` owns `OwBusiness`, `OwPrices` and
+  `OwSettings`.
+  - One module-level `demoBusinessService` backs the three hooks, so saved
+    prices and toggled settings survive navigation.
+  - The Business tab reloads on focus (`useFocusEffect`).
+  - `BusinessSettings` (taking requests, urgent requests, ring on silent at
+    night, polish by default) is feature-local in
+    `services/businessService.ts` until chats consumes "Polish with Zukki by
+    default".
+  - Row values come from `mock.ts` verbatim: "Mon–Sat, 8 AM–8 PM", the first
+    three prices with full labels. `importedServices: 12` and
+    `areaLabel: "Northside"` are demo values in the fake client.
+- **Why:** HANDOFF-RN-UI §7–8 and the operator's answers in
+  `odd/tasks/owner-business.md` L2: copy from the design HTML, data from
+  `mock.ts`, no `shared/data` edits while T5 edits `mock.ts`.
+- **Consequences:**
+  - The logo and the map strip are data-URI modules built from
+    `handoff-ui/owner-app/assets/` (`assets/img/logoNorthside.ts`,
+    `assets/img/mapCity.ts`).
+  - "Test Zukki", "Sign out" and the Profile, Hours, Service area and
+    Website rows do nothing until their screens land.
+  - The added price row's label "Name" has no handoff source (operator
+    accepted).
+  - Coded by muse (Spark 1.3, effort xhigh) test-first; the operator locked
+    the tests and reviewed one cleaner round.
