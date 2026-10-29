@@ -1,15 +1,17 @@
-import { offers as seedOffers } from "../../../shared/data/mock.ts";
+import { conversations as seedConversations, offers as seedOffers } from "../../../shared/data/mock.ts";
 import type { ID, OfferStatus, RequestOffer } from "../../../shared/data/types.ts";
 
 export type OffersClient = {
   findOffer(id: ID): Promise<RequestOffer | null>;
   saveOffer(offer: RequestOffer): Promise<void>;
+  findConversationId(offerId: ID): Promise<ID | null>;
 };
 
 export type OffersService = {
   getOffer(id: ID): Promise<RequestOffer | null>;
   accept(id: ID): Promise<RequestOffer | null>;
   decline(id: ID): Promise<RequestOffer | null>;
+  findChat(offerId: ID): Promise<ID | null>; // the conversation an accepted offer opened
 };
 
 export function createOffersService(client: OffersClient): OffersService {
@@ -17,18 +19,21 @@ export function createOffersService(client: OffersClient): OffersService {
     getOffer: (id) => client.findOffer(id),
     accept: (id) => moveOfferedTo(client, id, "accepted"),
     decline: (id) => moveOfferedTo(client, id, "declined"),
+    findChat: (offerId) => findChatOfAccepted(client, offerId),
   };
 }
 
-// In-memory client seeded with a private copy of the demo offers.
+// In-memory client seeded with a private copy of the demo offers and their conversations.
 export function createFakeOffersClient(): OffersClient {
   const offersById = new Map(structuredClone(seedOffers).map((offer) => [offer.id, offer]));
+  const conversationIdByOfferId = new Map(seedConversations.map((conversation) => [conversation.offerId, conversation.id]));
 
   return {
     findOffer: async (id) => structuredClone(offersById.get(id) ?? null),
     saveOffer: async (offer) => {
       offersById.set(offer.id, structuredClone(offer));
     },
+    findConversationId: async (offerId) => conversationIdByOfferId.get(offerId) ?? null,
   };
 }
 
@@ -40,4 +45,12 @@ async function moveOfferedTo(client: OffersClient, id: ID, status: OfferStatus):
   const answered = { ...offer, status };
   await client.saveOffer(answered);
   return answered;
+}
+
+// Only an accepted offer has a chat to open.
+async function findChatOfAccepted(client: OffersClient, offerId: ID): Promise<ID | null> {
+  const offer = await client.findOffer(offerId);
+  if (offer?.status !== "accepted") return null;
+
+  return client.findConversationId(offerId);
 }

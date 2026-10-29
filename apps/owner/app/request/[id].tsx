@@ -20,9 +20,10 @@ export default function RequestRoute() {
       isExpired={request.isExpired}
       insets={{ top: insets.top, bottom: insets.bottom }}
       onAccept={async () => {
-        if (!(await request.accept())) return;
+        const chatId = await request.accept();
+        if (!chatId) return;
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        router.replace({ pathname: '/chat/[id]', params: { id: `c_${id}` } });
+        router.replace({ pathname: '/chat/[id]', params: { id: chatId } });
       }}
       onDecline={async () => {
         if (!(await request.decline())) return;

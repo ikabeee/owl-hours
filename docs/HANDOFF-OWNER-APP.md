@@ -124,6 +124,67 @@ via props (DOM serializable-props rule). Do not touch `app/`, `shared/`,
 implementation the four gates (handoff "Test plan") with observed results,
 plus a one-line diff summary per file. Do not commit.
 
+## T4 assignment (Claude Sonnet 5.5 subagent, effort high): chats slice
+
+**Spec.** `features/chats/` serves the owner chat (demo path step 6, "chat
+with polish"). Sources: `handoff-ui/owner-app/HANDOFF-RN-UI.md` §8 "Chat
+(`OwChat`, polish off = option A)" and "Chat with polish on (`OwChatPolish`,
+option B)", §9 `sendMessage(convId, text, {polish})` → `{sent}` or a
+`PolishPreview`; copy and layout from `design/html/OwChat.dc.html` and
+`OwChatPolish.dc.html`. Acceptance (§ checklist): "Option A and option B both
+work, and the metadata under the bubble matches what was sent."
+
+- Option A (polish off): Send delivers the text exactly as written;
+  `delivery: "as_written"`, metadata "sent as written".
+- Option B (polish on): Send does not send; it returns a `PolishPreview` and
+  the composer becomes `PolishCompare` ("You wrote", "Zukki's version ·
+  English, Ana's language", "Send mine" / "Send Zukki's"). "Send Zukki's"
+  sends `polished` with `delivery: "polished"` and `ownerDraft` = original;
+  "Send mine" sends the original as option A.
+- Polish switch remembered per chat; default `false` until Settings exists.
+- While polishing: "Polishing…"; on failure "Couldn't polish. Send yours or
+  try again." (strings from HANDOFF-RN-UI §8).
+
+Demo literals: `OWNER_TEXT`, `POLISHED_TEXT`, `conversations` (`c_ana`) from
+`shared/data/mock.ts`. The `c_ana` thread starts from `anaMessages` (m1, m2)
+in `mock.ts`; the fake client seeds inside `features/chats/services/`; do
+not edit `shared/`.
+
+Out of T4: the `OwChats` list (keep `ChatsScreen` placeholder),
+`SuggestionRow`, the "View job and evidence" link target (T5), the Settings
+default, the phone button toast.
+
+**Edit surface.** `apps/owner/features/chats/**`; in GREEN only, the new route
+`apps/owner/app/chat/[id].tsx` (thin adapter: hook result → screen;
+`app/request/[id].tsx` already navigates to `/chat/c_<offerId>`). Do not touch
+`shared/`, `lib/`, other features, or other routes; report gaps instead.
+
+**Write these tests first, show them failing (RED), then stop for review:**
+
+1. `features/chats/lib/*.test.ts` — the A/B delivery rule (pure): message
+   built from as-written vs polished input (`text`, `delivery`, `ownerDraft`),
+   and the metadata label under each bubble.
+2. `features/chats/services/conversationsService.test.ts` (fake client) —
+   `getConversation("c_ana")`, unknown id → `null`, thread messages,
+   `sendMessage` with polish off returns `{sent}` and appends it,
+   with polish on returns a `PolishPreview` (`OWNER_TEXT` → `POLISHED_TEXT`)
+   and appends nothing; sending the chosen version appends it.
+3. `features/chats/copys/chatsCopys.test.ts` — every referenced key exists
+   and is non-empty; demo strings verbatim: `"sent as written"`,
+   `"You wrote"`, `"Send mine"`, `"Send Zukki's"`,
+   `"Zukki's version · English, Ana's language"`.
+
+**Then implement (GREEN):** `lib/`, `services/conversationsService.ts`
+(injected client, fake by default, domain types from `shared/data/types.ts`,
+same shape as `features/requests/services/offersService.ts`),
+`hooks/useConversation.ts` (only service consumer; owns polish switch and
+`composing → polishing → comparing → sent`), `copys/chatsCopys.ts`,
+`components/ChatScreen.tsx` (DOM, serializable props, top-level async
+callbacks), and the route.
+
+**Report:** RED output first; after GREEN the four gates with observed
+results and a one-line diff summary per file. Do not commit.
+
 ## Environment notes (this machine)
 
 - Use `/tmp/pnpm10` for installs (the system pnpm 12 cannot write this

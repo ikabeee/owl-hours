@@ -21,7 +21,7 @@ export type RequestOfferView = {
   secondsLeft: number;
   maxSeconds: number;
   isExpired: boolean;
-  accept: () => Promise<boolean>; // false when the offer was no longer "offered"
+  accept: () => Promise<ID | null>; // the chat to open; null when the offer was no longer "offered"
   decline: () => Promise<boolean>;
 };
 
@@ -59,6 +59,11 @@ export function useRequestOffer(id: ID, deps?: Partial<RequestOfferDeps>): Reque
     return true;
   }
 
+  async function acceptAndFindChat() {
+    if (!(await answer(service.accept))) return null;
+    return service.findChat(id);
+  }
+
   if (!offer) return null;
 
   const remaining = secondsLeft(offer.expiresAt, now);
@@ -69,7 +74,7 @@ export function useRequestOffer(id: ID, deps?: Partial<RequestOfferDeps>): Reque
     secondsLeft: remaining,
     maxSeconds: acceptWindowSeconds(offer.urgent, acceptWindowMin),
     isExpired: remaining === 0,
-    accept: () => answer(service.accept),
+    accept: acceptAndFindChat,
     decline: () => answer(service.decline),
   };
 }
