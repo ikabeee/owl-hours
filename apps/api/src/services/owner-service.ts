@@ -2,6 +2,16 @@
 // security is the tenant boundary; nothing here filters by tenant by hand.
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
+import {
+  storySlidesSchema,
+  storyPackMediaRevisionSchema,
+  type StoryPackReview,
+  type StoryPackCreate,
+  type StoryPackUpdate,
+  type StoryPackDraftDto,
+  type StoryPackSourceDto,
+  type StoryPackHandoffDto,
+} from "@owl-hours/shared";
 import type { ChatChoice, ChatRequest, QuoteLine } from "./owner-types.ts";
 import { RepositoryError, createSupabaseRepository } from "../db/repository.ts";
 import type { OwnerSession } from "../http/auth.ts";
@@ -311,6 +321,308 @@ export async function transitionJob(s: OwnerSession, jobId: string, to: string, 
     .object({ id: uuid, state: z.string() })
     .parse(unwrap(await s.db.rpc("owner_transition_job", { p_job_id: jobId, p_to: to, p_reason: reason })));
   return { id: row.id, state: row.state };
+}
+
+// Story Packs ---------------------------------------------------------------
+
+const contentSourceRows = z.array(z.object({
+  id: uuid,
+  businessId: uuid,
+  businessName: z.string().min(1),
+  jobTitle: z.string().min(1),
+  state: z.literal("done"),
+  shareConsent: z.literal("yes"),
+  assets: z.array(z.object({
+    id: uuid,
+    role: z.enum(["before", "after"]),
+    storagePath: z.string().min(1),
+    revision: storyPackMediaRevisionSchema.shape.revision,
+    thumbPath: z.string().nullable().optional(),
+  })),
+}));
+
+const contentDraftRow = z.object({
+  id: uuid,
+  source: z.enum(["job", "story_pack", "prices", "reminder"]),
+  source_job_id: uuid.nullable(),
+  source_media_ids: z.array(uuid),
+  title: z.string().nullable(),
+  caption: z.string(),
+  slides: storySlidesSchema.nullable(),
+  approved_media: z.array(storyPackMediaRevisionSchema).nullable(),
+  platforms: z.array(z.enum(["facebook_page", "instagram"])),
+  scheduled_at: z.string().nullable(),
+  status: z.enum(["draft", "approved", "published", "rejected"]),
+  reviewed_at: z.string().nullable(),
+  published_at: z.string().nullable(),
+  created_at: z.string(),
+  updated_at: z.string(),
+  deleted_at: z.string().nullable().optional(),
+});
+
+type ContentSourceRow = z.infer<typeof contentSourceRows>[number];
+type ContentDraftRow = z.infer<typeof contentDraftRow>;
+
+async function listContentSourceRows(s: OwnerSession, jobIds?: string[]): Promise<ContentSourceRow[]> {
+  if (jobIds?.length === 0) return [];
+  return contentSourceRows.parse(
+    unwrap(await s.db.rpc("owner_content_sources", { p_limit: 100, ...(jobIds ? { p_job_ids: jobIds } : {}) })),
+  );
+}
+
+const CONTENT_DRAFT_FIELDS = [
+  "id",
+  "source",
+  "source_job_id",
+  "source_media_ids",
+  "title",
+  "caption",
+  "slides",
+  "approved_media",
+  "platforms",
+  "scheduled_at",
+  "status",
+  "reviewed_at",
+  "published_at",
+  "created_at",
+  "updated_at",
+  "deleted_at",
+].join(", ");
+
+function toContentDraft(row: ContentDraftRow, canHandoff = false): StoryPackDraftDto {
+  return {
+    id: row.id,
+    source: row.source,
+    sourceJobId: row.source_job_id,
+    sourceMediaIds: row.source_media_ids,
+    title: row.title,
+    caption: row.caption,
+    slides: row.slides,
+    platforms: row.platforms,
+    scheduledAt: row.scheduled_at,
+    status: row.status,
+    reviewedAt: row.reviewed_at,
+    publishedAt: row.published_at,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    canHandoff,
+  };
+}
+
+// Eligibility belongs to the exact selected set, never another before/after
+// pair that happens to still exist on the same job.
+function hasBeforeAndAfter(assets: ContentSourceRow["assets"]): boolean {
+  return assets.some((asset) => asset.role === "before") && assets.some((asset) => asset.role === "after");
+}
+
+function selectedSource(
+  sources: ContentSourceRow[],
+  jobId: string | null,
+  ids: string[],
+): ContentSourceRow | null {
+  const source = sources.find((row) => row.id === jobId);
+  if (!source || ids.length !== 2 || new Set(ids).size !== 2) return null;
+  const assets = ids.flatMap((id) => source.assets.filter((asset) => asset.id === id));
+  if (assets.length !== 2 || !hasBeforeAndAfter(assets)) return null;
+  return { ...source, assets };
+}
+
+function eligibleDraftSource(row: ContentDraftRow, sources: ContentSourceRow[]): ContentSourceRow | null {
+  if (row.source !== "story_pack" || !row.slides || row.platforms.length === 0 || row.deleted_at) {
+    return null;
+  }
+  const source = selectedSource(sources, row.source_job_id, row.source_media_ids);
+  if (!source) return null;
+  if (row.status === "approved" && !matchesApprovedMedia(source, row.approved_media)) return null;
+  return source;
+}
+
+function matchesApprovedMedia(source: ContentSourceRow, approved: ContentDraftRow["approved_media"]): boolean {
+  if (!approved || approved.length !== 2 || source.assets.length !== 2) return false;
+  const byId = new Map(approved.map((asset) => [asset.id, asset]));
+  if (byId.size !== 2) return false;
+  return source.assets.every((asset) => {
+    const expected = byId.get(asset.id);
+    return expected?.role === asset.role && expected.revision === asset.revision;
+  });
+}
+
+function canHandoff(row: ContentDraftRow, sources: ContentSourceRow[]): boolean {
+  return row.status === "approved" && eligibleDraftSource(row, sources) !== null;
+}
+
+function sameAsset(a: ContentSourceRow["assets"][number], b: ContentSourceRow["assets"][number]): boolean {
+  return a.id === b.id && a.role === b.role && a.storagePath === b.storagePath && a.revision === b.revision;
+}
+
+function toContentSource(row: ContentSourceRow, links: Map<string, string>): StoryPackSourceDto {
+  return {
+    id: row.id,
+    businessName: row.businessName,
+    jobTitle: row.jobTitle,
+    state: "done",
+    shareConsent: "yes",
+    isDemo: false,
+    assets: row.assets.flatMap((asset) => {
+      const imageUrl = links.get(asset.storagePath);
+      return imageUrl ? [{
+        id: asset.id,
+        role: asset.role,
+        label: asset.role === "before" ? "Before photo" : "After photo",
+        imageUrl,
+        revision: asset.revision,
+      }] : [];
+    }),
+  };
+}
+
+export async function listContentSources(s: OwnerSession): Promise<StoryPackSourceDto[]> {
+  const rows = await listContentSourceRows(s);
+  const paths = rows.flatMap((row) => row.assets.map((asset) => asset.storagePath));
+  if (paths.length === 0) return [];
+  const links = await signPaths(s.db, paths);
+  const current = await listContentSourceRows(s);
+  return rows.flatMap((row) => {
+    const latest = current.find((source) => source.id === row.id);
+    if (!latest) return [];
+    // Recheck consent, completion, membership and photo identity after signing.
+    const assets = row.assets.filter((asset) => latest.assets.some((fresh) => sameAsset(asset, fresh)) && links.has(asset.storagePath));
+    return hasBeforeAndAfter(assets) ? [toContentSource({ ...latest, assets }, links)] : [];
+  });
+}
+
+export async function listContentDrafts(s: OwnerSession): Promise<StoryPackDraftDto[]> {
+  const rows = await s.db
+    .from("content_drafts")
+    .select(CONTENT_DRAFT_FIELDS)
+    .eq("source", "story_pack")
+    .is("deleted_at", null)
+    .order("created_at", { ascending: false })
+    .limit(100);
+  const drafts = contentDraftRow.array().parse(unwrap(rows));
+  const activeDrafts = drafts.filter((row) => !row.deleted_at);
+  const jobIds = [...new Set(activeDrafts.flatMap((row) => (row.source_job_id ? [row.source_job_id] : [])))];
+  const sources = await listContentSourceRows(s, jobIds);
+  return activeDrafts.map((row) => toContentDraft(row, canHandoff(row, sources)));
+}
+
+export async function createContentDraft(s: OwnerSession, input: StoryPackCreate): Promise<StoryPackDraftDto> {
+  const sources = await listContentSourceRows(s, [input.sourceJobId]);
+  if (!sources.some((row) => row.id === input.sourceJobId)) {
+    throw new HttpError(404, "not_found", "This completed job is not available for a Story Pack.");
+  }
+  const source = selectedSource(sources, input.sourceJobId, input.sourceMediaIds);
+  if (!source) throw new HttpError(422, "source_media_invalid", "Choose before and after photos from this completed job.");
+  const row = contentDraftRow.parse(unwrap(await s.db.from("content_drafts").insert({
+    tenant_id: source.businessId,
+    source: "story_pack",
+    source_job_id: source.id,
+    source_media_ids: input.sourceMediaIds,
+    title: input.title,
+    caption: input.caption,
+    slides: input.slides,
+    platforms: input.platforms,
+  }).select(CONTENT_DRAFT_FIELDS).single()));
+  return toContentDraft(row);
+}
+
+export async function updateContentDraft(
+  s: OwnerSession,
+  draftId: string,
+  input: StoryPackUpdate,
+): Promise<StoryPackDraftDto> {
+  const changes = Object.fromEntries(
+    Object.entries({
+      title: input.title,
+      caption: input.caption,
+      slides: input.slides,
+      platforms: input.platforms,
+    }).filter(([, value]) => value !== undefined),
+  );
+  const row = contentDraftRow.parse(
+    unwrap(
+      await s.db
+        .from("content_drafts")
+        .update(changes)
+        .eq("id", draftId)
+        .eq("source", "story_pack")
+        .eq("status", "draft")
+        .is("deleted_at", null)
+        .select(CONTENT_DRAFT_FIELDS)
+        .single(),
+    ),
+  );
+  if (row.deleted_at) {
+    throw new HttpError(404, "not_found", "Story Pack not found.");
+  }
+  return toContentDraft(row);
+}
+
+type StoryDraftRow = ContentDraftRow & {
+  source: "story_pack";
+  source_job_id: string;
+};
+
+async function getStoryDraft(s: OwnerSession, draftId: string): Promise<StoryDraftRow> {
+  const row = contentDraftRow.parse(
+    unwrap(
+      await s.db
+        .from("content_drafts")
+        .select(CONTENT_DRAFT_FIELDS)
+        .eq("id", draftId)
+        .is("deleted_at", null)
+        .single(),
+    ),
+  );
+  if (row.source !== "story_pack" || !row.source_job_id || row.deleted_at) {
+    throw new HttpError(404, "not_found", "Story Pack not found.");
+  }
+  return { ...row, source: "story_pack", source_job_id: row.source_job_id };
+}
+
+export async function reviewContentDraft(
+  s: OwnerSession,
+  draftId: string,
+  input: StoryPackReview,
+): Promise<StoryPackDraftDto> {
+  const { approve, expectedUpdatedAt, expectedMedia } = input;
+  // Keep this route scoped to Story Packs. The locked database transition
+  // owns version, consent, completion, exact-media and copy validation.
+  await getStoryDraft(s, draftId);
+  const row = contentDraftRow.parse(
+    unwrap(
+      await s.db.rpc("review_content_draft", {
+        p_draft_id: draftId,
+        p_approve: approve,
+        ...(expectedUpdatedAt ? { p_expected_updated_at: expectedUpdatedAt } : {}),
+        ...(expectedMedia ? { p_expected_media: expectedMedia } : {}),
+      }),
+    ),
+  );
+  // A review receipt does not promise current export eligibility. The UI
+  // refresh and every handoff request obtain that independently.
+  return toContentDraft(row);
+}
+
+// Manual delivery only. Every request obtains current server approval and
+// consent, then signs only the selected assets. No social publishing occurs.
+export async function handoffContentDraft(s: OwnerSession, draftId: string): Promise<StoryPackHandoffDto> {
+  const draft = await getStoryDraft(s, draftId);
+  const source = draft.status === "approved"
+    ? eligibleDraftSource(draft, await listContentSourceRows(s, [draft.source_job_id]))
+    : null;
+  if (!source) {
+    throw new HttpError(422, "story_pack_ineligible", "This Story Pack is no longer approved and eligible for handoff.");
+  }
+  const links = await signPaths(s.db, source.assets.map((asset) => asset.storagePath));
+  const current = eligibleDraftSource(draft, await listContentSourceRows(s, [draft.source_job_id]));
+  if (!current || !source.assets.every((asset) => current.assets.some((fresh) => sameAsset(asset, fresh)))) {
+    throw new HttpError(422, "story_pack_ineligible", "The selected photos or sharing permission changed. Reload this Story Pack.");
+  }
+  if (source.assets.some((asset) => !links.has(asset.storagePath))) {
+    throw new HttpError(422, "source_media_unavailable", "The selected photos are unavailable. Reload this Story Pack.");
+  }
+  return { draft: toContentDraft(draft, true), source: toContentSource(current, links) };
 }
 
 // Test Zukki ----------------------------------------------------------------
