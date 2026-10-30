@@ -98,8 +98,10 @@ export type Job = {
   address?: string;                 // present from customer_approved on
   distanceKm?: number;              // from the business to the customer, shown with the address
   approvedAt?: ISODate;             // when the customer approved the quote
+  scheduledFor?: ISODate;           // the visit time of a job booked ahead (Tomorrow), own offset
   quote: Quote;
   finalTotal?: Money;
+  finalPriceReason?: string;        // why the final total fell outside the quoted estimate
   status: JobStatus;
   timeline: TimelineEvent[];
   photos: { before?: string; after?: string; extra: string[] };

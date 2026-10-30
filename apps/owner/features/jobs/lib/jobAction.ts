@@ -5,7 +5,8 @@ export type JobAction = { label: string; nextStatus: JobStatus | null; isDisable
 
 const START_TRIP: JobAction = { label: jobsCopys.startTrip, nextStatus: "en_route", isDisabled: false };
 const IM_HERE: JobAction = { label: jobsCopys.imHere, nextStatus: "on_site", isDisabled: false };
-// Finishing the job is T5.1: until then the button is shown but cannot be pressed.
+// Finishing opens job/[id]/finish, so it leads to no status; it is enabled only on site.
+const FINISH: JobAction = { label: jobsCopys.finish, nextStatus: null, isDisabled: false };
 const FINISH_LATER: JobAction = { label: jobsCopys.finish, nextStatus: null, isDisabled: true };
 
 const ACTION_BY_STATUS: Record<JobStatus, JobAction> = {
@@ -13,7 +14,7 @@ const ACTION_BY_STATUS: Record<JobStatus, JobAction> = {
   owner_confirmed: { ...START_TRIP, nextStatus: null, isDisabled: true },
   customer_approved: START_TRIP,
   en_route: IM_HERE,
-  on_site: FINISH_LATER,
+  on_site: FINISH,
   done: FINISH_LATER,
 };
 

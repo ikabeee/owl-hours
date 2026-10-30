@@ -16,6 +16,7 @@ function createStoreClient(): JobsClient {
     findJobByConversationId: async (conversationId) =>
       structuredClone([...jobsById.values()].find((job) => job.conversationId === conversationId) ?? null),
     findJob: async (id) => structuredClone(jobsById.get(id) ?? null),
+    listJobs: async () => structuredClone([...jobsById.values()]),
     saveJob: async (job) => {
       jobsById.set(job.id, structuredClone(job));
     },

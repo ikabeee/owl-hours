@@ -12,7 +12,7 @@ export function createDemoClock(startIso: ISODate, realNow: () => number = Date.
 
   return () => {
     const instantMs = Date.parse(startIso) + (realNow() - startedAt);
-    return new Date(instantMs + offsetMs).toISOString().replace(/Z$/, offset);
+    return new Date(instantMs + offsetMs).toISOString().replace(/\.\d+Z$/, offset);
   };
 }
 
