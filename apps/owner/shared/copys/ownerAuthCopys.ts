@@ -1,0 +1,17 @@
+export const authCopys = {
+  title: "Owner sign-in",
+  email: "Owner email",
+  sendLink: "Send sign-in link",
+  signOut: "Sign out",
+  callbackError: "Could not complete sign-in. Request a new link on this device.",
+  callbackPending: "Completing sign-in…",
+  signedIn: "You are signed in.",
+  continue: "Continue",
+  unconfigured: "Owner sign-in is not configured.",
+  restoreError: "Could not restore your session. Please sign in again.",
+  signInError: "Could not send a sign-in link. Check your owner email and try again.",
+  signOutError: "Could not sign out. Please try again.",
+  signInRequired: "Sign in to continue.",
+  sessionExpired: "Your session has expired. Sign in again.",
+  linkSent: "If this email belongs to an existing owner, a sign-in link has been sent. Open it on this device.",
+} as const;
