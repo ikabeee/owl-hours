@@ -1,0 +1,83 @@
+/* Business slice screens: editor rows, the sticky save bar and the service-area strip. */
+
+/* Sticky bottom action bar: Save stays on screen while the editor scrolls
+   (same pattern as the request footer in OwRequest). */
+.zukki-sticky-footer {
+  position: sticky;
+  bottom: 0;
+  margin-inline: calc(-1 * var(--spacing-4, 16px));
+  padding: 12px var(--spacing-4, 16px);
+  background: var(--color-background-body);
+  border-top: 1px solid var(--color-border);
+}
+
+/* OwPrices editor rows: label on the left, fixed-width input on the right. */
+.zukki-price-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 60px;
+}
+.zukki-price-row > :first-child {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Business logo: the Northside mark, as in OwBusiness.dc.html. */
+.zukki-logo {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  flex-shrink: 0;
+}
+
+/* Service-area strip: the static city map with the radius circle on top. */
+.zukki-map-strip {
+  position: relative;
+  width: 100%;
+  height: 60px;
+  margin-top: 6px;
+  border-radius: var(--radius-element, 10px);
+  overflow: hidden;
+  background: var(--color-background-muted);
+}
+.zukki-map-image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.zukki-map-radius {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 56px;
+  height: 56px;
+  margin: -28px 0 0 -28px;
+  border-radius: 50%;
+  border: 2px solid var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 8%, transparent);
+}
+
+/* OwSettings time-to-accept row: label and detail on the left, value pinned right. */
+.zukki-setting-value {
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+/* Destructive "Sign out" row. */
+.zukki-sign-out {
+  color: var(--color-error);
+}
+
+/* The slice's one row chevron. */
+.zukki-row-chevron {
+  color: var(--color-icon-secondary);
+}
+
+/* Left-aligned text action (OwPrices "Add a price"). */
+.zukki-row-action {
+  display: flex;
+  justify-content: flex-start;
+}
