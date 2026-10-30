@@ -35,7 +35,11 @@ slice, delegated with test-first discipline.
 - T5: jobs slice: quote modal + job detail + chat SuggestionRow entry,
   S2-S3, route: delegated (Claude Sonnet 5.5, effort high, same flow as
   T3/T4), branch `feat/owner-jobs-quote`, status: done (GREEN)
-- T5.1: Jobs list (`OwJobs`) + finish (`OwJobDone`), S2-S3
+- T5.1: Jobs list (`OwJobs`) + finish (`OwJobDone`) + jobs-only shared
+  store, S2-S3, route: delegated (Claude Sonnet 5.5, effort high, same flow
+  as T5), branch `feat/owner-jobs-list`, coder: Muse (GREEN), status: done (GREEN, 11294f9 + ccf37eb)
+- T5.2: the sent quote as a message in the chat thread (needs a store shared
+  by chats and jobs), S2-S3, status: pending
 - T6: content + business slices, S2-S3
 
 ## Log
@@ -421,3 +425,66 @@ slice, delegated with test-first discipline.
 - L38 (user, 2026-10-29): "Abre PR pero muestrame los outputs e2e de la
   UI". PR #23 (`feat/owner-jobs-quote`, 3dffc57 + ecd31bc) with the six
   e2e screenshots inline. Next: T5.1 (Jobs list, finish, shared store).
+- L39 (user, 2026-10-30): "empezamos con t5.1, el primer slice ya esta en
+  main. hay que hacer una rama derivada de main en un worktree"; then "si"
+  to install and write the T5.1 assignment with RED for review.
+  - Worktree `owl-hours-worktrees/owner-jobs-list`, branch
+    `feat/owner-jobs-list` from `origin/main` a3bb9f8 (#23), upstream unset.
+    Owner deps via `/tmp/pnpm10 install --frozen-lockfile`.
+  - Store scope: "Jobs-only (Recommended)": one demo jobs service shared by
+    the jobs screens; Carlos and the Tomorrow jobs seeded in `mock.ts`; the
+    quote message in the chat moves to T5.2.
+  - Assignment: `docs/HANDOFF-OWNER-APP.md` "T5.1 assignment".
+- L40 (user, 2026-10-30): "Arrance y deja a muse trabajando como coder".
+  - RED by the Sonnet coder: 16 new test files; 390 tests, 311 pass, 79
+    fail; existing 306 green; tsc errors only from missing code (operator
+    re-ran: 390/311/79).
+  - Answers approved (Q1-Q11 of the RED report): "Upcoming" count derived
+    from the jobs (2 today, design says 3; D12); technician on the card from
+    `customer_approved` on; new copy "Outside the $130–160 estimate. Tell
+    Ana why.", "Why is the price different?", "No jobs tonight.", "No
+    upcoming jobs.", "No finished jobs yet."; status lines "On the way",
+    "On site", "Done · $145"; a range line starts at its midpoint, rounded
+    down; optional `Job.scheduledFor` and `Job.finalPriceReason`;
+    `finishJob` appends "Done"; `listJobs()`, `finishJob(id, { amounts,
+    reason?, asksToSharePhotos })`, `JobView.canFinish`;
+    `sharedDemoJobsService()`, `sharedDemoNow()`,
+    `resetSharedDemoJobsService()`; seeds `carlosJob`, `luciaJob`,
+    `graceJob`.
+  - Operator updated three superseded T5 tests: `jobAction.test.ts`
+    (`on_site` "Finish" enabled), `jobsService.demoClient.test.ts`
+    (`c_carlos` has a draft), `jobsService.test.ts` (store client gains
+    `listJobs`). RED now 390/309/81. Tests locked (`t5-1-jobs-list`).
+  - GREEN coder: Muse (`muse-spark-1.3-contributor`, effort xhigh).
+- L41 (2026-10-30): T5.1 GREEN by Muse; no locked test touched (hashes of
+  the 64 test files unchanged).
+  - Gates (operator re-ran): owner `npm test` 451/451, tsc clean, iOS
+    export OK; root `npm test` and `typecheck` now pass too.
+  - Review, fix round 1 (Muse): the Jobs list and job detail went stale
+    (loaded once, tab stays mounted) -> `reload` on `useFocusEffect` in the
+    routes; `jobCardLabel` moved to `lib/`, dead `JobCardRoute` removed;
+    Carlos arrival 12:40-1:10 AM (was before his request); `useFinishJob`
+    catches a rejected load; `finalTotal` computed once.
+  - After fix: owner 452/452 (+1 `jobCardLabel` test), tsc clean.
+  - E2E `10-job-finish.yaml` not run by Muse: its sandbox cannot reach the
+    simulator.
+- L42 (user, 2026-10-30): "Go" (stop the main checkout's Metro, run e2e
+  from the worktree); then "Narrower padding (Recommended)".
+  - E2E 08, 09, 10 pass in order from a fresh Expo Go. Evidence:
+    `apps/owner/.maestro/evidence/2026-10-30-jobs-list/`.
+  - Operator fixes inline: flow 10 asserted "Approved · arrive 12:55 AM"
+    although 09 leaves Ana `on_site` (now accepts either status line);
+    "Upcoming · 2" was truncated by Astryx md side padding in three equal
+    segments -> `.zukki-jobs-segments` sets `padding-inline:
+    var(--spacing-1) !important` (Astryx atomic rules out-rank any class).
+  - Findings: the shared store makes 08-10 order-dependent within one
+    Expo Go session (run the suite from a fresh app); Expo Go's DOM webview
+    picks up CSS edits only after `expo start --clear`; Maestro needs
+    `JAVA_HOME=/opt/homebrew/opt/openjdk@17`.
+  - Gates after the fixes: owner 452/452, tsc clean, locked-test hashes
+    unchanged. Next: commit the work units, remove the lock.
+- L43 (2026-10-30): T5.1 committed on `feat/owner-jobs-list`: 11294f9
+  (store, service, seeds, lib), ccf37eb (screens, routes, e2e, handoff
+  retirement, D12), plus this log. Lock removed. Native assess: medium,
+  not due (`under_budget`). Not pushed. Next: T5.2 (the sent quote as a
+  message in the chat thread, store shared by chats and jobs).
