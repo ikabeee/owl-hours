@@ -27,6 +27,7 @@ export default function JobScreen(props: {
   job: JobView;
   insets: { top: number; bottom: number };
   onAdvance: () => Promise<boolean>;
+  onOpenFinish: () => Promise<void>;
   onBack: () => Promise<void>;
   dom?: DOMProps;
 }) {
@@ -72,7 +73,7 @@ export default function JobScreen(props: {
           <Card padding={4}>
             <JobTimeline events={job.timeline} pendingSteps={job.pendingSteps} />
           </Card>
-          {job.isFooterVisible && <StatusFooter action={job.action} onAdvance={props.onAdvance} />}
+          {job.isFooterVisible && <StatusFooter action={job.action} canFinish={job.canFinish} onAdvance={props.onAdvance} onOpenFinish={props.onOpenFinish} />}
         </VStack>
       </div>
     </Theme>
@@ -95,11 +96,16 @@ function AddressRow(props: { address: string; sharedNote: string }) {
   );
 }
 
-function StatusFooter(props: { action: JobView['action']; onAdvance: () => Promise<boolean> }) {
+function StatusFooter(props: { action: JobView['action']; canFinish: boolean; onAdvance: () => Promise<boolean>; onOpenFinish: () => Promise<void> }) {
   const [isAdvancing, setIsAdvancing] = useState(false);
 
   // One move at a time: a second tap while the first is in flight must not ask for the same step twice.
-  async function advance() {
+  // On site the button leaves the status flow and opens the finish screen instead.
+  async function press() {
+    if (props.canFinish) {
+      await props.onOpenFinish();
+      return;
+    }
     if (isAdvancing) return;
     setIsAdvancing(true);
     await props.onAdvance();
@@ -108,7 +114,7 @@ function StatusFooter(props: { action: JobView['action']; onAdvance: () => Promi
 
   return (
     <div className="zukki-jobs-footer zukki-jobs-footer-single">
-      <Button label={props.action.label} variant="primary" size="lg" width="100%" isDisabled={props.action.isDisabled || isAdvancing} onClick={advance} />
+      <Button label={props.action.label} variant="primary" size="lg" width="100%" isDisabled={props.action.isDisabled || isAdvancing} onClick={press} />
     </div>
   );
 }
