@@ -1,3 +1,4 @@
+import { OwnerAuthProvider } from "../features/auth/hooks/useOwnerAuth.tsx";
 import { useEffect } from "react";
 import { Stack } from "expo-router";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -24,11 +25,13 @@ export default function RootLayout() {
   if (!fontsLoaded) return null;
 
   return (
+    <OwnerAuthProvider>
     <SafeAreaProvider>
       <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: "#f1f1f1" } }}>
         {/* OwQuote slides up over the chat: https://docs.expo.dev/router/advanced/modals/ */}
         <Stack.Screen name="chat/[id]/quote" options={{ presentation: "modal" }} />
       </Stack>
     </SafeAreaProvider>
+    </OwnerAuthProvider>
   );
 }

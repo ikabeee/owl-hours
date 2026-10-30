@@ -222,3 +222,19 @@ it with a new one.
     accepted).
   - Coded by muse (Spark 1.3, effort xhigh) test-first; the operator locked
     the tests and reviewed one cleaner round.
+
+## D15 — Owner authentication infrastructure (2026-10-30)
+
+- Extract app-wide owner authentication into a separate PR. Keep the singleton,
+  session contract, and encrypted persistence in `shared/infra`, consumed by the
+  auth routes and live feature services. Auth never imports Story Pack.
+- Use PKCE and a dedicated `/auth/callback`, including native
+  `zukki-owner://auth/callback`. One root provider owns cold/warm URL listeners
+  and foreground refresh; explicit URL exchange is independent of auto-refresh.
+- Store oversized native sessions as bounded encrypted SecureStore chunks with
+  a write-last manifest. Surface persistence/cleanup failures and remove the
+  manifest before sign-out cleanup to prevent resurrection of old credentials.
+- Configure the API's external origin explicitly for TLS termination; do not
+  infer trusted browser origins from client-controlled forwarded headers.
+- Hosted allow-lists and real Android sign-in acceptance remain separate from
+  synthetic callback tests and bundle compilation; see `docs/OWNER-AUTH.md`.

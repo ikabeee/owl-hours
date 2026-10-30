@@ -14,3 +14,9 @@ no-install link.
 - `lib/api-client.ts` — HTTP client, base URL from `EXPO_PUBLIC_API_URL`
 
 Theme: Astryx neutral, Figtree, accent `#0074e2` (tokens in `design/tokens.json`).
+
+## Owner sign-in
+
+`/auth` is the app-wide existing-owner magic-link screen. Set the public Supabase
+variables in `.env.example`; follow [owner authentication](../../docs/OWNER-AUTH.md)
+for native redirects, persistence, API origins, and the live acceptance checklist.
