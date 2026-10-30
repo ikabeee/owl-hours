@@ -27,12 +27,16 @@ psql -d postgres -c "create database zukki_test template template0"
 
 run() {
   echo "-- $1"
-  psql -d zukki_test -f - < "$root/$1"
+  local file="$1"
+  shift
+  psql -d zukki_test "$@" -f - < "$root/$file"
 }
 
 run supabase/tests/supabase-stub.sql
 for migration in "$root"/supabase/migrations/*.sql; do
-  run "supabase/migrations/$(basename "$migration")"
+  # Match the Supabase runner: a migration is one atomic transaction.
+  # This catches enum add-and-use and other transaction-dependent failures.
+  run "supabase/migrations/$(basename "$migration")" --single-transaction
 done
 run supabase/seed.sql
 for test in "$root"/supabase/tests/*.test.sql; do
