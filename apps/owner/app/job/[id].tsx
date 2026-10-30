@@ -1,5 +1,6 @@
 // Native wrapper: owns data, navigation and safe areas. The DOM screen only draws. OwJob.
-import { useLocalSearchParams, router } from 'expo-router';
+import { useCallback } from 'react';
+import { useLocalSearchParams, router, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import JobScreen from '../../features/jobs/components/JobScreen';
 import { useJob } from '../../features/jobs/hooks/useJob';
@@ -8,6 +9,8 @@ export default function JobRoute() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const insets = useSafeAreaInsets();
   const job = useJob(id);
+  const reload = job?.reload;
+  useFocusEffect(useCallback(() => { reload?.(); }, [reload]));
   if (!job) return null;
 
   return (
@@ -15,6 +18,7 @@ export default function JobRoute() {
       job={job.job}
       insets={{ top: insets.top, bottom: insets.bottom }}
       onAdvance={job.advance}
+      onOpenFinish={async () => router.push(`/job/${id}/finish`)}
       onBack={async () => router.back()}
       dom={domHost}
     />

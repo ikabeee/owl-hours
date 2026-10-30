@@ -361,3 +361,42 @@ it with a new one.
   logs a warning with the offer id and the `sent`/`failed`/`removed` counts
   when `failed > 0`. Clarified: `sources` records the items the price tool
   returned to the model, so a filtered call contributes only matching rules.
+
+## D22 — Jobs list, finish and the shared jobs store (2026-10-30, T5.1)
+
+- **Decision:** the jobs feature owns the list and the finish.
+  - One module-level demo service (`hooks/demoJobsService.ts`) is shared by
+    `useJobs`, `useJob`, the finish hook and `useQuoteDraft`, so a status
+    change on one screen shows on the others. Hooks still accept an injected
+    service; `createDemoJobsService()` keeps returning independent services.
+  - `listJobs()` on the service (and a required `listJobs` on `JobsClient`)
+    returns the seeded jobs in the store's order, as copies.
+    `finishJob(id, { amounts, reason?, asksToSharePhotos })` from `on_site`
+    marks `done` with `finalTotal` and `shareConsent` ("asked" when the
+    switch is on, else "not_asked"), appends "Done" to the timeline, and
+    stores a trimmed `finalPriceReason` only when the total falls outside
+    the estimate. `updateJobStatus` keeps refusing `done`.
+  - `Job` gains optional `scheduledFor` and `finalPriceReason`; `JobView`
+    gains `canFinish` (true only on site); the overtime statuses read
+    "On the way" (`en_route`, success), "On site" (`on_site`, success) and
+    "Done · $145" (`done`, success, from `finalTotal`); a done card's
+    subtitle reads its final total. A range line starts the finish form at
+    its midpoint, rounded down.
+  - `job/[id]/finish` is a plain stack push (no modal); "Mark as done"
+    returns to the Jobs tab with `router.dismissTo`, where the job now sits
+    under Done.
+  - The Jobs tab and the job detail reload when they regain focus: each
+    hook exposes `reload()`, and the thin routes wire it with
+    `useFocusEffect`. Hooks stay free of expo-router.
+- **Why:** the demo path ends the job from the list, and the "Upcoming · 3"
+  design count cannot hold with two Tomorrow jobs in the seed: the counts
+  are derived from the jobs ("Upcoming · 2" today), which the operator
+  approved as a divergence from the design.
+- **Consequences:**
+  - The quote message in the chat thread moves to T5.2; the chats feature
+    is untouched.
+  - `demoClock` no longer writes fractional seconds, so `sharedDemoNow`
+    matches the seed's shape (`2026-10-28T00:07:00-05:00`).
+  - A rejected `getJob`/`listJobs` still leaves a blank screen (the L37
+    gap): the new routes render null while loading and have no error state
+    yet.
