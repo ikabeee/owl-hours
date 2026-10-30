@@ -15,8 +15,8 @@ describe("primaryAction", () => {
     assert.deepEqual(primaryAction("en_route"), { label: "I'm here", nextStatus: "on_site", isDisabled: false });
   });
 
-  it('at on_site reads "Finish", disabled until T5.1, and leads nowhere', () => {
-    assert.deepEqual(primaryAction("on_site"), { label: "Finish", nextStatus: null, isDisabled: true });
+  it('at on_site reads "Finish", enabled, and opens the finish screen instead of a status (T5.1)', () => {
+    assert.deepEqual(primaryAction("on_site"), { label: "Finish", nextStatus: null, isDisabled: false });
   });
 
   for (const status of ["quoted", "owner_confirmed", "done"] as const) {

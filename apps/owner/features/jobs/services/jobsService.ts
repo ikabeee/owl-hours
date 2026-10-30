@@ -1,27 +1,38 @@
-import { anaJob } from "../../../shared/data/mock.ts";
-import type { ID, ISODate, Job, JobStatus, Quote } from "../../../shared/data/types.ts";
+import { anaJob, carlosJob, graceJob, luciaJob } from "../../../shared/data/mock.ts";
+import type { ID, ISODate, Job, JobStatus, Money, Quote } from "../../../shared/data/types.ts";
 import { jobsCopys } from "../copys/jobsCopys.ts";
+import { estimateCheck } from "../lib/estimateCheck.ts";
+import { finalTotal } from "../lib/finalAmounts.ts";
+import { canFinish } from "../lib/finishAvailability.ts";
 import { primaryAction } from "../lib/jobAction.ts";
-import { canSendQuote } from "../lib/lineValidation.ts";
+import { canSendQuote, isValidAmount } from "../lib/lineValidation.ts";
 import { quoteTotal } from "../lib/quoteTotal.ts";
 
 export type JobsClient = {
   findJobByConversationId(conversationId: ID): Promise<Job | null>;
   findJob(id: ID): Promise<Job | null>;
+  listJobs(): Promise<Job[]>;
   saveJob(job: Job): Promise<void>;
 };
 
 // What the quote modal opens with: Zukki's pre-filled quote and who it is for.
 export type QuoteDraft = { jobId: ID; title: string; customerName: string; quote: Quote };
 
+// What the finish screen saves: one final amount per quote line, a reason when the total falls
+// outside the estimate, and whether the owner asked the customer to share the photos.
+export type FinishJobInput = { amounts: Money[]; reason?: string; asksToSharePhotos: boolean };
+
 export type JobsDeps = { now: () => ISODate };
 
-// Refusals answer null: an unknown id, an invalid quote, or a status the job cannot move to.
+// Refusals answer null: an unknown id, an invalid quote, a status the job cannot move to, or a
+// finish the rules forbid.
 export type JobsService = {
   getQuoteDraft(conversationId: ID): Promise<QuoteDraft | null>;
   sendQuote(conversationId: ID, quote: Quote): Promise<Job | null>;
   getJob(id: ID): Promise<Job | null>;
+  listJobs(): Promise<Job[]>;
   updateJobStatus(id: ID, status: JobStatus): Promise<Job | null>;
+  finishJob(id: ID, final: FinishJobInput): Promise<Job | null>;
 };
 
 export function createJobsService(client: JobsClient, deps: Partial<JobsDeps> = {}): JobsService {
@@ -42,11 +53,30 @@ export function createJobsService(client: JobsClient, deps: Partial<JobsDeps> = 
 
     getJob: (id) => client.findJob(id),
 
+    listJobs: () => client.listJobs(),
+
     updateJobStatus: async (id, status) => {
       const job = await client.findJob(id);
       if (!job || primaryAction(job.status).nextStatus !== status) return null;
 
       return save(client, { ...job, status, timeline: [...job.timeline, ...eventsOnReaching(status, now())] });
+    },
+
+    finishJob: async (id, final) => {
+      const job = await client.findJob(id);
+      const reason = final.reason?.trim() ?? "";
+      if (!job || !canFinish(job.status) || !isConsistentFinal(job, final.amounts)) return null;
+      const total = finalTotal(final.amounts);
+      if (estimateCheck(total, job.quote.total) !== "within" && reason === "") return null;
+
+      return save(client, {
+        ...job,
+        status: "done",
+        finalTotal: total,
+        shareConsent: final.asksToSharePhotos ? "asked" : "not_asked",
+        ...(reason === "" ? {} : { finalPriceReason: reason }),
+        timeline: [...job.timeline, { at: now(), text: jobsCopys.timelineDone }],
+      });
     },
   };
 }
@@ -55,6 +85,11 @@ export function createJobsService(client: JobsClient, deps: Partial<JobsDeps> = 
 function isConsistentQuote(quote: Quote): boolean {
   const total = quoteTotal(quote.lines);
   return canSendQuote(quote.lines) && quote.total.min === total.min && quote.total.max === total.max;
+}
+
+// Final amounts are consistent when there is one positive whole number per quote line.
+function isConsistentFinal(job: Job, amounts: Money[]): boolean {
+  return amounts.length === job.quote.lines.length && amounts.every(isValidAmount);
 }
 
 // Only starting the trip is a milestone the timeline records; arriving on site is not.
@@ -75,6 +110,7 @@ export function createInMemoryJobsClient(seedJobs: Job[]): JobsClient {
     findJobByConversationId: async (conversationId) =>
       structuredClone([...jobsById.values()].find((job) => job.conversationId === conversationId) ?? null),
     findJob: async (id) => structuredClone(jobsById.get(id) ?? null),
+    listJobs: async () => structuredClone([...jobsById.values()]),
     saveJob: async (job) => {
       jobsById.set(job.id, structuredClone(job));
     },
@@ -88,7 +124,7 @@ export type FakeJobsClientDeps = { now: () => ISODate };
 
 export function createFakeJobsClient(deps: Partial<FakeJobsClientDeps> = {}): JobsClient {
   const { now } = { ...createDefaultDeps(), ...deps };
-  const store = createInMemoryJobsClient([anaJob]);
+  const store = createInMemoryJobsClient([anaJob, carlosJob, luciaJob, graceJob]);
 
   return {
     ...store,
@@ -107,7 +143,7 @@ function approvedOnCustomersBehalf(job: Job, at: ISODate): Job {
   };
 }
 
-// Wall clock; the demo hooks inject a clock that starts at the designs' "12:05 AM".
+// Wall clock; the demo hooks inject a clock that starts at the designs' "12:07 AM".
 function createDefaultDeps(): JobsDeps {
   return { now: () => new Date().toISOString() };
 }

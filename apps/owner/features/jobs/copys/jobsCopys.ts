@@ -34,6 +34,35 @@ const copys = {
   // timeline rows still ahead
   onTheWay: "On the way",
   timelineDone: "Done",
+  // jobs list
+  jobsTitle: "Jobs",
+  tonight: "Tonight",
+  upcoming: "Upcoming",
+  done: "Done",
+  tomorrow: "Tomorrow",
+  // finish
+  finishTheJob: "Finish the job",
+  photos: "Photos",
+  before: "Before",
+  after: "After",
+  addPhoto: "Add",
+  total: "Total",
+  sharePhotosHint: "For posts. Only used if she says yes.",
+  markAsDone: "Mark as done",
+  confirmFinalPrice: (firstName: string) =>
+    `Confirm the final price. Zukki sends ${firstName} the receipt and asks for a review on WhatsApp.`,
+  askToSharePhotos: (firstName: string) => `Ask ${firstName} to share the photos`,
+  outsideEstimate: (estimate: string, firstName?: string) =>
+    firstName ? `Outside the ${estimate} estimate. Tell ${firstName} why.` : `Outside the ${estimate} estimate.`,
+  reasonLabel: "Why is the price different?",
+  emptyTonight: "No jobs tonight.",
+  emptyUpcoming: "No upcoming jobs.",
+  emptyDone: "No finished jobs yet.",
+  // job cards
+  waitingForApproval: (firstName: string) => `Waiting for ${firstName} to approve`,
+  approvedArrive: (arrival: string) => `Approved · arrive ${arrival}`,
+  withinEstimate: (estimate: string) => `Within the ${estimate} estimate`,
+  onSite: "On site",
 };
 
 // The index signature lets tests and tooling walk the copys by key name.

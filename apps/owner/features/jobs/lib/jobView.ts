@@ -5,6 +5,7 @@ import { wallClockTimeText } from "../../../shared/lib/wallClockTime.ts";
 import { visibleAddress } from "./addressVisibility.ts";
 import { approvalLine } from "./approvalLine.ts";
 import { arrivalWindowText } from "./arrivalWindow.ts";
+import { canFinish } from "./finishAvailability.ts";
 import { isJobFooterVisible } from "./jobFooter.ts";
 import { primaryAction } from "./jobAction.ts";
 import type { JobAction } from "./jobAction.ts";
@@ -25,6 +26,7 @@ export type JobView = {
   pendingSteps: string[]; // the grey rows still ahead
   action: JobAction;
   isFooterVisible: boolean;
+  canFinish: boolean; // true only on site: the footer button opens job/[id]/finish instead of advancing
 };
 
 export function buildJobView(job: Job): JobView {
@@ -42,5 +44,6 @@ export function buildJobView(job: Job): JobView {
     pendingSteps: pendingTimelineSteps(job.status),
     action: primaryAction(job.status),
     isFooterVisible: isJobFooterVisible(job.status),
+    canFinish: canFinish(job.status),
   };
 }
