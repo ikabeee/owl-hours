@@ -1,0 +1,56 @@
+// Hook for OwAccounts screen: loads linked social accounts.
+import { useCallback, useEffect, useState } from "react";
+import type { LinkedAccount } from "../../../shared/data/types.ts";
+import {
+  createAccountsService,
+  createFakeAccountsClient,
+} from "../services/accountsService.ts";
+import type { AccountsService } from "../services/accountsService.ts";
+
+export type LinkedAccountsView = {
+  accounts: LinkedAccount[];
+};
+
+export type LinkedAccountsState =
+  | { status: "loading" }
+  | { status: "error"; retry: () => Promise<void> }
+  | { status: "ready"; view: LinkedAccountsView };
+
+export type LinkedAccountsDeps = {
+  service: AccountsService;
+};
+
+export function useLinkedAccounts(
+  deps?: Partial<LinkedAccountsDeps>,
+): LinkedAccountsState {
+  const [defaultDeps] = useState(createDefaultDeps);
+  const service = deps?.service ?? defaultDeps.service;
+
+  const [state, setState] = useState<LinkedAccountsState>({ status: "loading" });
+
+  const load = useCallback(async () => {
+    try {
+      const accounts = await service.getAccounts();
+      setState({
+        status: "ready",
+        view: {
+          accounts,
+        },
+      });
+    } catch {
+      setState({ status: "error", retry: load });
+    }
+  }, [service]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  return state;
+}
+
+function createDefaultDeps(): LinkedAccountsDeps {
+  return {
+    service: createAccountsService(createFakeAccountsClient()),
+  };
+}

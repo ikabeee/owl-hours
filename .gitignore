@@ -11,3 +11,4 @@ supabase/.branches/
 .pnpm-store/
 .astro/
 .atl/
+graphify-out/
