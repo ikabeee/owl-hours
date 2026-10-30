@@ -488,3 +488,5 @@ slice, delegated with test-first discipline.
   retirement, D12), plus this log. Lock removed. Native assess: medium,
   not due (`under_budget`). Not pushed. Next: T5.2 (the sent quote as a
   message in the chat thread, store shared by chats and jobs).
+- L44 (user, 2026-10-30): "Manda el pr". PR #30 (`feat/owner-jobs-list`,
+  11294f9 + ccf37eb + docs) with the e2e screenshots inline.
