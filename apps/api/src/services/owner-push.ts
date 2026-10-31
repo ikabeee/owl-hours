@@ -10,8 +10,8 @@ import { unwrap } from "./db-result.ts";
 
 // POST a single message or an array of up to 100 messages; no auth.
 export const EXPO_PUSH_URL = "https://exp.host/--/api/v2/push/send";
-// Android channel the app registers for urgent requests (S4).
-export const REQUEST_CHANNEL_ID = "Urgent requests";
+// Android channel id the app registers for urgent requests (S4); Expo routes by id, not by the "Urgent requests" display name.
+export const REQUEST_CHANNEL_ID = "urgent-requests";
 // Notification category the app registers with its Open/Decline actions.
 export const REQUEST_CATEGORY = "request";
 // The push outlives the offer window, so its image link lasts a day.

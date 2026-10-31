@@ -20,7 +20,7 @@ describe("buildRequestPush", () => {
     assert.equal(payload.title, "Urgent: leaking toilet, 1.2 km");
     assert.equal(payload.body, "Water is spreading. Accept within 5 minutes or Zukki offers it to another business.");
     assert.deepEqual(payload.data, { requestId: "req_ana", category: "request" });
-    assert.equal(payload.channelId, "Urgent requests");
+    assert.equal(payload.channelId, "urgent-requests");
     assert.equal(payload.image, "https://example.supabase.co/storage/bath-leak");
   });
 

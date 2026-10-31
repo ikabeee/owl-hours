@@ -30,7 +30,7 @@ const NOTIFICATION: BuiltRequestPush = {
   title: "Urgent: leaking toilet, 1.2 km",
   body: "Water is spreading. Accept within 5 minutes or Zukki offers it to another business.",
   data: { requestId: "req_ana", category: "request" },
-  channelId: "Urgent requests",
+  channelId: "urgent-requests",
   image: null,
 };
 
