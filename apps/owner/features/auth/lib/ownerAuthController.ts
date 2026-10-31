@@ -3,7 +3,8 @@ import type { Session } from '../../../shared/infra/ownerSessionService.ts';
 
 export type OwnerAuthRuntime = {
   restore(): Promise<Session | null>;
-  signIn(email: string): Promise<void>;
+  sendCode(phone: string): Promise<boolean>;
+  verifyCode(phone: string, code: string): Promise<boolean>;
   signOut(): Promise<void>;
   subscribe(next: (session: Session | null) => void): () => void;
 };
@@ -12,7 +13,6 @@ export type OwnerAuthControllerState = {
   session: Session | null;
   loading: boolean;
   error: string | null;
-  notice: string | null;
 };
 
 export type OwnerAuthController = {
@@ -20,12 +20,21 @@ export type OwnerAuthController = {
   subscribe(listener: () => void): () => void;
   start(): () => void;
   restore(): Promise<void>;
-  signIn(email: string): Promise<void>;
+  sendCode(phone: string): Promise<boolean>;
+  verifyCode(phone: string, code: string): Promise<boolean>;
   signOut(): Promise<void>;
-  reportError(failure: unknown): void;
 };
 
 const safeMessages = new Set<string>(Object.values(authCopys));
+
+// Network failures read as a rejected send or code: the handoff has no other copy.
+async function answerOrFalse(attempt: () => Promise<boolean>): Promise<boolean> {
+  try {
+    return await attempt();
+  } catch {
+    return false;
+  }
+}
 
 function safeError(failure: unknown, fallback: string): string {
   if (failure instanceof Error && safeMessages.has(failure.message)) {
@@ -35,14 +44,14 @@ function safeError(failure: unknown, fallback: string): string {
 }
 
 export function createOwnerAuthController(runtime: OwnerAuthRuntime | null): OwnerAuthController {
-  let state: OwnerAuthControllerState = { session: null, loading: runtime !== null, error: null, notice: null };
+  let state: OwnerAuthControllerState = { session: null, loading: runtime !== null, error: null };
   const listeners = new Set<() => void>();
   let unsubscribeRuntime: (() => void) | null = null;
   let signingOut = false;
   let clearedWhileSigningOut = false;
   let liveUpdateReceived = false;
 
-  return { getState, subscribe, start, restore, signIn, signOut, reportError };
+  return { getState, subscribe, start, restore, sendCode, verifyCode, signOut };
 
   function getState(): OwnerAuthControllerState {
     return state;
@@ -120,19 +129,21 @@ export function createOwnerAuthController(runtime: OwnerAuthRuntime | null): Own
     }
   }
 
-  async function signIn(email: string): Promise<void> {
+  // Demo mode has no runtime: onboarding then uses its DEMO_CODE fake, never this.
+  async function sendCode(phone: string): Promise<boolean> {
     if (runtime === null) {
-      update({ error: authCopys.unconfigured });
-      return;
+      return false;
+    }
+    return answerOrFalse(() => runtime.sendCode(phone));
+  }
+
+  // Subscribe first, so the session the runtime emits on a verified code is kept.
+  async function verifyCode(phone: string, code: string): Promise<boolean> {
+    if (runtime === null) {
+      return false;
     }
     ensureRuntimeSubscription();
-    update({ loading: true, error: null, notice: null });
-    try {
-      await runtime.signIn(email);
-      update({ notice: authCopys.linkSent, loading: false });
-    } catch (failure) {
-      update({ error: safeError(failure, authCopys.signInError), loading: false });
-    }
+    return answerOrFalse(() => runtime.verifyCode(phone, code));
   }
 
   async function signOut(): Promise<void> {
@@ -140,7 +151,7 @@ export function createOwnerAuthController(runtime: OwnerAuthRuntime | null): Own
       return;
     }
     ensureRuntimeSubscription();
-    update({ loading: true, error: null, notice: null });
+    update({ loading: true, error: null });
     signingOut = true;
     clearedWhileSigningOut = false;
     try {
@@ -155,10 +166,6 @@ export function createOwnerAuthController(runtime: OwnerAuthRuntime | null): Own
     } finally {
       signingOut = false;
     }
-  }
-
-  function reportError(failure: unknown): void {
-    update({ error: safeError(failure, authCopys.callbackError), loading: false });
   }
 
   function update(patch: Partial<OwnerAuthControllerState>): void {

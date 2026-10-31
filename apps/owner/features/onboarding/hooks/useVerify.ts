@@ -4,8 +4,8 @@
 import { useEffect, useState } from "react";
 import { resendAtFrom, resendSecondsLeft, resendState } from "../lib/codeEntry.ts";
 import type { ResendState } from "../lib/codeEntry.ts";
-import { demoOnboardingService } from "../services/onboardingService.ts";
 import type { OnboardingService } from "../services/onboardingService.ts";
+import { useOnboardingService } from "./useOnboardingService.ts";
 
 export type VerifyDeps = { service: OnboardingService };
 
@@ -24,8 +24,8 @@ export type Verify =
   | { status: "ready"; view: VerifyView };
 
 export function useVerify(deps?: Partial<VerifyDeps>): Verify {
-  const [defaults] = useState(createDemoDeps);
-  const service = deps?.service ?? defaults.service;
+  const configured = useOnboardingService();
+  const service = deps?.service ?? configured;
 
   const [phone, setPhone] = useState<string | null>(null);
   const [resendAt, setResendAt] = useState<string | null>(null);
@@ -90,8 +90,4 @@ async function resendCode(
 ): Promise<void> {
   await service.sendCode(phone);
   setResendAt(resendAtFrom((await service.getLastPhone()).sentAt));
-}
-
-function createDemoDeps(): VerifyDeps {
-  return { service: demoOnboardingService };
 }

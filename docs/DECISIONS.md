@@ -258,14 +258,21 @@ it with a new one.
 
 - Extract app-wide owner authentication into a separate PR. Keep the singleton,
   session contract, and encrypted persistence in `shared/infra`, consumed by the
-  auth routes and live feature services. Auth never imports Story Pack.
-- Use PKCE and a dedicated `/auth/callback`, including native
-  `zukki-owner://auth/callback`. One root provider owns cold/warm URL listeners
-  and foreground refresh; explicit URL exchange is independent of auto-refresh.
+  root provider and live feature services. Auth never imports Story Pack.
+- The owner signs in by SMS one-time code through the handoff `OwSignUp` →
+  `OwVerify` screens (user decision "SMS"), not an email magic link:
+  `signInWithOtp({ phone })` with `shouldCreateUser: true` on sign-up, then
+  `verifyOtp({ phone, token, type: 'sms' })`. The `/auth` routes, the email
+  screen and the PKCE callback code are removed. Live mode needs the Supabase
+  Phone provider and an SMS provider configured (`docs/OWNER-AUTH.md`).
+- The root provider owns the session controller and foreground refresh, and
+  injects the SMS send/verify into onboarding; demo mode (no Supabase variables)
+  keeps the `DEMO_CODE` fake. In live mode a signed-out owner outside
+  `/onboarding/*` is redirected to `/onboarding/sign-up`.
 - Store oversized native sessions as bounded encrypted SecureStore chunks with
   a write-last manifest. Surface persistence/cleanup failures and remove the
   manifest before sign-out cleanup to prevent resurrection of old credentials.
 - Configure the API's external origin explicitly for TLS termination; do not
   infer trusted browser origins from client-controlled forwarded headers.
-- Hosted allow-lists and real Android sign-in acceptance remain separate from
-  synthetic callback tests and bundle compilation; see `docs/OWNER-AUTH.md`.
+- Hosted Phone provider settings and real Android sign-in acceptance remain
+  separate from synthetic tests and bundle compilation; see `docs/OWNER-AUTH.md`.

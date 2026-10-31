@@ -1,8 +1,8 @@
-// Sign-up: the demo name and phone through the service, plus the code send. The form
+// Sign-up: the saved name and phone through the service, plus the code send. The form
 // itself lives in the DOM screen; the hook owns loading, the submit and the send.
 import { useEffect, useState } from "react";
-import { demoOnboardingService } from "../services/onboardingService.ts";
 import type { OnboardingService } from "../services/onboardingService.ts";
+import { useOnboardingService } from "./useOnboardingService.ts";
 
 export type SignUpDeps = { service: OnboardingService };
 
@@ -20,8 +20,8 @@ export type SignUp =
   | { status: "ready"; view: SignUpView };
 
 export function useSignUp(deps?: Partial<SignUpDeps>): SignUp {
-  const [defaults] = useState(createDemoDeps);
-  const service = deps?.service ?? defaults.service;
+  const configured = useOnboardingService();
+  const service = deps?.service ?? configured;
 
   const [saved, setSaved] = useState<{ name: string; phone: string } | null>(null);
   const [failed, setFailed] = useState(false);
@@ -70,8 +70,4 @@ async function submitSignUp(
 ): Promise<boolean> {
   await service.saveOwnerName(name);
   return (await service.sendCode(phone)).ok;
-}
-
-function createDemoDeps(): SignUpDeps {
-  return { service: demoOnboardingService };
 }

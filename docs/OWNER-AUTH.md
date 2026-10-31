@@ -1,32 +1,42 @@
 # Owner authentication
 
-This is app-wide infrastructure, independent of Story Pack. The shared Supabase
-singleton lives in `apps/owner/shared/infra/`; the auth feature owns the UI,
-root lifecycle adapter, and `/auth` and `/auth/callback` routes. The root provider
-is the only callback/AppState listener. Feature services reuse the singleton's
-`restore`, `subscribe`, `signIn`, `signOut`, and `getAccessToken` methods.
+This is app-wide infrastructure, independent of Story Pack. The owner signs in
+with the handoff onboarding flow `OwSignUp` → `OwVerify`: a mobile number and a
+6-digit code sent by SMS. There is no email or magic-link screen.
+
+The shared Supabase singleton lives in `apps/owner/shared/infra/`. The auth
+feature owns the root provider (`OwnerAuthProvider`), the auth gate and the
+foreground refresh adapter. The provider hands the SMS send/verify to onboarding
+(`useOnboardingService`), and feature services reuse the singleton's `restore`,
+`subscribe`, `signOut` and `getAccessToken` methods.
+
+## Sign-in flow
+
+- **Send:** `sendCode(phone)` calls `supabase.auth.signInWithOtp({ phone, options: { shouldCreateUser: true } })`.
+  Spaces and dashes are removed first, so `+1 555 014 2290` is sent as `+15550142290` (E.164).
+  Sign-up creates the owner's auth user on the first code.
+- **Verify:** `verifyCode(phone, code)` calls `supabase.auth.verifyOtp({ phone, token: code, type: 'sms' })`.
+  The SDK stores the returned session through the owner storage below and emits it;
+  the auth controller keeps it.
+- **Gate:** in live mode, a signed-out owner on any route outside `/onboarding/*` is
+  sent to `/onboarding/sign-up` once the stored session has been restored.
+- **Demo mode:** without `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_ANON_KEY`
+  there is no auth runtime: onboarding keeps the in-memory fake (`DEMO_CODE`), the
+  demo owner is prefilled on sign-up, and nothing is gated.
 
 ## Configuration and deployment acceptance
 
 Set `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_ANON_KEY` in the owner
 build environment. The public anon/publishable key is not a service-role key.
-The owner must already exist; magic-link requests set `shouldCreateUser: false`.
-The callback does not accept fragment access tokens or unverified token claims.
-It exchanges a PKCE code with Supabase, including `sb_flow_id` when supplied.
-The verifier is stored on the device/browser that initiated the request: open
-the link there. The app does not pass session tokens through the DOM bridge.
 
-Before live acceptance, the operator must configure the Supabase Auth redirect
-allow-list with `zukki-owner://auth/callback` and each deployed web origin's
-`/auth/callback` URL. Keep the existing `zukki-owner` scheme in the native build.
-Use a development or release app build, not an Expo Go scheme. These hosted
-settings have **not** been changed by this PR.
+Before live acceptance, the operator must enable the Supabase **Phone** provider
+(Authentication → Providers → Phone) and configure an SMS provider (Twilio,
+MessageBird, Textlocal or Vonage) with its credentials, plus the OTP expiry and
+SMS rate limits. These hosted settings have **not** been changed by this PR.
+No redirect allow-list is needed: SMS sign-in never returns through a URL.
 
-Native launches read `Linking.getInitialURL()`, running apps receive URL events,
-and both validate the exact callback scheme/host/path before exchanging a code.
-Foreground AppState starts refresh; background and unmount stop it. Refresh is
-configured independently of URL detection. Web also exchanges explicitly and
-removes the callback query from browser history after success.
+Foreground AppState (native) or page visibility (web) starts token refresh;
+background and unmount stop it.
 
 ## Session persistence
 
@@ -52,20 +62,27 @@ an Origin header retain their existing authentication behavior.
 
 ## Verification boundary
 
-Automated coverage includes exact callback validation, replay suppression,
-PKCE flow ID forwarding, cold/warm URL delivery, lifecycle cleanup, refresh
-failure, persisted SDK session restore/sign-out, Unicode chunking, storage
-write failure and sign-out cleanup failure, and proxy-origin CORS spoofing.
-These are synthetic tests. Android bundle export is compile evidence, not
-installed-device or live-provider acceptance.
+Automated coverage includes the exact `signInWithOtp` and `verifyOtp` payloads,
+SDK `/otp` and `/verify` requests with the verified session written to the given
+storage, the controller keeping the emitted session, the live/demo onboarding
+service selection, the gate decision, foreground refresh cleanup, persisted SDK
+session restore/sign-out, Unicode chunking, storage write and sign-out cleanup
+failures, and proxy-origin CORS spoofing. These are synthetic tests; no SMS is sent.
 
-Live acceptance remains: configure redirect allow-list; request an existing
-owner link from the installed Android build; open once with the app closed and
-once while running; relaunch and verify the same session; background/foreground
-and refresh; sign out/relaunch and verify no session. Check web `/auth` callback
-on the deployed web origin. No email, hosted configuration, or deployment is
-performed by these tests.
+Live acceptance remains: enable the Phone provider; sign up from the installed
+Android build with a real number; enter the code; relaunch and verify the same
+session; background/foreground and refresh; sign out/relaunch and verify the gate
+returns to sign-up.
 
-References: [Supabase mobile deep links](https://supabase.com/docs/guides/auth/native-mobile-deep-linking),
-[Supabase PKCE](https://supabase.com/docs/guides/auth/sessions/pkce-flow),
+## Follow-ups
+
+- A failed SMS send is silent: "Send code" stays on sign-up with no message,
+  because the handoff has no copy for it.
+- Every verify failure (wrong or expired code, network error) shows the handoff
+  "That code didn't work. Try again."
+- In live mode the onboarding drafts (name, profile, prices, area) stay in memory;
+  they are not saved to Supabase yet.
+
+References: [Supabase phone login](https://supabase.com/docs/guides/auth/phone-login),
+[Supabase React Native sessions](https://supabase.com/docs/guides/auth/quickstarts/react-native),
 [Expo SecureStore](https://docs.expo.dev/versions/latest/sdk/securestore/).

@@ -1,4 +1,6 @@
-// Onboarding demo backend: sign-up code, website import, and the profile/prices/area drafts.
+// Onboarding backend: sign-up code, website import, and the profile/prices/area drafts.
+// Demo mode checks DEMO_CODE; live mode texts and checks the code through PhoneAuth
+// (Supabase SMS OTP behind the owner auth controller). Drafts stay in memory in both.
 // The fake client is seeded with private copies of the demo business and owner
 // (structuredClone, never mutating the shared mock). Services return states
 // (e.g. "wrong_code"), never copy: the screens own the words.
@@ -39,14 +41,23 @@ export type OnboardingService = {
   setNightUrgent(nightUrgent: boolean): Promise<void>;
 };
 
-export type OnboardingDeps = { now: () => string };
+// Who sign-up starts with: the demo owner in demo mode, empty fields in live mode.
+export type OwnerDefaults = { name: string; phone: string };
+
+export type OnboardingDeps = { now: () => string; owner: OwnerDefaults };
+
+export type PhoneAuth = {
+  sendCode(phone: string): Promise<boolean>;
+  verifyCode(phone: string, code: string): Promise<boolean>;
+};
 
 export type OnboardingClient = {
   findOwnerName(): Promise<string | null>;
   saveOwnerName(name: string): Promise<void>;
   findPhone(): Promise<{ phone: string; sentAt: string } | null>;
   savePhone(entry: { phone: string; sentAt: string }): Promise<void>;
-  checkCode(code: string): Promise<boolean>;
+  sendCode(phone: string): Promise<boolean>;
+  checkCode(phone: string, code: string): Promise<boolean>;
   importPrices(): Promise<WebsiteImport>;
   findProfile(): Promise<OnboardingProfile | null>;
   saveProfile(profile: OnboardingProfile): Promise<void>;
@@ -60,15 +71,15 @@ export function createOnboardingService(
   client: OnboardingClient,
   deps: Partial<OnboardingDeps> = {},
 ): OnboardingService {
-  const { now } = { ...createDefaultDeps(), ...deps };
+  const { now, owner } = { ...createDefaultDeps(), ...deps };
 
   return {
     sendCode: (phone) => sendCode(client, now, phone),
     verifyCode: (phone, code) => verifyCode(client, phone, code),
     importFromWebsite: () => client.importPrices(),
-    getOwnerName: async () => (await client.findOwnerName()) ?? seedOwner.name,
+    getOwnerName: async () => (await client.findOwnerName()) ?? owner.name,
     saveOwnerName: (name) => client.saveOwnerName(name),
-    getLastPhone: () => lastPhone(client),
+    getLastPhone: () => lastPhone(client, owner.phone),
     getProfile: () => currentProfile(client),
     saveProfile: (profile) => client.saveProfile(profile),
     getPrices: () => currentPrices(client),
@@ -99,7 +110,8 @@ export function createFakeOnboardingClient(): OnboardingClient {
     savePhone: async (entry) => {
       phone = structuredClone(entry);
     },
-    checkCode: async (code) => code === DEMO_CODE,
+    sendCode: async () => true,
+    checkCode: async (_phone, code) => code === DEMO_CODE,
     importPrices: async () => ({
       services: IMPORTED_SERVICES,
       prices: structuredClone(seedBusiness.prices),
@@ -119,11 +131,44 @@ export function createFakeOnboardingClient(): OnboardingClient {
   };
 }
 
-// The demo default every hook shares, so data entered on one step is there on the next:
+// Live client: the code goes through PhoneAuth; every draft stays in the given client.
+export function createLiveOnboardingClient(
+  phoneAuth: PhoneAuth,
+  drafts: OnboardingClient,
+): OnboardingClient {
+  return {
+    ...drafts,
+    sendCode: (phone) => phoneAuth.sendCode(phone),
+    checkCode: (phone, code) => phoneAuth.verifyCode(phone, code),
+  };
+}
+
+// The drafts every hook shares, so data entered on one step is there on the next:
 // profile -> prices -> area -> live shows the business name and radius.
-export const demoOnboardingService: OnboardingService = createOnboardingService(
-  createFakeOnboardingClient(),
-);
+const sharedDrafts = createFakeOnboardingClient();
+
+export const demoOnboardingService: OnboardingService = createOnboardingService(sharedDrafts);
+
+const liveServices = new WeakMap<PhoneAuth, OnboardingService>();
+
+// Demo mode (no PhoneAuth) keeps the fake; live mode reuses one service per PhoneAuth,
+// so the number sent on sign-up is the one verify shows and checks.
+export function onboardingServiceFor(phoneAuth: PhoneAuth | null): OnboardingService {
+  if (phoneAuth === null) return demoOnboardingService;
+
+  const known = liveServices.get(phoneAuth);
+  if (known) return known;
+
+  const live = createLiveOnboardingService(phoneAuth);
+  liveServices.set(phoneAuth, live);
+  return live;
+}
+
+function createLiveOnboardingService(phoneAuth: PhoneAuth): OnboardingService {
+  return createOnboardingService(createLiveOnboardingClient(phoneAuth, sharedDrafts), {
+    owner: { name: "", phone: "" },
+  });
+}
 
 async function sendCode(
   client: OnboardingClient,
@@ -131,27 +176,28 @@ async function sendCode(
   phone: string,
 ): Promise<SendCodeResult> {
   if (phone.trim() === "") return { ok: false };
+  if (!(await client.sendCode(phone))) return { ok: false };
 
   await client.savePhone({ phone, sentAt: now() });
   return { ok: true };
 }
 
-// The fake checks the code only: the locked tests verify without sending first,
-// so no prior send may be required here.
+// No prior send is required here: the locked demo tests verify without sending first.
 async function verifyCode(
   client: OnboardingClient,
-  _phone: string,
+  phone: string,
   code: string,
 ): Promise<VerifyCodeResult> {
-  if (await client.checkCode(code)) return { ok: true };
+  if (await client.checkCode(phone, code)) return { ok: true };
 
   return { ok: false, error: "wrong_code" };
 }
 
-async function lastPhone(client: OnboardingClient): Promise<{ phone: string; sentAt: string }> {
-  return (
-    (await client.findPhone()) ?? { phone: seedOwner.phone, sentAt: new Date(0).toISOString() }
-  );
+async function lastPhone(
+  client: OnboardingClient,
+  defaultPhone: string,
+): Promise<{ phone: string; sentAt: string }> {
+  return (await client.findPhone()) ?? { phone: defaultPhone, sentAt: new Date(0).toISOString() };
 }
 
 async function currentProfile(client: OnboardingClient): Promise<OnboardingProfile> {
@@ -197,5 +243,8 @@ async function storeNightUrgent(client: OnboardingClient, nightUrgent: boolean):
 }
 
 function createDefaultDeps(): OnboardingDeps {
-  return { now: () => new Date().toISOString() };
+  return {
+    now: () => new Date().toISOString(),
+    owner: { name: seedOwner.name, phone: seedOwner.phone },
+  };
 }
