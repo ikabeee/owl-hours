@@ -33,3 +33,34 @@ describe("onboardingCopys", () => {
     }
   });
 });
+
+// Spec: odd/tasks/crystal-pr-handoff-fixes.md, T4, S1 + S5. Only the phone wording
+// changes to email (there is no SMS provider); every other handoff string stays
+// byte-identical.
+describe("onboardingCopys email sign-in", () => {
+  it('asks for "Email" instead of a mobile number', () => {
+    assert.equal(onboardingCopys.emailLabel, "Email");
+  });
+
+  it("says the code arrives by email", () => {
+    assert.equal(onboardingCopys.emailHelp, "We'll email you a code to confirm it.");
+  });
+
+  it('offers "Change email" on verify', () => {
+    assert.equal(onboardingCopys.changeEmail, "Change email");
+  });
+
+  it("has no phone copy left", () => {
+    for (const key of ["phoneLabel", "phoneHelp", "changeNumber"]) {
+      assert.ok(!(key in onboardingCopys), `${key} still exists`);
+    }
+  });
+
+  it("keeps every other handoff string byte-identical", () => {
+    assert.equal(onboardingCopys.sendCode, "Send code");
+    assert.equal(onboardingCopys.verifyTitle, "Enter the code");
+    assert.equal(onboardingCopys.verifySentPrefix, "We sent a 6-digit code to");
+    assert.equal(onboardingCopys.resendLink, "Resend code");
+    assert.equal(onboardingCopys.codeError, "That code didn't work. Try again.");
+  });
+});

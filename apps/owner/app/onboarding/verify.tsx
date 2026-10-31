@@ -19,7 +19,7 @@ export default function VerifyRoute() {
   const { view } = verification;
   return (
     <VerifyScreen
-      phone={view.phone}
+      email={view.email}
       resend={view.resend}
       insets={safeInsets}
       onVerify={async (code) => {
@@ -28,7 +28,7 @@ export default function VerifyRoute() {
         return outcome;
       }}
       onResend={view.resendCode}
-      onChangeNumber={async () => { router.back(); }}
+      onChangeEmail={async () => { router.back(); }}
       onBack={async () => { router.back(); }}
       dom={domHost}
     />

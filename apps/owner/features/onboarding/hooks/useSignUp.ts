@@ -1,17 +1,17 @@
-// Sign-up: the demo name and phone through the service, plus the code send. The form
+// Sign-up: the saved name and email through the service, plus the code send. The form
 // itself lives in the DOM screen; the hook owns loading, the submit and the send.
 import { useEffect, useState } from "react";
-import { demoOnboardingService } from "../services/onboardingService.ts";
 import type { OnboardingService } from "../services/onboardingService.ts";
+import { useOnboardingService } from "./useOnboardingService.ts";
 
 export type SignUpDeps = { service: OnboardingService };
 
 export type SignUpView = {
   defaultName: string;
-  defaultPhone: string;
+  defaultEmail: string;
   saveOwnerName: (name: string) => Promise<void>;
-  sendCode: (phone: string) => Promise<{ ok: boolean }>;
-  submit: (name: string, phone: string) => Promise<boolean>;
+  sendCode: (email: string) => Promise<{ ok: boolean }>;
+  submit: (name: string, email: string) => Promise<boolean>;
 };
 
 export type SignUp =
@@ -20,19 +20,19 @@ export type SignUp =
   | { status: "ready"; view: SignUpView };
 
 export function useSignUp(deps?: Partial<SignUpDeps>): SignUp {
-  const [defaults] = useState(createDemoDeps);
-  const service = deps?.service ?? defaults.service;
+  const configured = useOnboardingService();
+  const service = deps?.service ?? configured;
 
-  const [saved, setSaved] = useState<{ name: string; phone: string } | null>(null);
+  const [saved, setSaved] = useState<{ name: string; email: string } | null>(null);
   const [failed, setFailed] = useState(false);
   const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     let isCurrent = true;
     setFailed(false);
-    Promise.all([service.getOwnerName(), service.getLastPhone()]).then(
+    Promise.all([service.getOwnerName(), service.getLastEmail()]).then(
       ([name, last]) => {
-        if (isCurrent) setSaved({ name, phone: last.phone });
+        if (isCurrent) setSaved({ name, email: last.email });
       },
       () => {
         if (isCurrent) setFailed(true);
@@ -50,10 +50,10 @@ export function useSignUp(deps?: Partial<SignUpDeps>): SignUp {
     status: "ready",
     view: {
       defaultName: saved.name,
-      defaultPhone: saved.phone,
+      defaultEmail: saved.email,
       saveOwnerName: (name) => service.saveOwnerName(name),
-      sendCode: (phone) => service.sendCode(phone),
-      submit: (name, phone) => submitSignUp(service, name, phone),
+      sendCode: (email) => service.sendCode(email),
+      submit: (name, email) => submitSignUp(service, name, email),
     },
   };
 
@@ -66,12 +66,8 @@ export function useSignUp(deps?: Partial<SignUpDeps>): SignUp {
 async function submitSignUp(
   service: OnboardingService,
   name: string,
-  phone: string,
+  email: string,
 ): Promise<boolean> {
   await service.saveOwnerName(name);
-  return (await service.sendCode(phone)).ok;
-}
-
-function createDemoDeps(): SignUpDeps {
-  return { service: demoOnboardingService };
+  return (await service.sendCode(email)).ok;
 }

@@ -22,22 +22,22 @@ import { onboardingCopys } from '../copys/onboardingCopys';
 import { isSendCodeEnabled } from '../lib/signUpForm';
 import ZukkiSays from './ZukkiSays';
 
-// ZukkiSays + name, phone, terms and "Send code", disabled until the form is valid.
+// ZukkiSays + name, email, terms and "Send code", disabled until the form is valid.
 // "Continue with Facebook" skips verify; the fields stay DOM-local, only the send persists.
 export default function SignUpScreen(props: {
   defaultName: string;
-  defaultPhone: string;
+  defaultEmail: string;
   insets: { top: number; bottom: number };
-  onSendCode: (name: string, phone: string) => Promise<void>;
+  onSendCode: (name: string, email: string) => Promise<void>;
   onFacebook: () => Promise<void>;
   onBack: () => Promise<void>;
   dom?: DOMProps;
 }) {
   const { insets } = props;
   const [name, setName] = useState(props.defaultName);
-  const [phone, setPhone] = useState(props.defaultPhone);
+  const [email, setEmail] = useState(props.defaultEmail);
   const [termsAccepted, setTermsAccepted] = useState(false);
-  const canSend = isSendCodeEnabled({ name, phone, termsAccepted });
+  const canSend = isSendCodeEnabled({ name, email, termsAccepted });
 
   return (
     <Theme theme={neutralTheme}>
@@ -50,8 +50,8 @@ export default function SignUpScreen(props: {
           <Heading level={1}>{onboardingCopys.signUpTitle}</Heading>
           <TextInput label={onboardingCopys.nameLabel} size="lg" value={name} onChange={setName} />
           <VStack gap={1}>
-            <TextInput label={onboardingCopys.phoneLabel} size="lg" value={phone} onChange={setPhone} />
-            <Text type="supporting">{onboardingCopys.phoneHelp}</Text>
+            <TextInput label={onboardingCopys.emailLabel} type="email" autoComplete="email" size="lg" value={email} onChange={setEmail} />
+            <Text type="supporting">{onboardingCopys.emailHelp}</Text>
           </VStack>
           <CheckboxInput label={onboardingCopys.termsLabel} value={termsAccepted} onChange={setTermsAccepted} />
           <Divider label={onboardingCopys.orDivider} />
@@ -71,7 +71,7 @@ export default function SignUpScreen(props: {
             size="lg"
             width="100%"
             isDisabled={!canSend}
-            onClick={() => props.onSendCode(name, phone)}
+            onClick={() => props.onSendCode(name, email)}
           />
         </div>
       </div>

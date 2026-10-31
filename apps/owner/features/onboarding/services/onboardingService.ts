@@ -1,4 +1,6 @@
-// Onboarding demo backend: sign-up code, website import, and the profile/prices/area drafts.
+// Onboarding backend: sign-up code, website import, and the profile/prices/area drafts.
+// Demo mode checks DEMO_CODE; live mode emails and checks the code through CodeAuth
+// (Supabase email OTP behind the owner auth controller). Drafts stay in memory in both.
 // The fake client is seeded with private copies of the demo business and owner
 // (structuredClone, never mutating the shared mock). Services return states
 // (e.g. "wrong_code"), never copy: the screens own the words.
@@ -11,6 +13,9 @@ import type { ExtraFee, PriceItem } from "../../../shared/data/types.ts";
 // Typed as string (not the literal): callers compare it against arbitrary user input,
 // which is exactly what the locked verify test does with its wrong-code branch.
 export const DEMO_CODE: string = "482910";
+// The shared demo owner predates email sign-in and has no email,
+// so the onboarding demo seed owns it.
+export const DEMO_EMAIL = "daniel@northside-plumbing.example";
 const IMPORTED_SERVICES = 12;
 
 export type OnboardingProfile = { name: string; category: string; website: string };
@@ -21,12 +26,12 @@ export type SendCodeResult = { ok: boolean };
 export type VerifyCodeResult = { ok: true } | { ok: false; error: "wrong_code" };
 
 export type OnboardingService = {
-  sendCode(phone: string): Promise<SendCodeResult>;
-  verifyCode(phone: string, code: string): Promise<VerifyCodeResult>;
+  sendCode(email: string): Promise<SendCodeResult>;
+  verifyCode(email: string, code: string): Promise<VerifyCodeResult>;
   importFromWebsite(website: string): Promise<WebsiteImport>;
   getOwnerName(): Promise<string>;
   saveOwnerName(name: string): Promise<void>;
-  getLastPhone(): Promise<{ phone: string; sentAt: string }>;
+  getLastEmail(): Promise<{ email: string; sentAt: string }>;
   getProfile(): Promise<OnboardingProfile>;
   saveProfile(profile: OnboardingProfile): Promise<void>;
   getPrices(): Promise<PriceItem[]>;
@@ -39,14 +44,23 @@ export type OnboardingService = {
   setNightUrgent(nightUrgent: boolean): Promise<void>;
 };
 
-export type OnboardingDeps = { now: () => string };
+// Who sign-up starts with: the demo owner name and demo email in demo mode, empty fields in live.
+export type OwnerDefaults = { name: string; email: string };
+
+export type OnboardingDeps = { now: () => string; owner: OwnerDefaults };
+
+export type CodeAuth = {
+  sendCode(email: string): Promise<boolean>;
+  verifyCode(email: string, code: string): Promise<boolean>;
+};
 
 export type OnboardingClient = {
   findOwnerName(): Promise<string | null>;
   saveOwnerName(name: string): Promise<void>;
-  findPhone(): Promise<{ phone: string; sentAt: string } | null>;
-  savePhone(entry: { phone: string; sentAt: string }): Promise<void>;
-  checkCode(code: string): Promise<boolean>;
+  findEmail(): Promise<{ email: string; sentAt: string } | null>;
+  saveEmail(entry: { email: string; sentAt: string }): Promise<void>;
+  sendCode(email: string): Promise<boolean>;
+  checkCode(email: string, code: string): Promise<boolean>;
   importPrices(): Promise<WebsiteImport>;
   findProfile(): Promise<OnboardingProfile | null>;
   saveProfile(profile: OnboardingProfile): Promise<void>;
@@ -60,15 +74,15 @@ export function createOnboardingService(
   client: OnboardingClient,
   deps: Partial<OnboardingDeps> = {},
 ): OnboardingService {
-  const { now } = { ...createDefaultDeps(), ...deps };
+  const { now, owner } = { ...createDefaultDeps(), ...deps };
 
   return {
-    sendCode: (phone) => sendCode(client, now, phone),
-    verifyCode: (phone, code) => verifyCode(client, phone, code),
+    sendCode: (email) => sendCode(client, now, email),
+    verifyCode: (email, code) => verifyCode(client, email, code),
     importFromWebsite: () => client.importPrices(),
-    getOwnerName: async () => (await client.findOwnerName()) ?? seedOwner.name,
+    getOwnerName: async () => (await client.findOwnerName()) ?? owner.name,
     saveOwnerName: (name) => client.saveOwnerName(name),
-    getLastPhone: () => lastPhone(client),
+    getLastEmail: () => lastEmail(client, owner.email),
     getProfile: () => currentProfile(client),
     saveProfile: (profile) => client.saveProfile(profile),
     getPrices: () => currentPrices(client),
@@ -85,7 +99,7 @@ export function createOnboardingService(
 // In-memory client seeded with private copies of the demo owner, business, prices and area.
 export function createFakeOnboardingClient(): OnboardingClient {
   let ownerName: string | null = null;
-  let phone: { phone: string; sentAt: string } | null = null;
+  let email: { email: string; sentAt: string } | null = null;
   let profile: OnboardingProfile | null = null;
   let prices: PriceItem[] | null = null;
   let area: { radiusKm: number; nightUrgent: boolean } | null = null;
@@ -95,11 +109,12 @@ export function createFakeOnboardingClient(): OnboardingClient {
     saveOwnerName: async (name) => {
       ownerName = name;
     },
-    findPhone: async () => structuredClone(phone),
-    savePhone: async (entry) => {
-      phone = structuredClone(entry);
+    findEmail: async () => structuredClone(email),
+    saveEmail: async (entry) => {
+      email = structuredClone(entry);
     },
-    checkCode: async (code) => code === DEMO_CODE,
+    sendCode: async () => true,
+    checkCode: async (_email, code) => code === DEMO_CODE,
     importPrices: async () => ({
       services: IMPORTED_SERVICES,
       prices: structuredClone(seedBusiness.prices),
@@ -119,39 +134,73 @@ export function createFakeOnboardingClient(): OnboardingClient {
   };
 }
 
-// The demo default every hook shares, so data entered on one step is there on the next:
+// Live client: the code goes through CodeAuth; every draft stays in the given client.
+export function createLiveOnboardingClient(
+  codeAuth: CodeAuth,
+  drafts: OnboardingClient,
+): OnboardingClient {
+  return {
+    ...drafts,
+    sendCode: (email) => codeAuth.sendCode(email),
+    checkCode: (email, code) => codeAuth.verifyCode(email, code),
+  };
+}
+
+// The drafts every hook shares, so data entered on one step is there on the next:
 // profile -> prices -> area -> live shows the business name and radius.
-export const demoOnboardingService: OnboardingService = createOnboardingService(
-  createFakeOnboardingClient(),
-);
+const sharedDrafts = createFakeOnboardingClient();
+
+export const demoOnboardingService: OnboardingService = createOnboardingService(sharedDrafts);
+
+const liveServices = new WeakMap<CodeAuth, OnboardingService>();
+
+// Demo mode (no CodeAuth) keeps the fake; live mode reuses one service per CodeAuth,
+// so the address sent on sign-up is the one verify shows and checks.
+export function onboardingServiceFor(codeAuth: CodeAuth | null): OnboardingService {
+  if (codeAuth === null) return demoOnboardingService;
+
+  const known = liveServices.get(codeAuth);
+  if (known) return known;
+
+  const live = createLiveOnboardingService(codeAuth);
+  liveServices.set(codeAuth, live);
+  return live;
+}
+
+function createLiveOnboardingService(codeAuth: CodeAuth): OnboardingService {
+  return createOnboardingService(createLiveOnboardingClient(codeAuth, sharedDrafts), {
+    owner: { name: "", email: "" },
+  });
+}
 
 async function sendCode(
   client: OnboardingClient,
   now: () => string,
-  phone: string,
+  email: string,
 ): Promise<SendCodeResult> {
-  if (phone.trim() === "") return { ok: false };
+  if (email.trim() === "") return { ok: false };
+  if (!(await client.sendCode(email))) return { ok: false };
 
-  await client.savePhone({ phone, sentAt: now() });
+  await client.saveEmail({ email, sentAt: now() });
   return { ok: true };
 }
 
-// The fake checks the code only: the locked tests verify without sending first,
-// so no prior send may be required here.
+// No prior send is required here: the locked demo tests verify without sending first.
 async function verifyCode(
   client: OnboardingClient,
-  _phone: string,
+  email: string,
   code: string,
 ): Promise<VerifyCodeResult> {
-  if (await client.checkCode(code)) return { ok: true };
+  if (await client.checkCode(email, code)) return { ok: true };
 
   return { ok: false, error: "wrong_code" };
 }
 
-async function lastPhone(client: OnboardingClient): Promise<{ phone: string; sentAt: string }> {
-  return (
-    (await client.findPhone()) ?? { phone: seedOwner.phone, sentAt: new Date(0).toISOString() }
-  );
+async function lastEmail(
+  client: OnboardingClient,
+  defaultEmail: string,
+): Promise<{ email: string; sentAt: string }> {
+  return (await client.findEmail()) ?? { email: defaultEmail, sentAt: new Date(0).toISOString() };
 }
 
 async function currentProfile(client: OnboardingClient): Promise<OnboardingProfile> {
@@ -197,5 +246,8 @@ async function storeNightUrgent(client: OnboardingClient, nightUrgent: boolean):
 }
 
 function createDefaultDeps(): OnboardingDeps {
-  return { now: () => new Date().toISOString() };
+  return {
+    now: () => new Date().toISOString(),
+    owner: { name: seedOwner.name, email: DEMO_EMAIL },
+  };
 }

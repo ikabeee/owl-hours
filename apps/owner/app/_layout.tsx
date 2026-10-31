@@ -4,6 +4,8 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { useFonts, Figtree_600SemiBold, Figtree_700Bold } from "@expo-google-fonts/figtree";
 import * as SplashScreen from "expo-splash-screen";
 import { LogBox } from "react-native";
+import OwnerAuthGate from "../features/auth/components/OwnerAuthGate.tsx";
+import { OwnerAuthProvider } from "../features/auth/hooks/useOwnerAuth.tsx";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -24,11 +26,14 @@ export default function RootLayout() {
   if (!fontsLoaded) return null;
 
   return (
-    <SafeAreaProvider>
-      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: "#f1f1f1" } }}>
-        {/* OwQuote slides up over the chat: https://docs.expo.dev/router/advanced/modals/ */}
-        <Stack.Screen name="chat/[id]/quote" options={{ presentation: "modal" }} />
-      </Stack>
-    </SafeAreaProvider>
+    <OwnerAuthProvider>
+      <SafeAreaProvider>
+        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: "#f1f1f1" } }}>
+          {/* OwQuote slides up over the chat: https://docs.expo.dev/router/advanced/modals/ */}
+          <Stack.Screen name="chat/[id]/quote" options={{ presentation: "modal" }} />
+        </Stack>
+        <OwnerAuthGate />
+      </SafeAreaProvider>
+    </OwnerAuthProvider>
   );
 }

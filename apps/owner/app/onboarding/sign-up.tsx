@@ -20,10 +20,10 @@ export default function SignUpRoute() {
   return (
     <SignUpScreen
       defaultName={view.defaultName}
-      defaultPhone={view.defaultPhone}
+      defaultEmail={view.defaultEmail}
       insets={safeInsets}
-      onSendCode={async (name, phone) => {
-        if (await view.submit(name, phone)) router.push(resolveNext('/onboarding/sign-up', 'next'));
+      onSendCode={async (name, email) => {
+        if (await view.submit(name, email)) router.push(resolveNext('/onboarding/sign-up', 'next'));
       }}
       onFacebook={async () => { router.push(resolveNext('/onboarding/sign-up', 'facebook')); }}
       onBack={async () => { router.back(); }}

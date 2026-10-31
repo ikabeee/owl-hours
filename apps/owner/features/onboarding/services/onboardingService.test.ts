@@ -1,8 +1,8 @@
-// Spec: odd/tasks/owner-onboarding.md, S3–S6; unit T7, test file 6.
+// Spec: odd/tasks/crystal-pr-handoff-fixes.md, T4, S1.
 // Fake client seeded from shared/data/mock.ts; every test builds its own service so
-// state never leaks. Demo values verbatim from mock.ts; the error string verbatim
-// from HANDOFF-RN-UI §Verify. The fakes must not mutate the shared mock: tests
-// assert against a structuredClone of it.
+// state never leaks. Demo values verbatim from mock.ts (name) and the onboarding
+// demo seed (email); the error string verbatim from HANDOFF-RN-UI §Verify. The fakes
+// must not mutate the shared mock: tests assert against a structuredClone of it.
 // Q (operator): the HTML shows a half-filled code (4 8 2 9 1 _) but no complete demo
 // code — which demo code should verifyCode accept? The tests use the DEMO_CODE export.
 import { describe, it } from "node:test";
@@ -14,17 +14,32 @@ import {
   createOnboardingService,
 } from "./onboardingService.ts";
 
+const DEMO_EMAIL = "daniel@northside-plumbing.example";
+const SENT_AT = "2026-10-30T12:00:00.000Z";
+
 function buildService() {
-  return createOnboardingService(createFakeOnboardingClient());
+  return createOnboardingService(createFakeOnboardingClient(), { now: () => SENT_AT });
 }
 
 describe("onboardingService.sendCode", () => {
-  it("sends a code to the demo number", async () => {
-    assert.deepEqual(await buildService().sendCode(mockOwner.phone), { ok: true });
+  it("sends a code to the demo email", async () => {
+    assert.deepEqual(await buildService().sendCode(DEMO_EMAIL), { ok: true });
   });
 
-  it("fails for a missing number", async () => {
+  it("remembers the address the code went to", async () => {
+    const service = buildService();
+
+    await service.sendCode(DEMO_EMAIL);
+
+    assert.deepEqual(await service.getLastEmail(), { email: DEMO_EMAIL, sentAt: SENT_AT });
+  });
+
+  it("fails for a missing address", async () => {
     assert.equal((await buildService().sendCode("")).ok, false);
+  });
+
+  it("fails for a blank address", async () => {
+    assert.equal((await buildService().sendCode("   ")).ok, false);
   });
 });
 
@@ -34,13 +49,13 @@ describe("onboardingService.verifyCode", () => {
   });
 
   it("succeeds with the demo code", async () => {
-    assert.deepEqual(await buildService().verifyCode(mockOwner.phone, DEMO_CODE), { ok: true });
+    assert.deepEqual(await buildService().verifyCode(DEMO_EMAIL, DEMO_CODE), { ok: true });
   });
 
   it("fails with the error state for a wrong code", async () => {
     const wrongCode = DEMO_CODE === "000000" ? "111111" : "000000";
 
-    assert.deepEqual(await buildService().verifyCode(mockOwner.phone, wrongCode), {
+    assert.deepEqual(await buildService().verifyCode(DEMO_EMAIL, wrongCode), {
       ok: false,
       error: "wrong_code",
     });
@@ -89,8 +104,8 @@ describe("onboardingService isolation", () => {
     const before = structuredClone({ business: mockBusiness, owner: mockOwner });
     const service = buildService();
 
-    await service.sendCode(mockOwner.phone);
-    await service.verifyCode(mockOwner.phone, DEMO_CODE);
+    await service.sendCode(DEMO_EMAIL);
+    await service.verifyCode(DEMO_EMAIL, DEMO_CODE);
     await service.importFromWebsite(mockBusiness.website ?? "");
     await service.saveProfile({ name: "Changed", category: "plumbing", website: "x.example" });
     await service.savePrices([]);
