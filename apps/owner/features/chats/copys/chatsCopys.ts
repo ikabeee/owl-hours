@@ -1,5 +1,8 @@
 // Visible text of the chat screen. Sources: handoff-ui/owner-app/design/html/OwChat.dc.html,
-// OwChatPolish.dc.html and HANDOFF-RN-UI.md section 8.
+// OwChatPolish.dc.html and HANDOFF-RN-UI.md section 8; the quote bubble mirrors the WhatsApp message
+// handoff-ui/whatsapp/payloads/13-quote.json.
+import { QUOTE_MESSAGE_WORDS } from "../../../shared/lib/quoteMessage.ts";
+
 const copys = {
   // top bar and thread
   backLabel: "Back",
@@ -26,6 +29,12 @@ const copys = {
   // polish states
   polishing: "Polishing…",
   polishFailed: "Couldn't polish. Send yours or try again.",
+  // quote bubble: header, footer and the customer's reply buttons; the body wording is shared with jobs
+  quoteFrom: "Quote from",
+  ...QUOTE_MESSAGE_WORDS,
+  quoteFooter: "Nothing is booked until you approve",
+  approveVisit: "Approve visit",
+  askQuestion: "Ask a question",
   // error state, HANDOFF-RN-UI.md section 8 "Every screen also needs"
   somethingWentWrong: "Something went wrong.",
   tryAgain: "Try again",

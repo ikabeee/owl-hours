@@ -1,3 +1,4 @@
+import { sharedThreadStore } from "../../../shared/data/threadStore.ts";
 import type { ISODate } from "../../../shared/data/types.ts";
 import { createDemoClock } from "../lib/demoClock.ts";
 import { createFakeJobsClient, createJobsService } from "../services/jobsService.ts";
@@ -15,11 +16,12 @@ export function createDemoJobsService(): JobsService {
 }
 
 // One module-level demo service shared by useJobs, useJob, the finish hook and useQuoteDraft, so a
-// status change on one screen shows on the others. Every call hands out the same store.
+// status change on one screen shows on the others. Every call hands out the same store, and a sent
+// quote lands in the shared thread store, where the chat reads it.
 export function sharedDemoJobsService(): JobsService {
   if (!sharedService) {
     const now = sharedDemoClock();
-    sharedService = createJobsService(createFakeJobsClient({ now }), { now });
+    sharedService = createJobsService(createFakeJobsClient({ now, threads: sharedThreadStore() }), { now });
   }
   return sharedService;
 }

@@ -1,4 +1,4 @@
-import type { Quote } from "../../../shared/data/types.ts";
+import type { Quote } from "../data/types.ts";
 
 const TIME_AND_PERIOD = /^(.+?)\s*(AM|PM)$/i;
 

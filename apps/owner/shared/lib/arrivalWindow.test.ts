@@ -1,7 +1,9 @@
-// Spec: docs/HANDOFF-OWNER-APP.md, T5 assignment: MetadataList "Arrival 12:55–1:25 AM" (quote and job).
+// Spec: docs/HANDOFF-OWNER-APP.md, T5.2 assignment, test group 1: arrivalWindowText moves from
+// features/jobs/lib/ to shared/lib/ (jobs and chats both write the window) and keeps its behavior.
+// These are the two cases of the pre-move features/jobs/lib/arrivalWindow.test.ts, unchanged.
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { anaJob } from "../../../shared/data/mock.ts";
+import { anaJob } from "../data/mock.ts";
 import { arrivalWindowText } from "./arrivalWindow.ts";
 
 describe("arrivalWindowText", () => {
