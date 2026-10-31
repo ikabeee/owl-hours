@@ -1,4 +1,4 @@
-// Verify: which number the code went to, the live resend state, and the code check.
+// Verify: which address the code went to, the live resend state, and the code check.
 // The service returns the "wrong_code" state; the screen owns the copy. The 1 s ticker
 // lives here (never in the DOM screen): resend derives from resendAt and now.
 import { useEffect, useState } from "react";
@@ -12,7 +12,7 @@ export type VerifyDeps = { service: OnboardingService };
 export type VerifyOutcome = { kind: "verified" } | { kind: "wrong_code" };
 
 export type VerifyView = {
-  phone: string;
+  email: string;
   resend: ResendState;
   verify: (code: string) => Promise<VerifyOutcome>;
   resendCode: () => Promise<void>;
@@ -27,7 +27,7 @@ export function useVerify(deps?: Partial<VerifyDeps>): Verify {
   const configured = useOnboardingService();
   const service = deps?.service ?? configured;
 
-  const [phone, setPhone] = useState<string | null>(null);
+  const [email, setEmail] = useState<string | null>(null);
   const [resendAt, setResendAt] = useState<string | null>(null);
   const [now, setNow] = useState(() => Date.now());
   const [failed, setFailed] = useState(false);
@@ -36,10 +36,10 @@ export function useVerify(deps?: Partial<VerifyDeps>): Verify {
   useEffect(() => {
     let isCurrent = true;
     setFailed(false);
-    service.getLastPhone().then(
+    service.getLastEmail().then(
       (last) => {
         if (!isCurrent) return;
-        setPhone(last.phone);
+        setEmail(last.email);
         setResendAt(resendAtFrom(last.sentAt));
       },
       () => {
@@ -57,15 +57,15 @@ export function useVerify(deps?: Partial<VerifyDeps>): Verify {
   }, []);
 
   if (failed) return { status: "failed", retry: relaunch };
-  if (phone === null || resendAt === null) return { status: "loading" };
+  if (email === null || resendAt === null) return { status: "loading" };
 
   return {
     status: "ready",
     view: {
-      phone,
+      email,
       resend: resendState(resendSecondsLeft(resendAt, new Date(now).toISOString())),
-      verify: (code) => checkCode(service, phone, code),
-      resendCode: () => resendCode(service, phone, setResendAt),
+      verify: (code) => checkCode(service, email, code),
+      resendCode: () => resendCode(service, email, setResendAt),
     },
   };
 
@@ -76,18 +76,18 @@ export function useVerify(deps?: Partial<VerifyDeps>): Verify {
 
 async function checkCode(
   service: OnboardingService,
-  phone: string,
+  email: string,
   code: string,
 ): Promise<VerifyOutcome> {
-  const result = await service.verifyCode(phone, code);
+  const result = await service.verifyCode(email, code);
   return result.ok ? { kind: "verified" } : { kind: "wrong_code" };
 }
 
 async function resendCode(
   service: OnboardingService,
-  phone: string,
+  email: string,
   setResendAt: (resendAt: string) => void,
 ): Promise<void> {
-  await service.sendCode(phone);
-  setResendAt(resendAtFrom((await service.getLastPhone()).sentAt));
+  await service.sendCode(email);
+  setResendAt(resendAtFrom((await service.getLastEmail()).sentAt));
 }

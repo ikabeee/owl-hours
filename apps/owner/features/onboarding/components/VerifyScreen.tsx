@@ -26,12 +26,12 @@ import type { VerifyOutcome } from '../hooks/useVerify';
 // Auto-submits on the 6th digit; a wrong code shows the error copy and shakes the boxes,
 // unless reduced motion is on. The resend countdown lives in the hook and arrives as data.
 export default function VerifyScreen(props: {
-  phone: string;
+  email: string;
   resend: ResendState;
   insets: { top: number; bottom: number };
   onVerify: (code: string) => Promise<VerifyOutcome>;
   onResend: () => Promise<void>;
-  onChangeNumber: () => Promise<void>;
+  onChangeEmail: () => Promise<void>;
   onBack: () => Promise<void>;
   dom?: DOMProps;
 }) {
@@ -56,7 +56,7 @@ export default function VerifyScreen(props: {
           </div>
           <Heading level={1}>{onboardingCopys.verifyTitle}</Heading>
           <Text type="supporting">
-            {onboardingCopys.verifySentPrefix} <strong style={phoneStyle}>{props.phone}</strong>
+            {onboardingCopys.verifySentPrefix} <strong style={emailStyle}>{props.email}</strong>
             {onboardingCopys.verifySentSuffix}
           </Text>
           <div className="onk-code-wrap">
@@ -83,7 +83,7 @@ export default function VerifyScreen(props: {
           ) : (
             <Button label={onboardingCopys.resendLink} variant="ghost" onClick={() => props.onResend()} />
           )}
-          <Button label={onboardingCopys.changeNumber} variant="ghost" onClick={() => props.onChangeNumber()} />
+          <Button label={onboardingCopys.changeEmail} variant="ghost" onClick={() => props.onChangeEmail()} />
         </div>
         <div style={footerStyle}>
           <Button label={onboardingCopys.verifyButton} variant="primary" size="lg" width="100%" onClick={() => submit(code)} />
@@ -131,7 +131,7 @@ const bodyStyle = { flex: 1, paddingInline: 24, display: "flex", flexDirection: 
 
 const owlStyle = { display: "flex", justifyContent: "center" } as const;
 
-const phoneStyle = { color: "var(--color-text-primary)" } as const;
+const emailStyle = { color: "var(--color-text-primary)" } as const;
 
 const errorStyle = { color: "var(--color-error)" } as const;
 

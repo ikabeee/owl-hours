@@ -1,5 +1,5 @@
-// The owner's Supabase session: SMS one-time code sign-in, restore, sign-out and the
-// API token. Phone OTP: https://supabase.com/docs/guides/auth/phone-login
+// The owner's Supabase session: emailed 6-digit code sign-in, restore, sign-out and the
+// API token. Email OTP: https://supabase.com/docs/guides/auth/auth-email-passwordless
 import { authCopys } from '../copys/ownerAuthCopys.ts';
 
 export type Session = {
@@ -11,8 +11,8 @@ type SessionResult = { data: { session: Session | null }; error: unknown };
 export type OwnerAuthPort = {
   getSession(): Promise<SessionResult>;
   refreshSession(): Promise<SessionResult>;
-  signInWithOtp(credentials: { phone: string; options: { shouldCreateUser: true } }): Promise<{ error: unknown }>;
-  verifyOtp(params: { phone: string; token: string; type: 'sms' }): Promise<{ error: unknown }>;
+  signInWithOtp(credentials: { email: string; options: { shouldCreateUser: true } }): Promise<{ error: unknown }>;
+  verifyOtp(params: { email: string; token: string; type: 'email' }): Promise<{ error: unknown }>;
   signOut(options?: { scope: 'local' }): Promise<{ error: unknown }>;
   onAuthStateChange(callback: (event: string, session: Session | null) => void): {
     data: { subscription: { unsubscribe(): void } };
@@ -27,16 +27,16 @@ export function createOwnerSessionService(auth: OwnerAuthPort, now = Date.now) {
       return result.data.session;
     },
     // Sign-up creates the owner's auth user on the first code (shouldCreateUser).
-    async sendCode(phone: string): Promise<boolean> {
+    async sendCode(email: string): Promise<boolean> {
       const { error } = await auth.signInWithOtp({
-        phone: toE164(phone),
+        email: normalizeEmail(email),
         options: { shouldCreateUser: true },
       });
       return !error;
     },
     // A verified code stores the session through the client's storage and emits it.
-    async verifyCode(phone: string, code: string): Promise<boolean> {
-      const { error } = await auth.verifyOtp({ phone: toE164(phone), token: code, type: 'sms' });
+    async verifyCode(email: string, code: string): Promise<boolean> {
+      const { error } = await auth.verifyOtp({ email: normalizeEmail(email), token: code, type: 'email' });
       return !error;
     },
     async signOut(): Promise<void> {
@@ -62,7 +62,7 @@ export function createOwnerSessionService(auth: OwnerAuthPort, now = Date.now) {
 }
 export type OwnerSessionService = ReturnType<typeof createOwnerSessionService>;
 
-// The sign-up form allows spaces and dashes ("+1 555 014 2290"); Supabase wants E.164.
-function toE164(phone: string): string {
-  return phone.replace(/[\s-]/g, '');
+// Supabase matches the email exactly; the form allows surrounding spaces and casing.
+function normalizeEmail(email: string): string {
+  return email.trim().toLowerCase();
 }

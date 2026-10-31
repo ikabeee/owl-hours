@@ -1,14 +1,14 @@
 // The app's one owner session: the root provider restores it, keeps it refreshed in the
-// foreground, and hands the SMS send/verify to onboarding. Demo mode has no runtime.
+// foreground, and hands the emailed-code send/verify to onboarding. Demo mode has no runtime.
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { getOwnerAuthRuntime, mountOwnerAuth, type OwnerAuthRuntime } from '../services/ownerAuthRuntime';
 import type { Session } from '../../../shared/infra/ownerSessionService.ts';
 import { createOwnerAuthController } from '../lib/ownerAuthController.ts';
 
-// The SMS code send/verify; null in demo mode, where onboarding keeps its fake.
-export type OwnerPhoneAuth = {
-  sendCode(phone: string): Promise<boolean>;
-  verifyCode(phone: string, code: string): Promise<boolean>;
+// The emailed-code send/verify; null in demo mode, where onboarding keeps its fake.
+export type OwnerCodeAuth = {
+  sendCode(email: string): Promise<boolean>;
+  verifyCode(email: string, code: string): Promise<boolean>;
 };
 
 export type OwnerAuthState = {
@@ -16,7 +16,7 @@ export type OwnerAuthState = {
   session: Session | null;
   loading: boolean;
   error: string | null;
-  phoneAuth: OwnerPhoneAuth | null;
+  codeAuth: OwnerCodeAuth | null;
   signOut(): Promise<void>;
 };
 
@@ -28,7 +28,7 @@ export function OwnerAuthProvider({ children, runtime }: ProviderProps) {
   const resolvedRuntime = useMemo(() => runtime ?? getOwnerAuthRuntime(), [runtime]);
   const controller = useMemo(() => createOwnerAuthController(resolvedRuntime), [resolvedRuntime]);
   const [snapshot, setSnapshot] = useState(() => controller.getState());
-  const phoneAuth = useMemo(() => phoneAuthOf(resolvedRuntime, controller), [resolvedRuntime, controller]);
+  const codeAuth = useMemo(() => codeAuthOf(resolvedRuntime, controller), [resolvedRuntime, controller]);
 
   useEffect(() => {
     setSnapshot(controller.getState());
@@ -51,14 +51,14 @@ export function OwnerAuthProvider({ children, runtime }: ProviderProps) {
     session: snapshot.session,
     loading: snapshot.loading,
     error: snapshot.error,
-    phoneAuth,
+    codeAuth,
     signOut: controller.signOut,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
-function phoneAuthOf(runtime: OwnerAuthRuntime | null, controller: OwnerPhoneAuth): OwnerPhoneAuth | null {
+function codeAuthOf(runtime: OwnerAuthRuntime | null, controller: OwnerCodeAuth): OwnerCodeAuth | null {
   if (runtime === null) return null;
   return { sendCode: controller.sendCode, verifyCode: controller.verifyCode };
 }

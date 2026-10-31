@@ -1,4 +1,4 @@
-// Spec: odd/tasks/crystal-pr-handoff-fixes.md, T1, S1 (SMS OTP through the shared session).
+// Spec: odd/tasks/crystal-pr-handoff-fixes.md, T4, S1 (email OTP through the shared session).
 import assert from 'node:assert/strict';
 import { it } from 'node:test';
 import { createOwnerSessionService, type OwnerAuthPort } from './ownerSessionService.ts';
@@ -35,32 +35,32 @@ it('fails closed if refresh fails, and never returns the expired token', async (
   await assert.rejects(session.getAccessToken(),/Sign in/);
 });
 
-it('S1 sends the SMS code with Supabase phone OTP, creating the owner on sign-up', async () => {
+it('S1 sends the code with Supabase email OTP, creating the owner on sign-up', async () => {
   let request: unknown;
   const session = createOwnerSessionService(authPort({
     signInWithOtp: async (input) => { request = input; return { error: null }; },
   }));
 
-  assert.equal(await session.sendCode(' +1 555-014-2290 '), true);
-  assert.deepEqual(request, { phone: '+15550142290', options: { shouldCreateUser: true } });
+  assert.equal(await session.sendCode(' Daniel@Example.COM '), true);
+  assert.deepEqual(request, { email: 'daniel@example.com', options: { shouldCreateUser: true } });
 });
 
-it('S1 reports a rejected SMS send as false', async () => {
+it('S1 reports a rejected email send as false', async () => {
   const session = createOwnerSessionService(authPort({
-    signInWithOtp: async () => ({ error: new Error('sms provider down') }),
+    signInWithOtp: async () => ({ error: new Error('email provider down') }),
   }));
 
-  assert.equal(await session.sendCode('+1 555 014 2290'), false);
+  assert.equal(await session.sendCode('daniel@example.com'), false);
 });
 
-it('S1 verifies the SMS code with verifyOtp type sms', async () => {
+it('S1 verifies the emailed code with verifyOtp type email', async () => {
   let request: unknown;
   const session = createOwnerSessionService(authPort({
     verifyOtp: async (input) => { request = input; return { error: null }; },
   }));
 
-  assert.equal(await session.verifyCode('+1 555 014 2290', '482910'), true);
-  assert.deepEqual(request, { phone: '+15550142290', token: '482910', type: 'sms' });
+  assert.equal(await session.verifyCode('Daniel@Example.COM', '482910'), true);
+  assert.deepEqual(request, { email: 'daniel@example.com', token: '482910', type: 'email' });
 });
 
 it('S1 reports a code Supabase rejects as false', async () => {
@@ -68,7 +68,7 @@ it('S1 reports a code Supabase rejects as false', async () => {
     verifyOtp: async () => ({ error: new Error('Token has expired or is invalid') }),
   }));
 
-  assert.equal(await session.verifyCode('+1 555 014 2290', '000000'), false);
+  assert.equal(await session.verifyCode('daniel@example.com', '000000'), false);
 });
 
 it('restores and refreshes a persisted SDK session after a fresh client, then removes it on local sign-out', async () => {
@@ -101,11 +101,11 @@ it('restores and refreshes a persisted SDK session after a fresh client, then re
   await assert.rejects(second.getAccessToken(),/Sign in/);
 });
 
-it('S1 sends and verifies the SMS code through the SDK and stores the session in the given storage', async () => {
+it('S1 sends and verifies the emailed code through the SDK and stores the session in the given storage', async () => {
   const { createSupabaseOwnerSession } = await import('./ownerSessionClient.ts');
   const values = new Map<string,string>();
   const storage={getItem:async(name:string)=>values.get(name) ?? null,setItem:async(name:string,value:string)=>{values.set(name,value);},removeItem:async(name:string)=>{values.delete(name);}};
-  const user={id:'22222222-2222-4222-8222-222222222222',phone:'15550142290',aud:'authenticated',role:'authenticated',app_metadata:{},user_metadata:{},created_at:'2026-10-30T00:00:00Z'};
+  const user={id:'22222222-2222-4222-8222-222222222222',email:'daniel@northside-plumbing.example',aud:'authenticated',role:'authenticated',app_metadata:{},user_metadata:{},created_at:'2026-10-30T00:00:00Z'};
   const bodies: Record<string, Record<string, unknown>> = {};
   const fakeFetch:typeof fetch=async(input,init)=>{
     const url=String(input);
@@ -115,19 +115,19 @@ it('S1 sends and verifies the SMS code through the SDK and stores the session in
     }
     if(url.endsWith('/auth/v1/verify')) {
       bodies.verify=JSON.parse(String(init?.body));
-      return new Response(JSON.stringify({access_token:'sms-session',refresh_token:'sms-refresh',expires_at:Math.floor(Date.now()/1000)+3600,expires_in:3600,token_type:'bearer',user}),{status:200,headers:{'Content-Type':'application/json'}});
+      return new Response(JSON.stringify({access_token:'email-session',refresh_token:'email-refresh',expires_at:Math.floor(Date.now()/1000)+3600,expires_in:3600,token_type:'bearer',user}),{status:200,headers:{'Content-Type':'application/json'}});
     }
     throw new Error(`Unexpected auth request: ${url}`);
   };
   const session=createSupabaseOwnerSession({supabaseUrl:'https://fixture.supabase.co',anonKey:'public-test-key',storage,detectSessionInUrl:false,autoRefreshToken:false,fetch:fakeFetch});
 
-  assert.equal(await session.sendCode('+1 555 014 2290'),true);
-  assert.equal(await session.verifyCode('+1 555 014 2290','482910'),true);
+  assert.equal(await session.sendCode(' Daniel@Northside-Plumbing.Example '),true);
+  assert.equal(await session.verifyCode('Daniel@Northside-Plumbing.Example','482910'),true);
 
-  assert.deepEqual(fields(bodies.otp, ['phone', 'create_user']), { phone:'+15550142290', create_user:true });
-  assert.deepEqual(fields(bodies.verify, ['phone', 'token', 'type']), { phone:'+15550142290', token:'482910', type:'sms' });
-  assert.equal(await session.getAccessToken(),'sms-session');
-  assert.match(values.get('sb-fixture-auth-token') ?? '',/sms-session/);
+  assert.deepEqual(fields(bodies.otp, ['email', 'create_user']), { email:'daniel@northside-plumbing.example', create_user:true });
+  assert.deepEqual(fields(bodies.verify, ['email', 'token', 'type']), { email:'daniel@northside-plumbing.example', token:'482910', type:'email' });
+  assert.equal(await session.getAccessToken(),'email-session');
+  assert.match(values.get('sb-fixture-auth-token') ?? '',/email-session/);
 });
 
 function fields(body: Record<string, unknown> | undefined, keys: string[]): Record<string, unknown> {

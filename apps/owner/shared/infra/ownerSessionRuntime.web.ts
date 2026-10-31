@@ -8,7 +8,7 @@ export function createOwnerSessionRuntime(supabaseUrl: string, anonKey: string) 
   if (runtime && runtimeKey === key) return runtime;
   runtime?.stopRefresh();
   runtimeKey = key;
-  // SMS sign-in never returns through a URL, so the SDK does not read one.
+  // Email OTP sign-in never returns through a URL, so the SDK does not read one.
   runtime = createSupabaseOwnerSession({ supabaseUrl, anonKey, storage: ownerSessionStorage,
     detectSessionInUrl: false, autoRefreshToken: true });
   return runtime;

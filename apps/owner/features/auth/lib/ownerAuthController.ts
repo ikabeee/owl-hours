@@ -3,8 +3,8 @@ import type { Session } from '../../../shared/infra/ownerSessionService.ts';
 
 export type OwnerAuthRuntime = {
   restore(): Promise<Session | null>;
-  sendCode(phone: string): Promise<boolean>;
-  verifyCode(phone: string, code: string): Promise<boolean>;
+  sendCode(email: string): Promise<boolean>;
+  verifyCode(email: string, code: string): Promise<boolean>;
   signOut(): Promise<void>;
   subscribe(next: (session: Session | null) => void): () => void;
 };
@@ -20,8 +20,8 @@ export type OwnerAuthController = {
   subscribe(listener: () => void): () => void;
   start(): () => void;
   restore(): Promise<void>;
-  sendCode(phone: string): Promise<boolean>;
-  verifyCode(phone: string, code: string): Promise<boolean>;
+  sendCode(email: string): Promise<boolean>;
+  verifyCode(email: string, code: string): Promise<boolean>;
   signOut(): Promise<void>;
 };
 
@@ -130,20 +130,20 @@ export function createOwnerAuthController(runtime: OwnerAuthRuntime | null): Own
   }
 
   // Demo mode has no runtime: onboarding then uses its DEMO_CODE fake, never this.
-  async function sendCode(phone: string): Promise<boolean> {
+  async function sendCode(email: string): Promise<boolean> {
     if (runtime === null) {
       return false;
     }
-    return answerOrFalse(() => runtime.sendCode(phone));
+    return answerOrFalse(() => runtime.sendCode(email));
   }
 
   // Subscribe first, so the session the runtime emits on a verified code is kept.
-  async function verifyCode(phone: string, code: string): Promise<boolean> {
+  async function verifyCode(email: string, code: string): Promise<boolean> {
     if (runtime === null) {
       return false;
     }
     ensureRuntimeSubscription();
-    return answerOrFalse(() => runtime.verifyCode(phone, code));
+    return answerOrFalse(() => runtime.verifyCode(email, code));
   }
 
   async function signOut(): Promise<void> {
