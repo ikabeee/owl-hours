@@ -126,3 +126,19 @@ test('own save and approval responses advance versions without requiring a paren
     assert.equal(h.get().editorError, null);
   } finally { await h.close(); }
 });
+
+test('discard after an acknowledged save restores that saved copy before parent props refresh', async () => {
+  const h = await mount();
+  try {
+    h.deps.updateDraft = async patch => ({ ...h.pack, ...patch, updatedAt: 'own-saved-v2' });
+    await act(async () => h.get().setDraft({ ...h.pack, caption: 'Saved A' }));
+    await act(async () => { await h.get().saveDraft(); });
+    assert.equal(h.get().draft?.updatedAt, 'own-saved-v2');
+    await act(async () => h.get().setDraft(current => current && { ...current, caption: 'Unsaved B' }));
+    await act(async () => h.get().discardChanges());
+    assert.equal(h.get().draft?.caption, 'Saved A');
+    assert.equal(h.get().draft?.updatedAt, 'own-saved-v2');
+    assert.equal(h.get().expectedUpdatedAt, 'own-saved-v2');
+    assert.equal(h.get().dirty, false);
+  } finally { await h.close(); }
+});

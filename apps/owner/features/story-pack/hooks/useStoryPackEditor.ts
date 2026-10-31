@@ -54,7 +54,8 @@ export function useStoryPackEditor(selected: StoryPack | null) {
     canExport:
       !dirty && editor.draft?.status === 'approved' && editor.draft.canHandoff,
     discardChanges() {
-      commit(acceptEditorSave(selection.current));
+      const saved = latest.current.saved;
+      commit(acceptEditorSave(saved?.id === selection.current?.id ? saved : selection.current));
     },
   };
 }
