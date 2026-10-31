@@ -24,7 +24,6 @@ export function useStoryPack(deps?: StoryPackDeps) {
   }, [controller]);
   return {
     ...state,
-    signIn: controller.signIn,
     signOut: controller.signOut,
     reload: controller.reload,
     assignPhotos: controller.assignPhotos,

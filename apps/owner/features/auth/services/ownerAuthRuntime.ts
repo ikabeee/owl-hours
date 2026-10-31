@@ -1,22 +1,22 @@
-import { AppState, Linking } from 'react-native';
+import { AppState } from 'react-native';
 import { createOwnerSessionRuntime } from '../../../shared/infra/ownerSessionRuntime';
 import { startOwnerAuthLifecycle } from '../../../shared/infra/ownerAuthLifecycle.ts';
 
-export function getOwnerAuthRuntime() {
+export type OwnerAuthRuntime = ReturnType<typeof createOwnerSessionRuntime>;
+
+// Live mode needs both public Supabase variables; without them the app runs the demo.
+export function getOwnerAuthRuntime(): OwnerAuthRuntime | null {
   const url = process.env.EXPO_PUBLIC_SUPABASE_URL;
   const key = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
   if (!url || !key) return null;
   return createOwnerSessionRuntime(url, key);
 }
-export function mountOwnerAuth(runtime: NonNullable<ReturnType<typeof getOwnerAuthRuntime>>, onError: (error: Error) => void) {
+
+export function mountOwnerAuth(runtime: OwnerAuthRuntime): () => void {
   return startOwnerAuthLifecycle({
-    initialUrl: async () => (await Linking.getInitialURL()) ?? null,
-    listenUrl: callback => { const listener = Linking.addEventListener('url', event => callback(event.url)); return () => listener.remove(); },
     listenState: callback => { const listener = AppState.addEventListener('change', callback); return () => listener.remove(); },
     currentState: () => AppState.currentState ?? null,
-    handleUrl: runtime.handleCallback,
     startRefresh: runtime.startRefresh,
     stopRefresh: runtime.stopRefresh,
-    onError,
   });
 }
