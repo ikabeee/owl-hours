@@ -112,6 +112,13 @@ If the preflight returns no job, stop. If it reports legacy blockers, stop and
 review their retention policy separately. Recheck scope when executing; the preview is not a lock and a later
 implementation must guard against changes between preview and confirmation.
 
+Concurrent approval locks the draft before the job; job deletion takes those locks
+in the opposite order. PostgreSQL can abort a transaction with deadlock code
+`40P01`; that transaction rolls back, including its draft deletions. A maintenance
+operator must stop, reload the preflight and reconfirm scope before retrying.
+Do not blindly retry the destructive operation. A two-session concurrency test
+remains pending; the focused single-session PostgreSQL WASM proof does not cover it.
+
 T6's scheduling permissions and two-argument review remain available for its
 existing sources. Story Pack independently blocks scheduling and publication.
 
