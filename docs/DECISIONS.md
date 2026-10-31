@@ -326,3 +326,28 @@ it with a new one.
 - **Consequences:** export authorizes twice, renders three 1080×1920 PNGs in the DOM, then packages them with `caption.txt` and `manifest.json`. Web downloads the ZIP; native receives bounded base64 through an async callback, saves a temporary file, awaits the share sheet and removes it. A share-sheet result does not prove recipient delivery. Text fitting preserves the full allowed copy. The separate local `deliveryReceipt` records opening the delivery UI; it is not part of `StoryPackStatus`. SQL remains `approved`.
 - **Session boundary:** hooks accept injected dependencies. Live mode requires explicit API/Supabase settings and a persisted owner session; the existing-owner magic-link flow does not create accounts. Missing configuration never silently falls back to demo. Browser CORS is allowlisted only on owner routes. Native magic-link callback/device acceptance remains to be verified.
 - **Migration boundary:** Supabase CLI 2.122.0 reproduced PostgreSQL `55P04` when the new enum value was used in the same migration transaction. Its addition is now a preceding migration; the local DB harness wraps each migration in a transaction so this regression is visible.
+
+## D21 — Owner push, decline reason and Test Zukki sources (2026-10-30)
+
+- Push scope is full remote push (user decision "Full remote push", confirmed
+  "Sí, push remoto completo"). The app registers its Expo push token with
+  `POST /v1/owner/push-tokens` (`{ expoToken, platform }`, upserted into
+  `push_tokens` per user) after "Allow notifications" on onboarding `live`, and
+  re-sends it on later launches with a session. Demo mode asks for permission
+  and registers nothing. Remote push needs a development build, not Expo Go.
+- `connectBusiness` sends the push after the offer stands, through `fetch` to
+  the Expo Push Service (no SDK dependency). A push failure is logged and never
+  blocks or rolls back the offer; tokens Expo reports as `DeviceNotRegistered`
+  are deleted. Only owners of the offered business (`tenant_users`) receive it,
+  and it carries the approximate distance, never the address.
+- The Android channel id is `urgent-requests` (display name "Urgent requests");
+  the push's `channelId` must be the id, because Android routes by id. The app
+  registers the `request` category with the Open and Decline actions; Decline
+  opens `request/[id]?decline=1`.
+- Declining takes a reason (`busy`, `too_far`, `not_offered`, `other`) from the
+  decline sheet; `offersService.decline(id, reason?)` stays compatible with the
+  old single-argument call.
+- `POST /v1/owner/test-zukki` keeps `businessId` and `reply` and adds
+  `sources`: the price-rule items the price tool returned while answering,
+  deduplicated in first-returned order (user decision "API returns sources").
+  An empty `sources` renders "Not in your services".
