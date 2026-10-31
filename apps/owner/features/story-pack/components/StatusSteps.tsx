@@ -6,21 +6,8 @@ export type StatusStepsProps = {
   status: StoryPack['status'];
 };
 
-function getActiveStepIndex(status: StoryPack['status']): number {
-  if (status === 'draft') return 0;
-  if (status === 'approved' || status === 'rejected') return 1;
-  return 3;
-}
-
-function getStepStyle(isCurrent: boolean, isComplete: boolean) {
-  if (isCurrent) return activeStepStyle;
-  if (isComplete) return completeStepStyle;
-  return defaultStepStyle;
-}
-
 export function StatusSteps({ status }: StatusStepsProps) {
   const activeIndex = getActiveStepIndex(status);
-
   const steps = [
     copy.draft,
     status === 'rejected' ? copy.rejected : copy.ownerReviewStep,
@@ -38,14 +25,10 @@ export function StatusSteps({ status }: StatusStepsProps) {
           <li
             key={step}
             aria-current={isCurrent ? 'step' : undefined}
-            style={getStepStyle(isCurrent, isComplete)}
+            style={isCurrent ? activeStepStyle : stepStyle}
           >
             <span style={stepNumberStyle}>
-              {isComplete ? (
-                <Check size={13} aria-hidden="true" />
-              ) : (
-                index + 1
-              )}
+              {isComplete ? <Check size={13} aria-hidden="true" /> : index + 1}
             </span>
             <span>{step}</span>
           </li>
@@ -53,6 +36,12 @@ export function StatusSteps({ status }: StatusStepsProps) {
       })}
     </ol>
   );
+}
+
+function getActiveStepIndex(status: StoryPack['status']): number {
+  if (status === 'draft') return 0;
+  if (status === 'approved' || status === 'rejected') return 1;
+  return 3;
 }
 
 const stepsStyle = {
@@ -64,7 +53,8 @@ const stepsStyle = {
   gap: 6,
 } as const;
 
-const baseStepStyle = {
+// Steps are neutral: the current one reads by weight, never by accent or success color.
+const stepStyle = {
   minWidth: 0,
   display: 'flex',
   flexDirection: 'column',
@@ -75,24 +65,14 @@ const baseStepStyle = {
   fontSize: 16,
   lineHeight: 1.2,
   padding: '8px 2px',
-} as const;
-
-const defaultStepStyle = {
-  ...baseStepStyle,
   color: 'var(--color-text-secondary)',
   fontWeight: 400,
 } as const;
 
 const activeStepStyle = {
-  ...baseStepStyle,
-  color: 'var(--color-accent)',
+  ...stepStyle,
+  color: 'var(--color-text-primary)',
   fontWeight: 800,
-} as const;
-
-const completeStepStyle = {
-  ...baseStepStyle,
-  color: 'var(--color-success)',
-  fontWeight: 700,
 } as const;
 
 const stepNumberStyle = {
