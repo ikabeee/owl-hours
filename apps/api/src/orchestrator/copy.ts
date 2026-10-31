@@ -177,6 +177,10 @@ export const accepted = (businessName: string, notice: string): ZukkiMessage =>
 export const zukkiIsBack = (businessName: string): ZukkiMessage =>
   text(bodyOf(builders.zukkiIsBack({ to: QUEUE_TO, businessName })));
 
+// S6: the prompt after a question tap on 12 or 13. Plain text, no payload.
+export const typeYourQuestion = (businessName: string): ZukkiMessage =>
+  text(`Type your question and I'll pass it to ${businessName}.`);
+
 export const mediaFailed = (): ZukkiMessage =>
   text("Sorry, I couldn't open that file. Could you send it again?");
 

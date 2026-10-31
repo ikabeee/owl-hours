@@ -29,6 +29,7 @@ export { article, capitalize, nounFor, someone, type Category } from "./payloads
 export { offTopic } from "./payloads/off-topic.ts";
 export { POLISHED_BUTTONS, ownerMessageAsWritten, ownerMessagePolished } from "./payloads/owner-messages.ts";
 export { quote, type QuoteInput, type QuoteLine } from "./payloads/quote.ts";
+export { isQuestionTap } from "./payloads/question-taps.ts";
 export { requestSent } from "./payloads/request-sent.ts";
 export { SAFETY_BUTTONS, safetyMarkedFrame } from "./payloads/safety.ts";
 export { suggestBusiness, suggestButtons, type SuggestMatch } from "./payloads/suggest-business.ts";

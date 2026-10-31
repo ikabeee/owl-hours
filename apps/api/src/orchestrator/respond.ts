@@ -4,7 +4,7 @@
 // Messages are queued in the outbox, which sends them in order.
 import { textPart, type ContentPart } from "@owl-hours/meta-models";
 import { HOME_EMERGENCY_CATEGORIES, categoryFromListReply, type Category } from "@owl-hours/shared";
-import { nounFor } from "@owl-hours/whatsapp";
+import { isQuestionTap, nounFor } from "@owl-hours/whatsapp";
 import { errorText } from "../whatsapp/inbound.ts";
 import * as copy from "./copy.ts";
 import type { ConversationFacts, RespondDeps, Turn, TurnContext, Understanding, ZukkiMessage } from "./types.ts";
@@ -51,10 +51,24 @@ type Queue = (message: ZukkiMessage, tenantId?: string | null) => Promise<void>;
 
 // Product rule 6: the owner talks; Zukki answers only to its name.
 async function inBusinessChat(deps: RespondDeps, _ctx: TurnContext, turn: Turn, businessId: string, queue: Queue) {
-  if (turn.kind === "text" && ZUKKI_WORD.test(turn.text)) {
-    const name = (await deps.store.businessName(businessId)) ?? "the business";
-    await queue(copy.zukkiIsBack(name), businessId);
+  if (turn.kind === "button") {
+    await onBusinessButton(deps, turn.id, businessId, queue);
+    return;
   }
+  if (turn.kind === "text" && ZUKKI_WORD.test(turn.text)) {
+    await queue(copy.zukkiIsBack(await businessDisplayName(deps, businessId)), businessId);
+  }
+}
+
+// S6: a question tap asks the customer to type the question for the
+// business; reply_ok and anything else queues nothing to the customer.
+async function onBusinessButton(deps: RespondDeps, id: string, businessId: string, queue: Queue): Promise<void> {
+  if (!isQuestionTap(id)) return;
+  await queue(copy.typeYourQuestion(await businessDisplayName(deps, businessId)), businessId);
+}
+
+async function businessDisplayName(deps: RespondDeps, businessId: string): Promise<string> {
+  return (await deps.store.businessName(businessId)) ?? "the business";
 }
 
 async function onButton(deps: RespondDeps, ctx: TurnContext, id: string, queue: Queue) {
@@ -81,7 +95,7 @@ async function onButton(deps: RespondDeps, ctx: TurnContext, id: string, queue: 
     await connect(deps, ctx, facts, businessId, queue);
     return;
   }
-  // reply_ok, quote_question and the rest are for the owner's chat.
+  // reply_ok, reply_question, quote_question and the rest are for the owner's chat.
   deps.log.info(`zukki: no step for button ${id} in ${ctx.conversationId}`);
 }
 
