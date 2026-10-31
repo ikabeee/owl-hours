@@ -440,7 +440,7 @@ slice, delegated with test-first discipline.
     fail; existing 306 green; tsc errors only from missing code (operator
     re-ran: 390/311/79).
   - Answers approved (Q1-Q11 of the RED report): "Upcoming" count derived
-    from the jobs (2 today, design says 3; D12); technician on the card from
+    from the jobs (2 today, design says 3; D22); technician on the card from
     `customer_approved` on; new copy "Outside the $130–160 estimate. Tell
     Ana why.", "Why is the price different?", "No jobs tonight.", "No
     upcoming jobs.", "No finished jobs yet."; status lines "On the way",
@@ -485,7 +485,7 @@ slice, delegated with test-first discipline.
     unchanged. Next: commit the work units, remove the lock.
 - L43 (2026-10-30): T5.1 committed on `feat/owner-jobs-list`: 11294f9
   (store, service, seeds, lib), ccf37eb (screens, routes, e2e, handoff
-  retirement, D12), plus this log. Lock removed. Native assess: medium,
+  retirement, D22), plus this log. Lock removed. Native assess: medium,
   not due (`under_budget`). Not pushed. Next: T5.2 (the sent quote as a
   message in the chat thread, store shared by chats and jobs).
 - L44 (user, 2026-10-30): "Manda el pr". PR #30 (`feat/owner-jobs-list`,

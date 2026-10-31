@@ -34,7 +34,7 @@ export function useFinishJob(id: ID, deps?: Partial<FinishJobDeps>): FinishJobVi
         if (isCurrent) setJob(loaded);
       })
       .catch(() => {
-        // A rejected load keeps the current view (null while loading): no error state yet (D12).
+        // A rejected load keeps the current view (null while loading): no error state yet (D22).
       });
     return () => {
       isCurrent = false;
