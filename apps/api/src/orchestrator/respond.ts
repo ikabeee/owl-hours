@@ -149,13 +149,17 @@ async function onMessage(deps: RespondDeps, ctx: TurnContext, turn: Extract<Turn
     await queue(copy.offTopic());
     return;
   }
-  const category = facts.category ?? understanding.category;
+  // While Zukki still has the chat, a customer who asks for something else gets the new category.
+  const switched =
+    facts.state === "with_zukki" && facts.category !== null && understanding.category !== null && understanding.category !== facts.category;
+  const known = switched ? null : facts.category;
+  const category = known ?? understanding.category;
   if (!category) {
     await queue(copy.categoryList());
     return;
   }
-  const urgent = facts.category ? facts.urgency === "now" : understanding.urgent;
-  if (!facts.category) {
+  const urgent = known ? facts.urgency === "now" : understanding.urgent;
+  if (!known) {
     await deps.store.saveNeed(ctx.conversationId, {
       category,
       urgency: urgent ? "now" : "today",
