@@ -59,6 +59,7 @@ const pushTokenBody = z
     platform: z.enum(["ios", "android", "web"]),
   })
   .strict();
+const pushTokenDeleteBody = z.object({ expoToken: pushTokenBody.shape.expoToken }).strict();
 
 export function ownerRoutes(deps: V1Deps): Hono<OwnerEnv> {
   const app = new Hono<OwnerEnv>();
@@ -150,7 +151,11 @@ export function ownerRoutes(deps: V1Deps): Hono<OwnerEnv> {
 
   app.post("/push-tokens", async (c) => {
     const body = await readJson(c, pushTokenBody);
-    return ok(c, await owner.savePushToken(c.get("session"), body));
+    return ok(c, await owner.savePushToken(c.get("session"), body, deps));
+  });
+  app.delete("/push-tokens", async (c) => {
+    const body = await readJson(c, pushTokenDeleteBody);
+    return ok(c, await owner.deletePushToken(c.get("session"), body));
   });
 
   return app;

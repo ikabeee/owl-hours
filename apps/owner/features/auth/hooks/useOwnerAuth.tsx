@@ -3,7 +3,10 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { getOwnerAuthRuntime, mountOwnerAuth, type OwnerAuthRuntime } from '../services/ownerAuthRuntime';
 import type { Session } from '../../../shared/infra/ownerSessionService.ts';
+import { API_BASE_URL } from '../../../lib/api-client';
 import { createOwnerAuthController } from '../lib/ownerAuthController.ts';
+import { forgetDevicePushToken } from '../../notifications/lib/pushDeregistration';
+import { createPushTokenSender, requestExpoPushToken } from '../../notifications/services/pushTokenService';
 
 // The emailed-code send/verify; null in demo mode, where onboarding keeps its fake.
 export type OwnerCodeAuth = {
@@ -26,7 +29,25 @@ type ProviderProps = { children: ReactNode; runtime?: OwnerAuthRuntime | null };
 
 export function OwnerAuthProvider({ children, runtime }: ProviderProps) {
   const resolvedRuntime = useMemo(() => runtime ?? getOwnerAuthRuntime(), [runtime]);
-  const controller = useMemo(() => createOwnerAuthController(resolvedRuntime), [resolvedRuntime]);
+  // Sign-out deletes this device's push token first (S11): on a shared phone
+  // the next owner must not receive this business's pushes. Best-effort.
+  const controller = useMemo(
+    () =>
+      createOwnerAuthController(resolvedRuntime, {
+        beforeSignOut: (session) =>
+          forgetDevicePushToken({
+            getToken: requestExpoPushToken,
+            deleteToken: (expoToken) => {
+              if (!session) return Promise.resolve();
+              return createPushTokenSender({
+                baseUrl: API_BASE_URL,
+                getSessionToken: async () => session.access_token,
+              }).deleteToken(expoToken);
+            },
+          }),
+      }),
+    [resolvedRuntime],
+  );
   const [snapshot, setSnapshot] = useState(() => controller.getState());
   const codeAuth = useMemo(() => codeAuthOf(resolvedRuntime, controller), [resolvedRuntime, controller]);
 

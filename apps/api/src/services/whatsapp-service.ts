@@ -224,9 +224,17 @@ export async function connectBusiness(
     db,
     deps?.push ?? fetch,
     { conversationId: input.conversationId, businessId: input.businessId, offerId: offer.offerId, distanceKm: offer.distanceKm },
-  ).catch((error: unknown) => {
-    console.warn(`[api] offer ${offer.offerId} push failed, the offer stands:`, error);
-  });
+  )
+    .then((summary) => {
+      if (summary.failed > 0) {
+        console.warn(
+          `[api] offer ${offer.offerId} push failed: sent=${summary.sent} failed=${summary.failed} removed=${summary.removed.length}, the offer stands`,
+        );
+      }
+    })
+    .catch((error: unknown) => {
+      console.warn(`[api] offer ${offer.offerId} push failed, the offer stands:`, error);
+    });
   return offer;
 }
 
