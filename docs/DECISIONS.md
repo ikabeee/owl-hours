@@ -445,3 +445,14 @@ it with a new one.
 - **Consequences:** `proposed` matches the seeded demo job, so the quote and approve-visit paths run
   unchanged. Jobs keep the table's default currency (businesses have no currency column).
   Tests: `supabase/tests/accept_creates_job.test.sql`.
+
+## D25 — Zukki suggests the quote range on the offer (2026-10-31)
+
+- **Decision:** "Connect me" now creates the offer with a suggested range from the business's own price
+  rules (`apps/api/src/services/suggested-quote.ts`): the `callout` visit, plus the cheapest
+  `repair_range`, plus the `night_fee` when the business's local hour falls inside its window
+  ("10 PM-7 AM"; an unreadable window never applies). The seeded Northside offer ($45 + $25 + $60–90 =
+  $130–160) already followed this formula.
+- **Why:** live offers had no `suggestedQuote`, so the owner chat hid "Zukki suggests sending the quote"
+  and the quote had no starting range.
+- **Consequences:** the accepted job inherits the range (D24), so the quote draft opens with it.
