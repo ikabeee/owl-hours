@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import BusinessScreen from "../../../features/business/components/BusinessScreen";
 import BusinessLoadError from "../../../features/business/components/BusinessLoadError";
 import { useBusiness } from "../../../features/business/hooks/useBusiness";
+import { businessLinks } from "../../../features/business/lib/businessLinks";
 
 export default function BusinessRoute() {
   const insets = useSafeAreaInsets();
@@ -30,7 +31,7 @@ export default function BusinessRoute() {
       insets={safeInsets}
       onOpenPrices={async () => router.push('/business/prices')}
       onOpenSettings={async () => router.push('/settings')}
-      onTestZukki={async () => {}} // business/test lands in another slice
+      onTestZukki={async () => router.push(`/${businessLinks.testZukki}`)}
       dom={domHost}
     />
   );
