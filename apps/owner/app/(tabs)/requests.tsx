@@ -2,6 +2,7 @@
 import { useCallback } from 'react';
 import { router, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import RequestsLoadError from '../../features/requests/components/RequestsLoadError';
 import RequestsScreen from '../../features/requests/components/RequestsScreen';
 import { useRequests } from '../../features/requests/hooks/useRequests';
 
@@ -9,13 +10,18 @@ export default function RequestsRoute() {
   const insets = useSafeAreaInsets();
   const { requests, reload } = useRequests();
   useFocusEffect(useCallback(() => { reload(); }, [reload]));
-  if (!requests) return null;
+  const safeInsets = { top: insets.top, bottom: insets.bottom };
+
+  if (requests.status === 'failed') return <RequestsLoadError insets={safeInsets} onRetry={requests.retry} dom={domHost} />;
+  if (requests.status !== 'ready') return null;
 
   return (
     <RequestsScreen
-      requests={requests}
-      insets={{ top: insets.top, bottom: insets.bottom }}
+      requests={requests.view}
+      insets={safeInsets}
       onOpenRequest={async (id) => router.push(`/request/${id}`)}
+      refreshFailed={requests.refreshFailed}
+      onRetry={requests.retry}
       dom={domHost}
     />
   );

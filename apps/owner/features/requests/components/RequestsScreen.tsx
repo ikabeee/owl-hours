@@ -34,6 +34,8 @@ export default function RequestsScreen(props: {
   requests: RequestsListView;
   insets: { top: number; bottom: number };
   onOpenRequest: (id: string) => Promise<void>;
+  refreshFailed: boolean;
+  onRetry: () => Promise<void>;
   dom?: DOMProps;
 }) {
   const { requests, insets } = props;
@@ -46,6 +48,7 @@ export default function RequestsScreen(props: {
             <Heading level={1}>{requestsListCopys.title}</Heading>
             <Switch label={requestsListCopys.takingRequests} value={requests.isTakingRequests} isDisabled />
           </HStack>
+          {props.refreshFailed && <RefreshNotice onRetry={props.onRetry} />}
           {requests.emptyState ? (
             <RequestsEmpty state={requests.emptyState} />
           ) : (
@@ -54,6 +57,17 @@ export default function RequestsScreen(props: {
         </VStack>
       </div>
     </Theme>
+  );
+}
+
+function RefreshNotice(props: { onRetry: () => Promise<void> }) {
+  return (
+    <Card padding={3}>
+      <HStack justify="between" align="center" gap={2}>
+        <Text type="supporting">{requestsListCopys.refreshFailedNotice}</Text>
+        <Button label={requestsListCopys.tryAgain} variant="secondary" size="md" onClick={() => props.onRetry()} />
+      </HStack>
+    </Card>
   );
 }
 
