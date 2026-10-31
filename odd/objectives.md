@@ -5,7 +5,7 @@
 > "Vamos a organizar un goal para dejar la aplicacion funcional. Y cuando acabes mandar un video y un tutorial (readme) de como usar el proyecto."
 > "TU MISMO HARAS LAS PRUEBAS Y NO VAS A PARAR HASTA QUE TENGAMOS UN FLUJO ENTERO DE DESARROLLO, EN CASO DE NECESITAR ALGUNA RESPUESTA HARAS UN CHAT EN LA UI DE CLAUDE PARA AVISARME SOBRE LO QUE NECESITAS"
 
-1. [Accepting an offer opens a job the owner can quote](tasks/live-accept-creates-job.md) — in-progress
+1. [Accepting an offer opens a job the owner can quote](tasks/live-accept-creates-job.md) — done
 2. [Owner app on the live API: requests, chats, jobs, quote](tasks/live-owner-core.md) — pending
 3. [Owner app on the live API: content post review](tasks/live-owner-content.md) — pending
 4. [Live environment: demo owner, owner web deploy, CORS](tasks/live-environment.md) — pending

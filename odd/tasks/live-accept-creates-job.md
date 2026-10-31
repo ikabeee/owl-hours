@@ -1,5 +1,5 @@
 ---
-status: in-progress
+status: done
 ---
 
 # Accepting an offer opens a job the owner can quote
@@ -20,10 +20,11 @@ Evidence: no migration or API code inserts into `public.jobs` (only `supabase/se
 
 ## Tasks
 
-- T1 S1–S5 — inline — RED migration test, then migration replacing `public.accept_handoff`; `docs/DECISIONS.md` D24. Risk: item 1 (migration of a live function) → independent verifier.
+- [x] T1 S1–S5 — inline — RED migration test, then migration replacing `private.accept_handoff`; `docs/DECISIONS.md` D24. Risk: item 1 (migration of a live function) → independent verifier. Commit 946cd02. RED: "one job per accepted handoff"; GREEN: `npm run test:db` passed.
 
 ## Log
 
 - L1 (2026-10-31) User: "Vamos a organizar un goal para dejar la aplicacion funcional. Y cuando acabes mandar un video y un tutorial (readme) de como usar el proyecto. TU MISMO HARAS LAS PRUEBAS Y NO VAS A PARAR HASTA QUE TENGAMOS UN FLUJO ENTERO DE DESARROLLO, EN CASO DE NECESITAR ALGUNA RESPUESTA HARAS UN CHAT EN LA UI DE CLAUDE PARA AVISARME SOBRE LO QUE NECESITAS"
 - L2 (2026-10-31) Team request pasted by the user: customer records "from saying “hi” on WhatsApp through “Approve visit.”"; owner records "receiving the request, accepting it, sending a quote, and reviewing the post."
 - L3 (2026-10-31) Map: owner app features other than auth, push tokens and story-pack default to fakes; Requests and Chats tabs are placeholders; no job is created on accept; owner onboarding creates no server business; owner web has no deploy. Baseline `npm run test:db` passes on d240ea1.
+- L4 (2026-10-31) Close: `npm run test:db`, `npm test`, `npm run typecheck` pass (needed `CI=true pnpm install --frozen-lockfile`: node_modules was stale). Independent verifier: PASS on S1–S5 and invariants (rejected accepts change nothing, open_job not executable by authenticated/anon, full path to `customer_approved`, no double job insert). Advisories: no one-job-per-conversation constraint (re-offer after cancel would allow a second job); a job without a suggested range has no totals until the quote. Native review: medium, user declined for this candidate. Pending: the migration is not applied to the live Supabase (question 1 in https://claude.ai/artifact/S5we7oz7u4kFbSZmAPT1co). Next: live-owner-core.
