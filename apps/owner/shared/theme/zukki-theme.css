@@ -10,3 +10,5 @@
 .zukki-tabular { font-variant-numeric: tabular-nums; }
 .zukki-actions { display: grid; grid-template-columns: 1fr 2fr; gap: 8px; }
 .zukki-grow { flex: 1; min-width: 0; }
+/* WhatsApp-style message pill: rounds the InputGroup's outer corners (it reads --radius-element). */
+.zukki-pill { --radius-element: 9999px; }

@@ -38,6 +38,10 @@ export type DeclineReason = "busy" | "too_far" | "not_offered" | "other";
 
 export type Media = { kind: "video" | "photo"; url: string; thumbUrl: string; durationS?: number };
 
+// Zukki's diagnosis from the customer's evidence, shown to the owner as a short list.
+export type FaultLikelihood = "likely" | "possible";
+export type PossibleFault = { label: string; likelihood: FaultLikelihood };
+
 export type RequestOffer = {
   id: ID;
   customerName: string;             // first name + initial only: "Ana L."
@@ -48,10 +52,12 @@ export type RequestOffer = {
   media: Media[];
   customerQuote?: string;           // transcript of the voice note
   zukkiSummary: string;             // "Valve closed, no cables near the water…"
+  possibleFaults?: PossibleFault[]; // absent when Zukki could not diagnose from the evidence
   suggestedQuote: MoneyRange;
   offeredAt: ISODate;
   expiresAt: ISODate;               // countdown is computed from this, never stored client-side
   status: OfferStatus;
+  declineReason?: DeclineReason;    // set when the owner declines with one of the decline-sheet reasons
 };
 
 // ---------- chats ----------
@@ -90,8 +96,12 @@ export type Job = {
   customerName: string;
   technician: string;
   address?: string;                 // present from customer_approved on
+  distanceKm?: number;              // from the business to the customer, shown with the address
+  approvedAt?: ISODate;             // when the customer approved the quote
+  scheduledFor?: ISODate;           // the visit time of a job booked ahead (Tomorrow), own offset
   quote: Quote;
   finalTotal?: Money;
+  finalPriceReason?: string;        // why the final total fell outside the quoted estimate
   status: JobStatus;
   timeline: TimelineEvent[];
   photos: { before?: string; after?: string; extra: string[] };

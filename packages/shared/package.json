@@ -6,7 +6,7 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "test": "node --test test/job-states.test.ts test/schemas.test.ts test/categories.test.ts",
+    "test": "node --test test/job-states.test.ts test/schemas.test.ts test/categories.test.ts test/story-pack.test.ts",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {

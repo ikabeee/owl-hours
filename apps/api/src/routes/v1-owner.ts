@@ -2,6 +2,8 @@
 // as that user, so each business only ever reaches its own data.
 import { Hono } from "hono";
 import { z } from "zod";
+import { storyPackCreateSchema, storyPackUpdateSchema, storyPackReviewSchema } from "@owl-hours/shared";
+import { ownerContentPhotoRoutes } from "./owner-content-photos.ts";
 import { requireOwner, type OwnerEnv } from "../http/auth.ts";
 import { rateLimit } from "../http/rate-limit.ts";
 import { errorResponse, ok, readId, readJson, readQuery } from "../http/respond.ts";
@@ -52,12 +54,21 @@ const testZukkiBody = z
     businessId: z.string().uuid().optional(),
   })
   .strict();
+const pushTokenBody = z
+  .object({
+    expoToken: z.string().regex(/^Expo(nent)?PushToken\[.+\]$/, "must be an Expo push token"),
+    platform: z.enum(["ios", "android", "web"]),
+  })
+  .strict();
+const pushTokenDeleteBody = z.object({ expoToken: pushTokenBody.shape.expoToken }).strict();
 
 export function ownerRoutes(deps: V1Deps): Hono<OwnerEnv> {
   const app = new Hono<OwnerEnv>();
   app.onError((error, c) => errorResponse(c, error));
   app.use("*", requireOwner(deps.authenticate));
   app.use("*", rateLimit<OwnerEnv>({ limit: 120, windowMs: 60_000, key: (c) => `owner:${c.get("session").userId}`, now: deps.now }));
+
+  app.route("/content/photo-jobs", ownerContentPhotoRoutes());
 
   app.get("/me", async (c) => ok(c, await owner.getMe(c.get("session"))));
 
@@ -115,9 +126,38 @@ export function ownerRoutes(deps: V1Deps): Hono<OwnerEnv> {
     return ok(c, await owner.transitionJob(c.get("session"), id, body.to, body.reason));
   });
 
+  app.get("/content/sources", async (c) => ok(c, await owner.listContentSources(c.get("session"))));
+  app.get("/content/drafts", async (c) => ok(c, await owner.listContentDrafts(c.get("session"))));
+  app.post("/content/drafts", async (c) => {
+    const body = await readJson(c, storyPackCreateSchema);
+    return ok(c, await owner.createContentDraft(c.get("session"), body), 201);
+  });
+  app.patch("/content/drafts/:id", async (c) => {
+    const id = readId(c);
+    const body = await readJson(c, storyPackUpdateSchema);
+    return ok(c, await owner.updateContentDraft(c.get("session"), id, body));
+  });
+  app.post("/content/drafts/:id/review", async (c) => {
+    const id = readId(c);
+    const body = await readJson(c, storyPackReviewSchema);
+    return ok(c, await owner.reviewContentDraft(c.get("session"), id, body));
+  });
+
+  app.post("/content/drafts/:id/handoff", async (c) =>
+    ok(c, await owner.handoffContentDraft(c.get("session"), readId(c))));
+
   app.post("/test-zukki", async (c) => {
     const body = await readJson(c, testZukkiBody);
     return ok(c, await owner.testZukki(c.get("session"), body, deps));
+  });
+
+  app.post("/push-tokens", async (c) => {
+    const body = await readJson(c, pushTokenBody);
+    return ok(c, await owner.savePushToken(c.get("session"), body, deps));
+  });
+  app.delete("/push-tokens", async (c) => {
+    const body = await readJson(c, pushTokenDeleteBody);
+    return ok(c, await owner.deletePushToken(c.get("session"), body));
   });
 
   return app;

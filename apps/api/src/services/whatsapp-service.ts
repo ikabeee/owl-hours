@@ -7,6 +7,7 @@ import type { Category } from "@owl-hours/shared";
 import { createSupabaseRepository } from "../db/repository.ts";
 import { HttpError } from "../http/respond.ts";
 import { unwrap } from "./db-result.ts";
+import { notifyOfferOwners } from "./owner-push.ts";
 
 const uuid = z.string().uuid();
 
@@ -223,9 +224,12 @@ export async function suggestedQuote(db: SupabaseClient, tenantId: string): Prom
 }
 
 // "Connect me": offers the request to the business and starts its timer.
+// The owner push goes out best-effort after the offer stands: a push failure
+// is logged and never blocks or rolls back the offer (S11).
 export async function connectBusiness(
   db: SupabaseClient,
   input: { conversationId: string; businessId: string; suggestedMin?: number | undefined; suggestedMax?: number | undefined },
+  deps?: { push?: typeof fetch | undefined },
 ) {
   const row = z
     .object({ id: uuid, attempt: z.number(), expires_at: z.string(), distance_km: z.coerce.number().nullable() })
@@ -239,7 +243,23 @@ export async function connectBusiness(
         }),
       ),
     );
-  return { offerId: row.id, attempt: row.attempt, expiresAt: row.expires_at, distanceKm: row.distance_km };
+  const offer = { offerId: row.id, attempt: row.attempt, expiresAt: row.expires_at, distanceKm: row.distance_km };
+  await notifyOfferOwners(
+    db,
+    deps?.push ?? fetch,
+    { conversationId: input.conversationId, businessId: input.businessId, offerId: offer.offerId, distanceKm: offer.distanceKm },
+  )
+    .then((summary) => {
+      if (summary.failed > 0) {
+        console.warn(
+          `[api] offer ${offer.offerId} push failed: sent=${summary.sent} failed=${summary.failed} removed=${summary.removed.length}, the offer stands`,
+        );
+      }
+    })
+    .catch((error: unknown) => {
+      console.warn(`[api] offer ${offer.offerId} push failed, the offer stands:`, error);
+    });
+  return offer;
 }
 
 // "Approve visit" (quote_approve:<id>).

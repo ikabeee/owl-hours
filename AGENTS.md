@@ -80,7 +80,7 @@ edits into handoff files creates the second source of truth this rule removes.
 
 - Human approves every job: no `customer_approved` without owner confirm +
   customer approval. Nothing is posted without owner approval.
-- AI disclosure first in every chat; off-topic gets the `14` payload.
+- Off-topic messages get the `14` payload.
 - Location privacy: approximate area only until the customer approves a visit.
 - Tenant isolation: one business never sees another's data.
 - Accept windows: 5 min urgent / 30 min otherwise, then the next business.

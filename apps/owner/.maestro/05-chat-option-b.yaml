@@ -1,0 +1,32 @@
+appId: host.exp.Exponent
+name: Option B compares and sends Zukki's version
+---
+- runFlow:
+    file: subflows/open.yaml
+    env: { ROUTE: "chat/c_ana", WAIT_FOR: "Polish with Zukki" }
+- runFlow: subflows/dismiss-logbox.yaml
+- tapOn: "Polish with Zukki"
+- tapOn: { text: "Message", index: 1 }
+- inputText: "ok mario there 12:55, bringing the valve. 45 visit + 25 night, repair 60-90"
+# The keyboard's accessory bar covers Send, so close the keyboard first.
+# A dropped tap leaves the draft in place, so sending again is safe.
+- retry:
+    maxRetries: 2
+    commands:
+      - tapOn:
+          text: "Done"
+          optional: true
+      - tapOn: "Send"
+      - runFlow: subflows/dismiss-logbox.yaml
+      - extendedWaitUntil:
+          visible: "You wrote"
+          timeout: 10000
+- assertVisible: "Zukki's version · English, Ana's language"
+- assertVisible: "Send mine"
+- takeScreenshot: 05-chat-option-b-compare
+- tapOn: "Send Zukki's"
+- runFlow: subflows/dismiss-logbox.yaml
+- extendedWaitUntil:
+    visible: ".*Written with Zukki, approved by Northside.*"
+    timeout: 10000
+- takeScreenshot: 05-chat-option-b-sent

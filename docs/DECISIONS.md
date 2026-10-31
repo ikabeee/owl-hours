@@ -70,3 +70,333 @@ it with a new one.
 - **Consequences:** swapping the fake for Supabase means a new `OffersClient`
   only; `acceptWindowMin` is injected too (urgent 300 s, other 1800 s), so
   `maxSeconds` is not hardcoded in the screen.
+
+## D7 — Chats slice contracts (2026-10-29)
+
+- **Decision:** `createConversationsService(client)` returns async
+  `{ getConversation, getMessages, sendMessage, sendPolishChoice }`.
+  `sendMessage(convId, text, {polish})` returns `{sent}` or a `PolishPreview`
+  (HANDOFF-RN-UI §9) and `null` for an unknown conversation; a preview appends
+  nothing. `sendPolishChoice(convId, preview, "mine" | "zukki")` sends option A
+  (`as_written`) or option B (`polished`, `ownerDraft` = original). The label
+  under an option B bubble is the §8 string "Written with Zukki, approved by
+  Northside" (no invented copy). The `c_ana` thread seeds from `anaMessages`
+  (m1, m2), so the owner types `OWNER_TEXT` live in the demo.
+  `useConversation(id, deps?)` is the only service consumer and owns the polish
+  switch (default off, not persisted) and `composing → polishing → comparing →
+  sent`. Default message ids come from a counter (no `crypto` on Hermes).
+- **Why:** user-approved answers to the T4 RED review (L12).
+- **Consequences:** the Settings default for polish and the metadata time are
+  not wired; "You accepted at" formats device-local time.
+
+## D8 — Accept opens the chat by offerId (2026-10-29)
+
+- **Decision:** `OffersService.findChat(offerId)` returns the conversation id
+  of an accepted offer (`null` otherwise); `useRequestOffer().accept()` returns
+  that id and the route navigates with it.
+- **Why:** the route built `c_${offerId}` (`c_req_ana`), but the conversation is
+  `c_ana`; ids are not derivable by naming (`c_grace` belongs to `req_grace2`).
+  A real backend creates the chat on accept and returns it.
+- **Consequences:** `OffersClient` gains `findConversationId(offerId)`.
+
+## D9 — Chat session and accept destinations (2026-10-29, T4.1)
+
+- **Decision:** the chat composer is a pure reducer (`features/chats/lib/composerMachine.ts`)
+  driven by a framework-free session (`features/chats/hooks/conversationSession.ts`);
+  `useConversation` is a thin `useSyncExternalStore` adapter returning
+  `loading | not_found | failed (retry) | ready (view)`. Sends are guarded while
+  one is in flight; a sent message is appended from the service result (no
+  reload); a rejected send restores the draft and shows "Something went wrong.";
+  a failed load renders `ChatLoadError` (owl `failed`, "Try again"). After Accept,
+  `destinationAfterAccept` (`features/requests/lib/acceptOutcome.ts`) maps
+  `not-offered → stay`, `accepted + chat → /chat/[id]`, `accepted + no chat → /chats`.
+- **Why:** the six non-blocking findings of the T4 review (L14); the owner app has
+  no React test setup, so the logic moved into units `node --test` can pin.
+- **Consequences:** `not_found` still renders nothing (no handoff copy for it);
+  the session is created inside the effect so React strict mode cannot leave a
+  disposed session in use.
+
+## D10 — Request evidence and possible faults (2026-10-29, T3.1)
+
+- **Decision:** the request detail shows the customer's evidence. That is:
+  - an Astryx `Thumbnail` banner of the first media item, which opens a
+    `Lightbox`;
+  - the customer's quote in italics;
+  - Zukki's summary with the owl tag;
+  - a structured "Possible faults" list. Each fault is
+    `{ label, likelihood: "likely" | "possible" }`; `sortLikelyFirst` puts
+    likely faults first, and each one shows as a `Badge`.
+
+  Decline / Accept and chat are a sticky bottom bar. Media frames are
+  data-URI modules (`assets/img/`), like the owl.
+- **Why:** HANDOFF-RN-UI §8 planned the media, quote and summary, and T3
+  never built them. The user added the faults list (L27). The handoff's
+  "Screen frame" makes the footer the bottom action bar.
+- **Consequences:**
+  - `RequestOffer.possibleFaults` is optional, and Zukki's pipeline must
+    fill it.
+  - The `Thumbnail` banner is a CSS override of Astryx's 64px square
+    (`requestScreen.css`).
+  - The demo Lightbox shows the video frame, not a video.
+
+## D11 — Quote modal, job detail and the chat suggestion (2026-10-29, T5)
+
+- **Decision:** the jobs feature owns the quote and the job.
+  - `chat/[id]/quote` is a modal route (`presentation: "modal"` in the root
+    Stack). The DOM screen edits the lines locally and recalculates the
+    total live; the hook builds the `Quote` and sends it once.
+  - The total is the sum of the line minimums and maximums, the invariant
+    of `packages/shared` `quoteSchema`, written as a pure
+    `features/jobs/lib` function: `apps/owner` takes no new dependency.
+  - `job/[id]` shows the address only from `customer_approved` on. The
+    primary button follows the status: "Start trip" → "I'm here" →
+    "Finish" (disabled until T5.1). The footer is hidden before approval.
+    `en_route` appends "On the way" to the timeline.
+  - The demo fake client approves a sent quote for the customer, since the
+    WhatsApp approval does not exist yet. The real service contract stops
+    at `quoted`.
+  - The chat learns its job id and suggested quote from its own service,
+    so no feature imports another. A failed lookup means no suggestion.
+  - Clock time, first name and money range text moved to `shared/lib/`
+    (two callers each); the owner `test` script runs `shared/**`.
+  - `Job` gains optional `approvedAt` and `distanceKm`.
+- **Why:** the demo path reaches the quote from the chat, and "View job and
+  evidence" needed a target (HANDOFF-RN-UI §7, §8). The user chose the
+  simulated approval (L35).
+- **Consequences:**
+  - The quote message in the chat thread and the Jobs "Waiting for … to
+    approve" line need a store shared by chats and jobs (T5.1). Today each
+    jobs hook mounts its own demo service.
+  - The jobs demo clock starts at 12:07 AM (OwQuote's status bar), so the
+    timeline stays in order; the requests hook keeps its own clock.
+
+## D12 — Content slice: drafts, post review, linked accounts (2026-10-29, T6a)
+
+- **Decision:** `features/content` owns `OwContent`, `OwPostReview` and
+  `OwAccounts`.
+  - One module-level fake posts client (`defaultFakePostsClient`) backs every
+    content hook, so an approval in post review shows in Content.
+  - Content reloads on focus (`useFocusEffect`).
+  - Approving moves a draft to `scheduled` when it has a future
+    `scheduledFor`, otherwise to `published`.
+  - Scheduled posts show in the Published list with their time
+    ("Today, 6:00 PM") as the meta line.
+  - `Content` is now a nested Stack (`(tabs)/content/_layout.tsx`), so
+    `accounts` keeps the tab bar; the tab route in `shared/shell/TabBar.tsx` is
+    `content`, not `content/index`.
+- **Why:** HANDOFF-RN-UI §7–8 and the operator's answers in
+  `odd/tasks/owner-content.md` L2: copy from the design HTML, data verbatim
+  from `mock.ts`, no `shared/data` edits while T5 edits `mock.ts`.
+- **Consequences:**
+  - Instagram shows the mock name "@northsideplumbing (professional)", not
+    the design's "· professional account".
+  - "Regenerate" returns the draft unchanged until Zukki's generator exists.
+  - The Published list has no empty state yet: the design has no copy for it.
+  - Coded by agy (Gemini 3.8 Flash High) test-first; the operator locked the
+    tests and reviewed one cleaner round.
+
+## D13 — Business slice: profile, prices, settings (2026-10-29, T6b)
+
+- **Decision:** `features/business` owns `OwBusiness`, `OwPrices` and
+  `OwSettings`.
+  - One module-level `demoBusinessService` backs the three hooks, so saved
+    prices and toggled settings survive navigation.
+  - The Business tab reloads on focus (`useFocusEffect`).
+  - `BusinessSettings` (taking requests, urgent requests, ring on silent at
+    night, polish by default) is feature-local in
+    `services/businessService.ts` until chats consumes "Polish with Zukki by
+    default".
+  - Row values come from `mock.ts` verbatim: "Mon–Sat, 8 AM–8 PM", the first
+    three prices with full labels. `importedServices: 12` and
+    `areaLabel: "Northside"` are demo values in the fake client.
+- **Why:** HANDOFF-RN-UI §7–8 and the operator's answers in
+  `odd/tasks/owner-business.md` L2: copy from the design HTML, data from
+  `mock.ts`, no `shared/data` edits while T5 edits `mock.ts`.
+- **Consequences:**
+  - The logo and the map strip are data-URI modules built from
+    `handoff-ui/owner-app/assets/` (`assets/img/logoNorthside.ts`,
+    `assets/img/mapCity.ts`).
+  - "Test Zukki", "Sign out" and the Profile, Hours, Service area and
+    Website rows do nothing until their screens land.
+  - The added price row's label "Name" has no handoff source (operator
+    accepted).
+
+## D14 — Onboarding slice and its routes (2026-10-29, T7)
+
+- **Decision:** `features/onboarding` owns the first run, from intro to live.
+  - The routes live in a real folder, `app/onboarding/`
+    (`/onboarding/intro` … `/onboarding/live`, then `/requests`), not in an
+    `(onboarding)` group.
+  - One module-level `demoOnboardingService` backs every step, so data
+    entered on one step reaches the next.
+  - Routes navigate with `resolveNext(route, "next" | "facebook" | "has-account")`.
+  - The demo code is `482910`. An email is valid when the trimmed value holds
+    one "@" with a "." in the domain part; Supabase validates the rest.
+- **Why:** an `(onboarding)` group does not change the URL, so
+  `(onboarding)/business.tsx` would resolve to `/business`, the same URL as
+  the Business tab. The operator's answers are in
+  `odd/tasks/owner-onboarding.md` L2.
+- **Consequences:**
+  - "Allow notifications" is `requestNotificationPermissionStub` until
+    `expo-notifications` is added, which is a dependency decision.
+  - "Link accounts" opens `/content/accounts`, which lands with the content
+    slice.
+  - The auth gate and the entry redirect (`app/_layout.tsx`,
+    `app/index.tsx`) are not wired yet.
+  - `PricesScreen` triggers an Expo CLI 58.1.16 defect: `expo export` fails
+    with `Asset not found: …/__common-<hash>.js` unless
+    `EXPO_NO_BUNDLE_SPLITTING=1` is set. `exportDomComponents.js` renames the
+    DOM chunks to md5 names without updating `metadata.requires`.
+    `expo export:embed` (native release) is not affected. The `build`
+    script sets `EXPO_NO_BUNDLE_SPLITTING=1` (user's decision, 2026-10-30),
+    so each DOM component ships as one unsplit bundle. Drop the variable
+    once an Expo CLI release fixes the rename.
+  - Coded by muse (Spark 1.3, effort xhigh) test-first; the operator locked
+    the tests and reviewed one cleaner round.
+
+## D15 — Owner authentication infrastructure (2026-10-30)
+
+- Extract app-wide owner authentication into a separate PR. Keep the singleton,
+  session contract, and encrypted persistence in `shared/infra`, consumed by the
+  root provider and live feature services. Auth never imports Story Pack.
+- The owner signs in by emailed 6-digit code through the handoff `OwSignUp` →
+  `OwVerify` screens (user decision "mejor hazlo por email, no tenemos proveedor
+  de sms", 2026-10-30), not an email magic link:
+  `signInWithOtp({ email, options: { shouldCreateUser: true } })` on sign-up,
+  then `verifyOtp({ email, token, type: 'email' })`. The `/auth` routes, the old
+  email screen and the PKCE callback code are removed. Live mode needs the
+  Supabase Email provider with the Magic Link and Confirm sign up templates carrying `{{ .Token }}`
+  (`docs/OWNER-AUTH.md`).
+- The sign-up/verify copy deviates from the handoff because there is no SMS
+  provider: `emailLabel` "Email", `emailHelp` "We'll email you a code to confirm
+  it." and `changeEmail` "Change email" replace the phone wording; every other
+  handoff string stays byte-identical.
+- The root provider owns the session controller and foreground refresh, and
+  injects the emailed-code send/verify into onboarding; demo mode (no Supabase variables)
+  keeps the `DEMO_CODE` fake with the onboarding demo-seed email. In live mode
+  a signed-out owner outside `/onboarding/*` is redirected to `/onboarding/sign-up`.
+- Store oversized native sessions as bounded encrypted SecureStore chunks with
+  a write-last manifest. Surface persistence/cleanup failures and remove the
+  manifest before sign-out cleanup to prevent resurrection of old credentials.
+- Configure the API's external origin explicitly for TLS termination; do not
+  infer trusted browser origins from client-controlled forwarded headers.
+- Hosted Email provider settings and real Android sign-in acceptance remain
+  separate from synthetic tests and bundle compilation; see `docs/OWNER-AUTH.md`.
+
+## D16 — Story Pack data and review contract (2026-10-30)
+
+- Keep Story photo purpose in `media.story_role`; preserve original evidence roles and first job assignment audit. Use shared SQL job/consent and original-photo predicates.
+- SQL produces the single media revision; UUID snapshots use consistent C collation and API comparisons match fields by ID.
+- Atomic approval owns eligibility. Review receipts do not promise fresh export availability; refresh and handoff recalculate it. Retain post-sign checks only across actual Storage I/O.
+- Use `PT409` for stale displayed copy or photo conflicts. `40001` is reserved for actual serialization failures because PostgREST may retry it.
+- Consolidate never-deployed Story migrations into a preceding enum addition and one data migration; preserve main migrations and T6 permissions.
+- See `docs/STORY-PACK-DATA.md` for the contract and local verification boundary.
+
+## D17 — Story Pack review and export boundary (2026-10-29; revised 2026-10-30)
+
+- **Decision:** Story Pack organizes a completed job with current customer photo consent and owner-confirmed before/after images into three editable slides, owner approval and manual image/copy export. It is an opt-in workspace separate from T6's Content publishing flow (D19).
+- **Why:** the day workflow can reuse completed night jobs without implying that a customer agreed to marketing, or that an approved/exported file was published.
+- **Consequences:** the real adapter persists three slides and selected media under the owner's RLS session. Demo mode must be explicitly enabled and stays fictional/in-memory. Source reads, approval and delivery check consent and exact photo eligibility. Signed links expire after ten minutes; issued links and downloaded files cannot be recalled. No Meta account connection, scheduling or publishing call is added by Story Pack. Existing T6 scheduling rights remain intact.
+
+## D18 — Reuse the supplied Zukki pack in Content (2026-10-29)
+
+- **Decision:** use the existing shared `Owl` component and the canonical
+  nine-action pack: `review` at the drafts headers, `idle` in empty states,
+  and `failed` beside errors. Preserve uniform cell scaling and the static
+  fallback for reduced motion.
+- **Why:** the supplied `golden-owl-nine-actions.zip` already matches the repo's
+  nine WebP animations and static frame byte for byte. Reusing these modules
+  gives the day and night workflows the same mascot without duplicating assets
+  or showing unrelated animations in Content.
+- **Consequences:** only three animation states enter the Content screen's
+  bundle. Generic reference leak photos are not added: this demo does not need
+  them, and they do not establish a matched customer before/after story. The
+  existing fictional job visuals and consent labels remain explicit.
+
+## D19 — Preserve T6 and isolate Story Pack (2026-10-30)
+
+- **Decision:** restore `features/content`, the Content tab route, and the four `OwContent`/`OwPostReview` handoff files byte for byte from `main`. Story Pack lives in `features/story-pack` at `/story-pack`, with no tab replacement. Its API source type is `story_pack`; the existing non-Story-Pack review/scheduling behavior is preserved.
+- **Why:** maintainer review identified overlap with T6's in-progress publish/schedule flow. A manual export workspace is not its replacement and does not satisfy the handoff retirement rule.
+- **Consequences:** the feature remains opt-in and the PR remains a draft. The team can review it without inheriting an unsolicited product switch. No claim is made that the native device flow or a platform publishing integration is accepted.
+
+## D20 — Persisted review contract and portable export (2026-10-30)
+
+- **Decision:** share the client/API schema; persist exactly three slides and selected media. Bind approval to the displayed `updatedAt` and each selected photo's ID, role and immutable-path revision. Use one SQL eligibility helper and target-job lookups instead of relying on the source-picker's 100-row window.
+- **Why:** a replacement after-photo must not keep a stale draft eligible, and another tab must not change copy or swap photo roles after the owner reviewed it.
+- **Consequences:** export authorizes twice, renders three 1080×1920 PNGs in the DOM, then packages them with `caption.txt` and `manifest.json`. Web downloads the ZIP; native receives bounded base64 through an async callback, saves a temporary file, awaits the share sheet and removes it. A share-sheet result does not prove recipient delivery. Text fitting preserves the full allowed copy. The separate local `deliveryReceipt` records opening the delivery UI; it is not part of `StoryPackStatus`. SQL remains `approved`.
+- **Session boundary:** hooks accept injected dependencies. Live mode requires explicit API/Supabase settings and a persisted owner session; the existing-owner magic-link flow does not create accounts. Missing configuration never silently falls back to demo. Browser CORS is allowlisted only on owner routes. Native magic-link callback/device acceptance remains to be verified.
+- **Migration boundary:** Supabase CLI 2.122.0 reproduced PostgreSQL `55P04` when the new enum value was used in the same migration transaction. Its addition is now a preceding migration; the local DB harness wraps each migration in a transaction so this regression is visible.
+
+## D21 — Owner push, decline reason and Test Zukki sources (2026-10-30)
+
+- Push scope is full remote push (user decision "Full remote push", confirmed
+  "Sí, push remoto completo"). The app registers its Expo push token with
+  `POST /v1/owner/push-tokens` (`{ expoToken, platform }`, upserted into
+  `push_tokens` per user) after "Allow notifications" on onboarding `live`, and
+  re-sends it on later launches with a session. Demo mode asks for permission
+  and registers nothing. Remote push needs a development build, not Expo Go.
+- `connectBusiness` sends the push after the offer stands, through `fetch` to
+  the Expo Push Service (no SDK dependency). A push failure is logged and never
+  blocks or rolls back the offer; tokens Expo reports as `DeviceNotRegistered`
+  are deleted. Only owners of the offered business (`tenant_users`) receive it,
+  and it carries the approximate distance, never the address.
+- The Android channel id is `urgent-requests` (display name "Urgent requests");
+  the push's `channelId` must be the id, because Android routes by id. The app
+  registers the `request` category with the Open and Decline actions; Decline
+  opens `request/[id]?decline=1`.
+- Declining takes a reason (`busy`, `too_far`, `not_offered`, `other`) from the
+  decline sheet; `offersService.decline(id, reason?)` stays compatible with the
+  old single-argument call.
+- `POST /v1/owner/test-zukki` keeps `businessId` and `reply` and adds
+  `sources`: the price-rule items the price tool returned while answering,
+  deduplicated in first-returned order (user decision "API returns sources").
+  An empty `sources` renders "Not in your services".
+- Amendment (2026-10-31, verifier blockers): one device belongs to one owner.
+  Registering a token deletes the same `expo_token` for every other user
+  (service-role client, scoped to that exact token); `DELETE
+  /v1/owner/push-tokens` removes the caller's row; sign-out deletes this
+  device's token before the session ends, best-effort (a failure never blocks
+  sign-out). The Expo push `fetch` aborts after `EXPO_PUSH_TIMEOUT_MS` (5 s,
+  `AbortSignal.timeout`); a timeout counts as a failure. `connectBusiness`
+  logs a warning with the offer id and the `sent`/`failed`/`removed` counts
+  when `failed > 0`. Clarified: `sources` records the items the price tool
+  returned to the model, so a filtered call contributes only matching rules.
+
+## D22 — Jobs list, finish and the shared jobs store (2026-10-30, T5.1)
+
+- **Decision:** the jobs feature owns the list and the finish.
+  - One module-level demo service (`hooks/demoJobsService.ts`) is shared by
+    `useJobs`, `useJob`, the finish hook and `useQuoteDraft`, so a status
+    change on one screen shows on the others. Hooks still accept an injected
+    service; `createDemoJobsService()` keeps returning independent services.
+  - `listJobs()` on the service (and a required `listJobs` on `JobsClient`)
+    returns the seeded jobs in the store's order, as copies.
+    `finishJob(id, { amounts, reason?, asksToSharePhotos })` from `on_site`
+    marks `done` with `finalTotal` and `shareConsent` ("asked" when the
+    switch is on, else "not_asked"), appends "Done" to the timeline, and
+    stores a trimmed `finalPriceReason` only when the total falls outside
+    the estimate. `updateJobStatus` keeps refusing `done`.
+  - `Job` gains optional `scheduledFor` and `finalPriceReason`; `JobView`
+    gains `canFinish` (true only on site); the overtime statuses read
+    "On the way" (`en_route`, success), "On site" (`on_site`, success) and
+    "Done · $145" (`done`, success, from `finalTotal`); a done card's
+    subtitle reads its final total. A range line starts the finish form at
+    its midpoint, rounded down.
+  - `job/[id]/finish` is a plain stack push (no modal); "Mark as done"
+    returns to the Jobs tab with `router.dismissTo`, where the job now sits
+    under Done.
+  - The Jobs tab and the job detail reload when they regain focus: each
+    hook exposes `reload()`, and the thin routes wire it with
+    `useFocusEffect`. Hooks stay free of expo-router.
+- **Why:** the demo path ends the job from the list, and the "Upcoming · 3"
+  design count cannot hold with two Tomorrow jobs in the seed: the counts
+  are derived from the jobs ("Upcoming · 2" today), which the operator
+  approved as a divergence from the design.
+- **Consequences:**
+  - The quote message in the chat thread moves to T5.2; the chats feature
+    is untouched.
+  - `demoClock` no longer writes fractional seconds, so `sharedDemoNow`
+    matches the seed's shape (`2026-10-28T00:07:00-05:00`).
+  - A rejected `getJob`/`listJobs` still leaves a blank screen (the L37
+    gap): the new routes render null while loading and have no error state
+    yet.
