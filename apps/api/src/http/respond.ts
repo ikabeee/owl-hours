@@ -19,7 +19,7 @@ export class HttpError extends Error {
   }
 }
 
-const POSTGRES_ERRORS: Record<string, { status: ContentfulStatusCode; code: string }> = {
+const POSTGRES_ERRORS: Record<string, { status: ContentfulStatusCode; code: string; message?: string }> = {
   P0002: { status: 404, code: "not_found" },
   PGRST116: { status: 404, code: "not_found" },
   "22023": { status: 422, code: "invalid_state" },
@@ -27,7 +27,8 @@ const POSTGRES_ERRORS: Record<string, { status: ContentfulStatusCode; code: stri
   "23505": { status: 409, code: "conflict" },
   "23514": { status: 422, code: "rule_violation" },
   "40001": { status: 409, code: "changed_since_read" },
-  "42501": { status: 403, code: "forbidden" },
+  PT409: { status: 409, code: "changed_since_read" },
+  "42501": { status: 403, code: "forbidden", message: "You don't have permission to perform this action." },
 };
 
 export function toHttpError(error: unknown): HttpError {
@@ -37,7 +38,7 @@ export function toHttpError(error: unknown): HttpError {
   if (error instanceof RepositoryError && error.code) {
     const mapped = POSTGRES_ERRORS[error.code];
     if (mapped) {
-      return new HttpError(mapped.status, mapped.code, error.message);
+      return new HttpError(mapped.status, mapped.code, mapped.message ?? error.message);
     }
   }
   return new HttpError(500, "internal", "Something went wrong on our side. Try again.");

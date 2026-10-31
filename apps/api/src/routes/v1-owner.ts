@@ -2,6 +2,7 @@
 // as that user, so each business only ever reaches its own data.
 import { Hono } from "hono";
 import { z } from "zod";
+import { ownerContentPhotoRoutes } from "./owner-content-photos.ts";
 import { requireOwner, type OwnerEnv } from "../http/auth.ts";
 import { rateLimit } from "../http/rate-limit.ts";
 import { errorResponse, ok, readId, readJson, readQuery } from "../http/respond.ts";
@@ -57,6 +58,8 @@ export function ownerRoutes(deps: V1Deps): Hono<OwnerEnv> {
   app.onError((error, c) => errorResponse(c, error));
   app.use("*", requireOwner(deps.authenticate));
   app.use("*", rateLimit<OwnerEnv>({ limit: 120, windowMs: 60_000, key: (c) => `owner:${c.get("session").userId}`, now: deps.now }));
+
+  app.route("/content/photo-jobs", ownerContentPhotoRoutes());
 
   app.get("/me", async (c) => ok(c, await owner.getMe(c.get("session"))));
 
