@@ -29,8 +29,8 @@ describe("fake jobs client seed", () => {
     assert.deepEqual(await buildService().getJob("job_ana"), untouchedAnaJob);
   });
 
-  it("has no quote draft for c_carlos: a real conversation whose job does not exist", async () => {
-    assert.equal(await buildService().getQuoteDraft("c_carlos"), null);
+  it("has a quote draft for c_carlos: Carlos's job is seeded since T5.1", async () => {
+    assert.equal((await buildService().getQuoteDraft("c_carlos"))?.jobId, "job_carlos");
   });
 });
 

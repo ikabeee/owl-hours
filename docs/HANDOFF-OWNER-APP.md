@@ -285,6 +285,107 @@ quote → back to chat, and chat → View job → Start trip → "I'm here".
 **Report:** RED output first; after GREEN the gates with observed results,
 e2e results, and a one-line diff summary per file. Do not commit.
 
+## T5.1 assignment (Claude Sonnet 5.5 subagent, effort high): jobs list + finish
+
+**Spec.** Demo path step "Job": "Finish" → `job/[id]/finish` → "Mark as done"
+→ Jobs. Sources: `handoff-ui/owner-app/HANDOFF-RN-UI.md` §8 "Jobs (`OwJobs`)",
+"Job detail (`OwJob`)" footer and "Finish (`OwJobDone`)", §7 flow "Job", §9
+`useJobs(filter)`, `useJob(id)`, `finishJob(id, final)`, and "Every screen
+also needs" (empty state). Copy and layout from `design/html/OwJobs.dc.html`
+and `OwJobDone.dc.html`; demo numbers from `shared/data/mock.ts`.
+
+- Jobs: `SegmentedControl` "Tonight · 2" / "Upcoming · 3" / "Done" (counts
+  derived from the jobs, not hard-coded). Tonight shows `ClickableCard`s:
+  "Leaking toilet", "Ana L. · Mario R. · $130–160", success line with a
+  check "Approved · arrive 12:55 AM"; "Kitchen sink clogged", "Carlos M. ·
+  $80–110", secondary line "Waiting for Carlos to approve" (waiting-owl
+  tile). A "Tomorrow" card lists "10:00 AM · Water heater install · Lucía
+  R." and "2:30 PM · Shower valve check · Grace K.". A card opens `job/[id]`.
+  An empty segment shows the `EmptyState` with the owl.
+- Job detail: at `on_site` the footer's "Finish" is enabled and opens
+  `job/[id]/finish`; at `done` it is disabled (T5 left it disabled at
+  `on_site` too).
+- Finish: "Finish the job", "Leaking toilet · Ana L.", "Confirm the final
+  price. Zukki sends Ana the receipt and asks for a review on WhatsApp.";
+  one final `NumberInput` per quote line (Visit, Night fee, Fill valve
+  repair); "Total $145" recalculated live; "Within the $130–160 estimate"
+  (success) when min ≤ total ≤ max; outside it the line turns error and asks
+  for a reason, and "Mark as done" needs that reason. "Photos" with Before,
+  After, Add; `Switch` "Ask Ana to share the photos", "For posts. Only used
+  if she says yes."; "Mark as done" saves `done`, `finalTotal` and
+  `shareConsent` ("asked" when the switch is on, else "not_asked") and
+  returns to the Jobs tab, where the job now sits under Done.
+
+Operator decisions (do not reopen):
+- Store scope is jobs-only (user, L39): one module-level demo jobs service
+  inside `features/jobs/hooks/`, shared by `useJobs`, `useJob`, the finish
+  hook and `useQuoteDraft`, so a status change on one screen shows on the
+  others. Hooks still accept an injected service. The chat's quote message
+  is T5.2; do not touch `features/chats/`.
+- The design's other jobs are seed data: add a Carlos job (`quoted`,
+  $80–110, `c_carlos`) and the two Tomorrow jobs to `shared/data/mock.ts`,
+  additively; `anaJob` and every existing export stay byte-identical. A
+  field the list needs (for example a scheduled time) is an optional,
+  additive field on `Job` in `shared/data/types.ts`.
+- `updateJobStatus` keeps refusing `done`: only `finishJob` reaches it, and
+  only from `on_site`.
+- Times are wall-clock in the timestamp's own offset (`shared/lib/wallClockTime.ts`).
+- Retire the handoff pairs in GREEN: `OwJobs`, `OwJobDone` and `OwJob`
+  (`design/{screens/*.png,html/*.dc.html}`), per the AGENTS.md retirement
+  rule.
+
+Out of T5.1: the quote message in the chat thread (T5.2), real photo
+capture (Add is a no-op; Before/After are static tiles), an error state for
+a rejected load (L37 gap; report it if a new screen hits it).
+
+**Edit surface.** `apps/owner/features/jobs/**`; `apps/owner/shared/data/mock.ts`
+and `apps/owner/shared/data/types.ts` additively; in GREEN only,
+`apps/owner/app/(tabs)/jobs.tsx`, `apps/owner/app/job/[id].tsx` (wire
+Finish), new `apps/owner/app/job/[id]/finish.tsx`, `apps/owner/app/_layout.tsx`
+if the route needs a screen entry, new Maestro flows under
+`apps/owner/.maestro/`, and the three retired handoff pairs. Do not touch
+other features, `lib/`, or locked tests; report gaps instead.
+
+**Write these tests first, show them failing (RED), then stop for review:**
+
+1. `features/jobs/lib/*.test.ts` (pure): segment of a job (Tonight /
+   Upcoming / Done) and the segment counts ("Tonight · 2", "Upcoming · 3");
+   card subtitle ("Ana L. · Mario R. · $130–160", "Carlos M. · $80–110") and
+   status line ("Approved · arrive 12:55 AM", "Waiting for Carlos to
+   approve"); Tomorrow line ("10:00 AM · Water heater install · Lucía R.");
+   final total from final amounts ($45 + $25 + $75 = $145); estimate check
+   (inside, below, above, at both bounds); final line validation; primary
+   action at `on_site` is an enabled "Finish", at `done` disabled.
+2. `features/jobs/services/jobsService*.test.ts` (fake client): `listJobs`
+   returns the seeded jobs as domain types; `finishJob` from `on_site`
+   marks `done` with `finalTotal` and `shareConsent`, refuses any other
+   status, an unknown id, invalid amounts, and an out-of-estimate total
+   without a reason; `updateJobStatus(id, "done")` stays refused.
+3. Shared store (hooks level, without React if possible): a status change
+   through the demo service is visible to the next read from another
+   consumer of the same service.
+4. `features/jobs/copys/jobsCopys*.test.ts`: every new key exists and is
+   non-empty; verbatim: `"Finish the job"`, `"Confirm the final price. Zukki
+   sends Ana the receipt and asks for a review on WhatsApp."`, `"Mark as
+   done"`, `"Ask Ana to share the photos"`, `"For posts. Only used if she
+   says yes."`, `"Tomorrow"`, `"Done"`.
+
+List every open question with the RED report (for example: which jobs make
+"Upcoming · 3" when the design lists two, the copy of the out-of-estimate
+line and its reason field, and where Ana's job has to be to reach Finish in
+the demo).
+
+**Then implement (GREEN):** `lib/`, `services/jobsService.ts` (`listJobs`,
+`finishJob`), the shared demo service, `hooks/useJobs.ts` and a finish hook
+(only service consumers), `copys/`, `components/JobsScreen.tsx` (DOM,
+replacing the placeholder) and a finish screen (DOM, serializable props,
+top-level async callbacks, Astryx controls per §5, 48px buttons, body ≥
+16px), the routes, and a Maestro flow: Jobs → Ana's job → Start trip → I'm
+here → Finish → Mark as done → Ana under Done.
+
+**Report:** RED output first; after GREEN the gates with observed results,
+e2e results, and a one-line diff summary per file. Do not commit.
+
 ## Environment notes (this machine)
 
 - Use `/tmp/pnpm10` for installs (the system pnpm 12 cannot write this

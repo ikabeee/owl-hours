@@ -47,7 +47,8 @@ function RangeFields(props: { label: string; range: MoneyRange; isInvalid: boole
 const INVALID_STATUS = { type: 'error' } as const;
 
 // An emptied field is NaN: it stays in the lines, is invalid, and keeps "Send quote" disabled.
-function AmountField(props: { label: string; amount: Money; isInvalid: boolean; onChange: (amount: Money) => void }) {
+// Shared with the finish screen, whose final amounts are the same control.
+export function AmountField(props: { label: string; amount: Money; isInvalid: boolean; onChange: (amount: Money) => void }) {
   return (
     <NumberInput
       label={props.label}

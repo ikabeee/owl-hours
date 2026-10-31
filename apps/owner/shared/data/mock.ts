@@ -109,6 +109,88 @@ export const anaJob: Job = {
   shareConsent: "yes",
 };
 
+// The design's other jobs (OwJobs): Carlos waits to approve, Lucía and Grace are booked for tomorrow.
+export const carlosJob: Job = {
+  id: "job_carlos",
+  conversationId: "c_carlos",
+  title: "Kitchen sink clogged",
+  customerName: "Carlos M.",
+  technician: "Mario R.",
+  distanceKm: 2.0,
+  quote: {
+    lines: [
+      { label: "Unclog a drain", amount: { min: 80, max: 110 } },
+    ],
+    total: { min: 80, max: 110 },
+    arrival: { from: "12:40 AM", to: "1:10 AM" },
+    technician: "Mario R.",
+  },
+  status: "quoted",
+  timeline: [
+    { at: "2026-10-27T21:40:00-05:00", text: "Carlos asked Zukki for help" },
+    { at: "2026-10-27T21:44:00-05:00", text: "You accepted the request" },
+    { at: "2026-10-27T21:46:00-05:00", text: "Quote sent" },
+  ],
+  photos: { extra: [] },
+  shareConsent: "not_asked",
+};
+
+export const luciaJob: Job = {
+  id: "job_lucia",
+  conversationId: "c_lucia",
+  title: "Water heater install",
+  customerName: "Lucía R.",
+  technician: "Mario R.",
+  address: "42 Palm Ave, house",
+  distanceKm: 3.4,
+  approvedAt: "2026-10-26T18:20:00-05:00",
+  scheduledFor: "2026-10-29T10:00:00-05:00",
+  quote: {
+    lines: [
+      { label: "Water heater install", amount: { min: 350, max: 420 } },
+    ],
+    total: { min: 350, max: 420 },
+    arrival: { from: "10:00 AM", to: "10:30 AM" },
+    technician: "Mario R.",
+  },
+  status: "customer_approved",
+  timeline: [
+    { at: "2026-10-26T17:40:00-05:00", text: "Lucía asked Zukki for help" },
+    { at: "2026-10-26T17:52:00-05:00", text: "You accepted the request" },
+    { at: "2026-10-26T18:20:00-05:00", text: "Quote sent and approved" },
+  ],
+  photos: { extra: [] },
+  shareConsent: "not_asked",
+};
+
+export const graceJob: Job = {
+  id: "job_grace",
+  conversationId: "c_grace",
+  title: "Shower valve check",
+  customerName: "Grace K.",
+  technician: "Mario R.",
+  address: "9 Palm Ave, apt 1",
+  distanceKm: 3.1,
+  approvedAt: "2026-10-26T09:20:00-05:00",
+  scheduledFor: "2026-10-29T14:30:00-05:00",
+  quote: {
+    lines: [
+      { label: "Shower valve check", amount: { min: 60, max: 90 } },
+    ],
+    total: { min: 60, max: 90 },
+    arrival: { from: "2:30 PM", to: "3:00 PM" },
+    technician: "Mario R.",
+  },
+  status: "customer_approved",
+  timeline: [
+    { at: "2026-10-26T08:40:00-05:00", text: "Grace asked Zukki for help" },
+    { at: "2026-10-26T08:55:00-05:00", text: "You accepted the request" },
+    { at: "2026-10-26T09:20:00-05:00", text: "Quote sent and approved" },
+  ],
+  photos: { extra: [] },
+  shareConsent: "not_asked",
+};
+
 export const drafts: PostDraft[] = [
   { id: "post_91", title: "Fixed in 91 minutes", source: "job", sourceJobId: "job_ana", imageUrl: "before-after",
     caption: "Water on the floor at midnight? Message us through Zukki. We reply in minutes and come the same night.",

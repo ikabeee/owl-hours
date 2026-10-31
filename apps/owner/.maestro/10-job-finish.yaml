@@ -1,0 +1,76 @@
+appId: host.exp.Exponent
+name: Jobs list to Finish to Mark as done shows Ana under Done
+---
+# The shared demo service is module-level, so the entry status depends on the
+# suite order: fresh it is customer_approved (flow 08 leaves it there), after
+# 09-chat-job-start-trip it is on_site. Both paths converge on the finish
+# screen, where the flow pins the rest.
+- runFlow:
+    file: subflows/open.yaml
+    env: { ROUTE: "jobs", WAIT_FOR: "Jobs" }
+- runFlow: subflows/dismiss-logbox.yaml
+- extendedWaitUntil:
+    visible: "Tonight · 2"
+    timeout: 15000
+- assertVisible: "Leaking toilet"
+- assertVisible: "Ana L. · Mario R. · $130–160"
+# Ana's status line follows the entry status (see above).
+- assertVisible: "Approved · arrive 12:55 AM|On the way|On site"
+- assertVisible: "Kitchen sink clogged"
+- assertVisible: "Waiting for Carlos to approve"
+- assertVisible: "Tomorrow"
+- takeScreenshot: 10-jobs-tonight
+- tapOn: "Leaking toilet"
+- runFlow: subflows/dismiss-logbox.yaml
+- extendedWaitUntil:
+    visible: "Approved by Ana at 12:07 AM"
+    timeout: 15000
+- takeScreenshot: 10-job-detail
+- runFlow:
+    when:
+      visible: "Start trip"
+    commands:
+      - tapOn: "Start trip"
+      - runFlow: subflows/dismiss-logbox.yaml
+      - extendedWaitUntil:
+          visible: "I'm here"
+          timeout: 10000
+- runFlow:
+    when:
+      visible: "I'm here"
+    commands:
+      - tapOn: "I'm here"
+      - runFlow: subflows/dismiss-logbox.yaml
+      - extendedWaitUntil:
+          visible: "Finish"
+          timeout: 10000
+- takeScreenshot: 10-job-on-site
+- tapOn: "Finish"
+- runFlow: subflows/dismiss-logbox.yaml
+- extendedWaitUntil:
+    visible: "Finish the job"
+    timeout: 15000
+- assertVisible: "Leaking toilet · Ana L."
+- assertVisible: "Confirm the final price. Zukki sends Ana the receipt and asks for a review on WhatsApp."
+- assertVisible: "Total"
+- assertVisible: ".*145"
+- assertVisible: "Within the $130–160 estimate"
+- assertVisible: "Ask Ana to share the photos"
+- assertVisible: "Mark as done"
+- takeScreenshot: 10-job-finish
+- tapOn: "Mark as done"
+- runFlow: subflows/dismiss-logbox.yaml
+# router.dismissTo returns to the Jobs tab, where the job now sits under Done.
+- extendedWaitUntil:
+    visible: "Tonight · 1"
+    timeout: 15000
+- assertNotVisible: "Leaking toilet"
+- assertVisible: "Kitchen sink clogged"
+- takeScreenshot: 10-jobs-tonight-after-done
+- tapOn: "Done"
+- extendedWaitUntil:
+    visible: "Leaking toilet"
+    timeout: 10000
+- assertVisible: "Ana L. · Mario R. · $145"
+- assertVisible: "Done · $145"
+- takeScreenshot: 10-jobs-done
