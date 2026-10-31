@@ -3,7 +3,7 @@ import type { ID, Job } from "../../../shared/data/types.ts";
 import { buildJobView } from "../lib/jobView.ts";
 import type { JobView } from "../lib/jobView.ts";
 import type { JobsService } from "../services/jobsService.ts";
-import { sharedDemoJobsService } from "./demoJobsService.ts";
+import { jobsRuntime } from "./jobsRuntime.ts";
 
 export type JobDeps = { service: JobsService };
 
@@ -14,7 +14,7 @@ export type JobScreenView = { job: JobView; advance: () => Promise<boolean>; rel
 // Returns null while the job loads, or when it does not exist.
 // Pass a stable service (a module constant or memoized): changing it reloads the job.
 export function useJob(id: ID, deps?: Partial<JobDeps>): JobScreenView | null {
-  const [defaults] = useState(createDemoDeps);
+  const [defaults] = useState(createDefaultDeps);
   const service = deps?.service ?? defaults.service;
   const [job, setJob] = useState<Job | null>(null);
   const [reloadToken, setReloadToken] = useState(0);
@@ -59,6 +59,7 @@ async function moveToNextStatus(
   }
 }
 
-function createDemoDeps(): JobDeps {
-  return { service: sharedDemoJobsService() };
+// The live API when configured, the demo otherwise (S7).
+function createDefaultDeps(): JobDeps {
+  return { service: jobsRuntime().service };
 }

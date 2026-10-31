@@ -31,6 +31,9 @@ const copys = {
   finish: "Finish",
   sharedAfterApproved: (firstName: string, distanceKm?: number) =>
     distanceKm === undefined ? `Shared after ${firstName} approved` : `Shared after ${firstName} approved · ${distanceKm} km`,
+  // timeline rows already reached on the live API (wording of the demo seed, shared/data/mock.ts)
+  youAcceptedTheRequest: "You accepted the request",
+  quoteSentAndApproved: "Quote sent and approved",
   // timeline rows still ahead
   onTheWay: "On the way",
   timelineDone: "Done",
