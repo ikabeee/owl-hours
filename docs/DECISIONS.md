@@ -291,3 +291,16 @@ it with a new one.
 - Use `PT409` for stale displayed copy or photo conflicts. `40001` is reserved for actual serialization failures because PostgREST may retry it.
 - Consolidate never-deployed Story migrations into a preceding enum addition and one data migration; preserve main migrations and T6 permissions.
 - See `docs/STORY-PACK-DATA.md` for the contract and local verification boundary.
+
+## Story Pack follow-up: versioned edits and source-job deletion (2026-10-31)
+
+- PATCH requires the displayed version and compares it in the write predicate.
+  A failed comparison never refreshes the version and retries an unseen overwrite.
+- Following Crystal's explicit retention choice, a new forward migration deletes
+  only linked Story Pack rows when the source job is deleted, including approved
+  packs. Preserve the existing legacy FK semantics and historical tombstone guards.
+- No deletion UI/API is added. A future surface or maintenance operation must
+  show affected counts and obtain confirmation. Original photo records and Storage
+  objects are retained by job deletion; broader conversation purges, Storage GC,
+  backup erasure and recall of downloaded exports are outside this change.
+- See `docs/STORY-PACK-DATA.md` for preflight and exact preservation boundaries.
