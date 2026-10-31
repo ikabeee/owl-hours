@@ -7,6 +7,7 @@ import {
 
 export type ExportHandoff = { pack: StoryPack; source: StorySource };
 export type ExportFile = { name: string; bytes: Uint8Array };
+export type FetchStoryPhoto = (url: string, isDemo: boolean) => Promise<Blob>;
 
 function fingerprint({ pack, source }: ExportHandoff): string {
   const assets = source.assets

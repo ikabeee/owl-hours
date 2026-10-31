@@ -143,7 +143,6 @@ function PhotoJobCard({
             size="lg"
             isDisabled={!valid || busy}
             isLoading={busy}
-            style={actionButtonStyle}
             onClick={handleAssign}
           />
         </>
@@ -256,8 +255,4 @@ const checkboxWrapperStyle = {
   minHeight: 48,
   display: 'flex',
   alignItems: 'center',
-} as const;
-
-const actionButtonStyle = {
-  minHeight: 48,
 } as const;
