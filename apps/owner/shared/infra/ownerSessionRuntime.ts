@@ -9,6 +9,6 @@ export function createOwnerSessionRuntime(supabaseUrl: string, anonKey: string) 
   runtime?.stopRefresh();
   runtimeKey = key;
   runtime = createSupabaseOwnerSession({ supabaseUrl, anonKey, storage: ownerSessionStorage,
-    detectSessionInUrl: false, autoRefreshToken: false, redirectUrl: () => 'zukki-owner://auth/callback' });
+    detectSessionInUrl: false, autoRefreshToken: false });
   return runtime;
 }
