@@ -265,7 +265,7 @@ it with a new one.
   `signInWithOtp({ email, options: { shouldCreateUser: true } })` on sign-up,
   then `verifyOtp({ email, token, type: 'email' })`. The `/auth` routes, the old
   email screen and the PKCE callback code are removed. Live mode needs the
-  Supabase Email provider with the Magic Link template carrying `{{ .Token }}`
+  Supabase Email provider with the Magic Link and Confirm sign up templates carrying `{{ .Token }}`
   (`docs/OWNER-AUTH.md`).
 - The sign-up/verify copy deviates from the handoff because there is no SMS
   provider: `emailLabel` "Email", `emailHelp` "We'll email you a code to confirm

@@ -33,7 +33,10 @@ Before live acceptance, the operator must enable the Supabase **Email** provider
 (Authentication → Providers → Email) with "Confirm email" on, and check the OTP
 expiry and email rate limits. The **Magic Link** email template must include
 `{{ .Token }}` so the email carries the 6-digit code; without it Supabase sends
-a link with no code. These hosted settings have **not** been changed by this PR.
+a link with no code ([passwordless email](https://supabase.com/docs/guides/auth/auth-email-passwordless)).
+The docs do not say whether a brand-new owner gets **Confirm sign up** instead,
+so add `{{ .Token }}` to that template too and check which one arrives on the
+first live sign-up ([email templates](https://supabase.com/docs/guides/auth/auth-email-templates)). These hosted settings have **not** been changed by this PR.
 No redirect allow-list is needed: email OTP sign-in never returns through a URL.
 
 Foreground AppState (native) or page visibility (web) starts token refresh;

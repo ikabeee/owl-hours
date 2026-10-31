@@ -292,7 +292,7 @@ HTTP endpoints over these: `docs/API.md`.
 Supabase project `zukki` (ref `kphaigghspywgkemjhhy`, us-east-1, free plan),
 created 2026-10-28 with every migration above and `seed.sql` applied. The
 Supabase security advisor reports only "leaked password protection" (an Auth
-dashboard setting; owners sign in with an SMS code) and "RLS enabled, no policy" on
+dashboard setting; owners sign in with an emailed code) and "RLS enabled, no policy" on
 `platform_settings`, which is intentional (server only). The performance
 advisor reports only "unused index", expected before real traffic. Keys are never
 committed. For development, run Supabase locally from `migrations/` and `seed.sql`
