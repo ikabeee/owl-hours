@@ -3,7 +3,8 @@ process.env.TZ = "America/Bogota";
 
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { arrivalInstants, localClockText, localIsoString } from "./localTime.ts";
+import { localIsoString } from "../../../shared/lib/localIsoString.ts";
+import { arrivalInstants, localClockText } from "./localTime.ts";
 
 const jobDay = new Date("2026-10-28T00:07:00-05:00");
 

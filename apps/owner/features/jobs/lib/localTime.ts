@@ -1,15 +1,8 @@
 import type { ISODate, Quote } from "../../../shared/data/types.ts";
+import { localIsoString } from "../../../shared/lib/localIsoString.ts";
 import { wallClockTimeText } from "../../../shared/lib/wallClockTime.ts";
 
 const DISPLAY_TIME = /^(\d{1,2}):(\d{2})\s*(AM|PM)$/i;
-
-// The API stores instants (often in UTC); the app shows and segments wall-clock times. Writing an
-// instant in the device's own offset lets wallClockTimeText and the calendar-day rules read it locally.
-export function localIsoString(instant: Date): ISODate {
-  const date = `${instant.getFullYear()}-${twoDigits(instant.getMonth() + 1)}-${twoDigits(instant.getDate())}`;
-  const time = `${twoDigits(instant.getHours())}:${twoDigits(instant.getMinutes())}:${twoDigits(instant.getSeconds())}`;
-  return `${date}T${time}${utcOffset(instant)}`;
-}
 
 // "12:55 AM" for an API timestamp, on the device's clock; null when the timestamp is malformed.
 export function localClockText(isoTimestamp: string): string | null {
@@ -42,14 +35,3 @@ function hours24(hours12: number, period: string): number {
   return (hours12 % 12) + (isAfternoon ? 12 : 0);
 }
 
-// getTimezoneOffset is minutes behind UTC, so UTC-5 answers 300.
-function utcOffset(instant: Date): string {
-  const minutesAhead = -instant.getTimezoneOffset();
-  const sign = minutesAhead < 0 ? "-" : "+";
-  const absolute = Math.abs(minutesAhead);
-  return `${sign}${twoDigits(Math.floor(absolute / 60))}:${twoDigits(absolute % 60)}`;
-}
-
-function twoDigits(value: number): string {
-  return String(value).padStart(2, "0");
-}

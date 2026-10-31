@@ -1,3 +1,6 @@
+// The device zone is fixed so the mapped local timestamps are exact (Bogotá: UTC-5, no daylight saving).
+process.env.TZ = "America/Bogota";
+
 // Spec: odd/tasks/live-owner-core.md, T3, S4. The live client reads and writes /v1/owner through the shared
 // owner API; a fake fetch answers each "METHOD /path" and records every call so URL, method and body are asserted.
 import { describe, it } from "node:test";
@@ -65,7 +68,7 @@ describe("live conversations: the list", () => {
         customerName: "Ana L.",
         jobTitle: "Leaking toilet",
         statusLine: "visit 12:55–1:25 AM",
-        lastMessage: { id: "m5", from: "customer", text: "Perfect, thank you!", sentAt: "2026-10-28T05:07:00+00:00" },
+        lastMessage: { id: "m5", from: "customer", text: "Perfect, thank you!", sentAt: "2026-10-28T00:07:00-05:00" },
         unread: 0,
       },
       {
@@ -74,7 +77,7 @@ describe("live conversations: the list", () => {
         customerName: "Carlos M.",
         jobTitle: "Kitchen sink",
         statusLine: "waiting for you",
-        lastMessage: { id: "m9", from: "customer", text: "Can you come Thursday instead?", sentAt: "2026-10-28T02:48:00+00:00" },
+        lastMessage: { id: "m9", from: "customer", text: "Can you come Thursday instead?", sentAt: "2026-10-27T21:48:00-05:00" },
         unread: 2,
       },
     ]);
@@ -99,6 +102,20 @@ describe("live conversations: the list", () => {
 });
 
 describe("live conversations: the thread", () => {
+  it("leaves out a shared location, which has no text to show", async () => {
+    const { service } = liveService({
+      "GET /conversations": { data: [anaRow] },
+      "GET /conversations/c1/messages": {
+        data: [
+          { id: "m1", from: "customer", kind: "location", text: null, payload: null, sentAt: "2026-10-28T05:05:00+00:00", status: "received", delivery: null, media: null },
+          { id: "m2", from: "zukki", kind: "text", text: "Thanks.", payload: null, sentAt: "2026-10-28T05:06:00+00:00", status: "sent", delivery: null, media: null },
+        ],
+      },
+    });
+
+    assert.deepEqual((await service.getMessages("c1"))?.map((message) => message.id), ["m2"]);
+  });
+
   it("reads GET /conversations/:id/messages and keeps the owner's delivery only on owner messages", async () => {
     const { service, calls } = liveService({
       "GET /conversations": { data: [anaRow] },
@@ -115,9 +132,9 @@ describe("live conversations: the thread", () => {
 
     assert.deepEqual(calls.at(-1), { method: "GET", path: "/conversations/c1/messages", body: undefined });
     assert.deepEqual(messages, [
-      { id: "m1", from: "zukki", text: "Leaking toilet", sentAt: "2026-10-28T05:05:00+00:00" },
-      { id: "m2", from: "customer", text: "", sentAt: "2026-10-28T05:06:00+00:00" },
-      { id: "m3", from: "owner", text: "On my way", sentAt: "2026-10-28T05:07:00+00:00", delivery: "polished" },
+      { id: "m1", from: "zukki", text: "Leaking toilet", sentAt: "2026-10-28T00:05:00-05:00" },
+      { id: "m2", from: "customer", text: "", sentAt: "2026-10-28T00:06:00-05:00" },
+      { id: "m3", from: "owner", text: "On my way", sentAt: "2026-10-28T00:07:00-05:00", delivery: "polished" },
     ]);
   });
 

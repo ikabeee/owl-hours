@@ -2,6 +2,7 @@ import { OwnerApiError } from "../../../shared/infra/ownerApi.ts";
 import type { OwnerApi } from "../../../shared/infra/ownerApi.ts";
 import type { DeclineReason, ID, Media, MoneyRange, OfferStatus } from "../../../shared/data/types.ts";
 import type { Offer, OffersClient } from "./offersService.ts";
+import { localTimestamp } from "../../../shared/lib/localIsoString.ts";
 
 // One offer as GET /offers returns it (supabase owner_offers, media links signed by the API).
 type ApiOffer = {
@@ -94,8 +95,8 @@ function toOffer(row: ApiOffer & { status: OfferStatus }): Offer {
     media: row.media.flatMap(toMedia),
     zukkiSummary: row.zukkiSummary ?? "",
     suggestedQuote: row.suggestedQuote,
-    offeredAt: row.offeredAt,
-    expiresAt: row.expiresAt,
+    offeredAt: localTimestamp(row.offeredAt),
+    expiresAt: localTimestamp(row.expiresAt),
     status: row.status,
   };
   if (row.customerQuote) offer.customerQuote = row.customerQuote;
