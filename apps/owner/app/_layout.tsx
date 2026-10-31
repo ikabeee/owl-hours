@@ -5,7 +5,9 @@ import { useFonts, Figtree_600SemiBold, Figtree_700Bold } from "@expo-google-fon
 import * as SplashScreen from "expo-splash-screen";
 import { LogBox } from "react-native";
 import OwnerAuthGate from "../features/auth/components/OwnerAuthGate.tsx";
-import { OwnerAuthProvider } from "../features/auth/hooks/useOwnerAuth.tsx";
+import { OwnerAuthProvider, useOwnerAuth } from "../features/auth/hooks/useOwnerAuth.tsx";
+import { usePushTokenSync } from "../features/notifications/hooks/usePushTokenSync";
+import { useRequestNotifications } from "../features/notifications/hooks/useRequestNotifications";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -23,10 +25,13 @@ export default function RootLayout() {
     if (fontsLoaded) SplashScreen.hideAsync();
   }, [fontsLoaded]);
 
+  useRequestNotifications();
+
   if (!fontsLoaded) return null;
 
   return (
     <OwnerAuthProvider>
+      <PushTokenSync />
       <SafeAreaProvider>
         <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: "#f1f1f1" } }}>
           {/* OwQuote slides up over the chat: https://docs.expo.dev/router/advanced/modals/ */}
@@ -36,4 +41,13 @@ export default function RootLayout() {
       </SafeAreaProvider>
     </OwnerAuthProvider>
   );
+}
+
+// RootLayout renders the auth provider, so it cannot read the session itself;
+// this child wires the auth state into the push-token sync hook.
+function PushTokenSync() {
+  const { session, configured } = useOwnerAuth();
+  usePushTokenSync({ session, configured });
+
+  return null;
 }
