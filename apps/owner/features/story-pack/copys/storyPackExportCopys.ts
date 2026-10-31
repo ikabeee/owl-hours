@@ -1,0 +1,18 @@
+export const storyPackExportCopys = {
+  selectedMedia: 'The selected photos are no longer eligible for handoff.',
+  authorization: 'Handoff authorization failed. Reload and check current photo permission.',
+  expired: 'Handoff authorization expired. Reload before exporting again.',
+  changed: 'The story changed while it was being exported. Review it again.',
+  imagesRequired: 'Three rendered story images are required.',
+  sourceUnavailable: 'Source photos are unavailable.',
+  unavailable: 'Image export is unavailable.',
+  renderFailed: 'Image export failed. Please try again.',
+  unsupportedSource: 'Unsupported image source.',
+  photoUnavailable: 'Photo is no longer available.',
+  photoFormat: 'Use a PNG, JPEG, or WebP photo up to 15 MB.',
+  photoEmpty: 'Photo is empty.',
+  fitFailed: 'The story copy does not fit the image. Shorten the slide text.',
+  sharingUnavailable: 'File sharing is unavailable.',
+  invalidDelivery: 'Invalid Story Pack delivery.',
+  sizeLimit: 'Story Pack exceeds the export size limit.',
+} as const;
