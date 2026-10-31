@@ -20,6 +20,7 @@ import { useStoryPackExport } from '../hooks/useStoryPackExport.ts';
 import { useStoryPackEditor } from '../hooks/useStoryPackEditor.ts';
 import { useStoryPackDraft } from '../hooks/useStoryPackDraft.ts';
 import { contentCopys as copy } from '../copys/contentCopys.ts';
+import { authCopys } from '../../../shared/copys/ownerAuthCopys.ts';
 import { StoryPhotoAssignments } from './StoryPhotoAssignments.tsx';
 import { renderStoryImages } from './renderStoryImages.ts';
 import { Loading } from './Loading.tsx';
@@ -30,7 +31,6 @@ import { StoryPackHeader } from './StoryPackHeader.tsx';
 import { DemoBanner } from './DemoBanner.tsx';
 import { WorkspaceToolbar } from './WorkspaceToolbar.tsx';
 import { StatusLine } from './StatusLine.tsx';
-import { SignInForm } from './SignInForm.tsx';
 
 export default function StoryPackScreen(
   props: StoryPackView & {
@@ -101,7 +101,7 @@ export default function StoryPackScreen(
     }
 
     if (!canViewWorkspace) {
-      return <SignInForm authBusy={props.authBusy} onSignIn={props.signIn} />;
+      return <Text>{authCopys.signInRequired}</Text>;
     }
 
     if (selected && draft) {
