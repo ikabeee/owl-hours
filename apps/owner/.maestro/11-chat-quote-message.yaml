@@ -1,0 +1,42 @@
+appId: host.exp.Exponent
+name: Send quote returns to the chat with the quote message in the thread
+---
+# The demo stores are module-level and flow 08 already sent Ana's quote, which hides the suggestion.
+# Stopping Expo Go first starts this flow from the seed, wherever it sits in the suite. It leaves
+# Ana's quote sent, so flow 08 (which needs the suggestion row) must run from a fresh app, not after this one.
+- launchApp:
+    stopApp: true
+- runFlow:
+    file: subflows/open.yaml
+    env: { ROUTE: "chat/c_ana", WAIT_FOR: "Polish with Zukki" }
+- runFlow: subflows/dismiss-logbox.yaml
+- assertVisible: ".*Zukki suggests sending the quote.*130.160.*"
+- assertNotVisible: "Quote from Northside Plumbing"
+- tapOn: "Review"
+- runFlow: subflows/dismiss-logbox.yaml
+- extendedWaitUntil:
+    visible: "Send a quote"
+    timeout: 15000
+- tapOn: "Send quote"
+- runFlow: subflows/dismiss-logbox.yaml
+# router.back() returns to the chat; it reloads on focus and draws the quote as an owner bubble.
+- extendedWaitUntil:
+    visible: "Quote from Northside Plumbing"
+    timeout: 15000
+# The modal is still sliding away when the bubble first shows, so wait for it to be gone.
+- extendedWaitUntil:
+    notVisible: "Send a quote"
+    timeout: 10000
+- assertVisible: ".*Mario R.*arrives 12:55.1:25 AM.*"
+- assertVisible: ".*Visit: .45.*"
+- assertVisible: ".*Night fee: .25.*"
+- assertVisible: ".*Fill valve repair: .60.90.*"
+- assertVisible: ".*Estimated total: .130.160.*"
+- assertVisible: "You pay Mario after the repair."
+- assertVisible: "Nothing is booked until you approve"
+# The customer's buttons are labels here, not controls.
+- assertVisible: "Approve visit"
+- assertVisible: "Ask a question"
+# Once the quote is sent, Zukki stops suggesting one.
+- assertNotVisible: ".*Zukki suggests sending the quote.*"
+- takeScreenshot: 11-chat-quote-message

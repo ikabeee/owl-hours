@@ -8,12 +8,14 @@ import { canStartChoice, canStartSend, composerReducer, initialComposerState } f
 import type { ComposerEvent, ComposerState } from "../lib/composerMachine.ts";
 import { deliveryLabel } from "../lib/ownerDelivery.ts";
 import type { PolishChoice } from "../lib/ownerDelivery.ts";
+import { hasSentQuote, quoteCardOf } from "../lib/quoteCard.ts";
 import type { ConversationsService, QuoteSuggestion, SendResult } from "../services/conversationsService.ts";
 
 export type ConversationSession = {
   getSnapshot: () => ConversationSnapshot; // same reference until something changes
   subscribe: (listener: () => void) => () => void;
   load: () => Promise<void>; // also the retry after a failed load
+  reload: () => Promise<void>; // refetches a ready chat without leaving "ready"; a failed reload keeps what is shown
   send: (text: string) => Promise<SendOutcome>;
   sendChoice: (choice: PolishChoice) => Promise<void>;
   setPolishEnabled: (enabled: boolean) => void;
@@ -22,7 +24,7 @@ export type ConversationSession = {
 
 type LoadState =
   | { status: "loading" | "not_found" | "failed" }
-  | { status: "ready"; customerName: string; messages: Message[]; suggestion: QuoteSuggestion | null };
+  | { status: "ready"; customerName: string; messages: Message[]; suggestion: QuoteSuggestion | null; businessName: string | null };
 
 export function createConversationSession(service: ConversationsService, id: ID): ConversationSession {
   let loadState: LoadState = { status: "loading" };
@@ -62,6 +64,16 @@ export function createConversationSession(service: ConversationsService, id: ID)
     }
 
     loadState = await fetchChat(service, id);
+    publish();
+  }
+
+  async function reload() {
+    if (loadState.status !== "ready") return;
+
+    const reloaded = await fetchChat(service, id);
+    if (reloaded.status !== "ready") return;
+
+    loadState = reloaded;
     publish();
   }
 
@@ -129,6 +141,7 @@ export function createConversationSession(service: ConversationsService, id: ID)
       return () => listeners.delete(listener);
     },
     load,
+    reload,
     send,
     sendChoice,
     setPolishEnabled,
@@ -141,14 +154,15 @@ export function createConversationSession(service: ConversationsService, id: ID)
 
 async function fetchChat(service: ConversationsService, id: ID): Promise<LoadState> {
   try {
-    const [conversation, messages, suggestion] = await Promise.all([
+    const [conversation, messages, suggestion, businessName] = await Promise.all([
       service.getConversation(id),
       service.getMessages(id),
       findSuggestionOrNone(service, id),
+      findBusinessNameOrNone(service),
     ]);
     if (!conversation || !messages) return { status: "not_found" };
 
-    return { status: "ready", customerName: conversation.customerName, messages, suggestion };
+    return { status: "ready", customerName: conversation.customerName, messages, suggestion, businessName };
   } catch {
     return { status: "failed" };
   }
@@ -163,6 +177,15 @@ async function findSuggestionOrNone(service: ConversationsService, id: ID): Prom
   }
 }
 
+// The business name only writes the quote bubble's header: a failed lookup means the quote shows as plain text.
+async function findBusinessNameOrNone(service: ConversationsService): Promise<string | null> {
+  try {
+    return await service.getBusinessName();
+  } catch {
+    return null;
+  }
+}
+
 function buildSnapshot(loadState: LoadState, composer: ComposerState): ConversationSnapshot {
   if (loadState.status !== "ready") return { status: loadState.status };
 
@@ -170,17 +193,21 @@ function buildSnapshot(loadState: LoadState, composer: ComposerState): Conversat
 }
 
 function buildChatView(
-  { customerName, messages, suggestion }: Extract<LoadState, { status: "ready" }>,
+  { customerName, messages, suggestion, businessName }: Extract<LoadState, { status: "ready" }>,
   composer: ComposerState,
 ): ChatView {
   return {
     customerName,
     customerFirstName: firstName(customerName),
     acceptedAt: messages[0]?.sentAt ?? null,
-    thread: messages.map((message) => ({ ...message, deliveryLabel: deliveryLabel(message) })),
+    thread: messages.map((message) => ({
+      ...message,
+      deliveryLabel: deliveryLabel(message),
+      quoteCard: quoteCardOf(message, businessName),
+    })),
     step: composer.step,
     jobId: suggestion?.jobId ?? null,
-    suggestedQuoteText: suggestion ? moneyRangeText(suggestion.suggestedQuote) : null,
+    suggestedQuoteText: suggestion && !hasSentQuote(messages) ? moneyRangeText(suggestion.suggestedQuote) : null,
     preview: composer.preview,
     polishEnabled: composer.polishEnabled,
     polishFailed: composer.polishFailed,

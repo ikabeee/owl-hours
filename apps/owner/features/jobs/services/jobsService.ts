@@ -1,5 +1,8 @@
 import { anaJob, carlosJob, graceJob, luciaJob } from "../../../shared/data/mock.ts";
-import type { ID, ISODate, Job, JobStatus, Money, Quote } from "../../../shared/data/types.ts";
+import { createThreadStore } from "../../../shared/data/threadStore.ts";
+import type { ThreadStore } from "../../../shared/data/threadStore.ts";
+import type { ID, ISODate, Job, JobStatus, Message, Money, Quote } from "../../../shared/data/types.ts";
+import { quoteMessageText } from "../../../shared/lib/quoteMessage.ts";
 import { jobsCopys } from "../copys/jobsCopys.ts";
 import { estimateCheck } from "../lib/estimateCheck.ts";
 import { finalTotal } from "../lib/finalAmounts.ts";
@@ -119,17 +122,34 @@ export function createInMemoryJobsClient(seedJobs: Job[]): JobsClient {
 
 const QUOTE_APPROVED_TEXT = "Quote sent and approved";
 
-// The demo client plays the customer: it approves every quote that is sent, at `now()`.
-export type FakeJobsClientDeps = { now: () => ISODate };
+// The demo client plays the customer: it approves every quote that is sent, at `now()`, and posts the
+// quote to the conversation's thread the way the backend will.
+export type FakeJobsClientDeps = { now: () => ISODate; threads: ThreadStore };
 
 export function createFakeJobsClient(deps: Partial<FakeJobsClientDeps> = {}): JobsClient {
-  const { now } = { ...createDefaultDeps(), ...deps };
+  const { now, threads } = { ...createDefaultDeps(), threads: createThreadStore(), ...deps };
   const store = createInMemoryJobsClient([anaJob, carlosJob, luciaJob, graceJob]);
+  let quoteMessageCount = 0;
+
+  function postQuoteMessage(job: Job, at: ISODate) {
+    threads.append(job.conversationId, buildQuoteMessage(`m_quote_${++quoteMessageCount}`, job.quote, at));
+  }
+
+  function saveQuoted(job: Job) {
+    const at = now();
+    postQuoteMessage(job, at);
+    return store.saveJob(approvedOnCustomersBehalf(job, at));
+  }
 
   return {
     ...store,
-    saveJob: (job) => store.saveJob(job.status === "quoted" ? approvedOnCustomersBehalf(job, now()) : job),
+    saveJob: (job) => (job.status === "quoted" ? saveQuoted(job) : store.saveJob(job)),
   };
+}
+
+// The owner's message for a sent quote: no `delivery`, since the polish A/B rule does not apply to it.
+function buildQuoteMessage(id: ID, quote: Quote, sentAt: ISODate): Message {
+  return { id, from: "owner", text: quoteMessageText(quote), sentAt, quote };
 }
 
 // Approving again replaces the earlier approval entry, so the timeline never repeats it.

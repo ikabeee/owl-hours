@@ -39,7 +39,9 @@ slice, delegated with test-first discipline.
   store, S2-S3, route: delegated (Claude Sonnet 5.5, effort high, same flow
   as T5), branch `feat/owner-jobs-list`, coder: Muse (GREEN), status: done (GREEN, 11294f9 + ccf37eb)
 - T5.2: the sent quote as a message in the chat thread (needs a store shared
-  by chats and jobs), S2-S3, status: pending
+  by chats and jobs), S2-S3, route: delegated (Claude Sonnet 5.5, effort
+  high, same flow as T5.1), branch `feat/owner-quote-message` stacked on
+  `feat/owner-jobs-list` (#30 open), status: done (GREEN)
 - T6: content + business slices, S2-S3
 
 ## Log
@@ -490,3 +492,52 @@ slice, delegated with test-first discipline.
   message in the chat thread, store shared by chats and jobs).
 - L44 (user, 2026-10-30): "Manda el pr". PR #30 (`feat/owner-jobs-list`,
   11294f9 + ccf37eb + docs) with the e2e screenshots inline.
+- L45 (user, 2026-10-30): "arrancamos con t5.2".
+  - #30 is still open, so the worktree `owl-hours-worktrees/owner-quote-message`
+    branches `feat/owner-quote-message` from `feat/owner-jobs-list` 3bbf74f.
+  - No design HTML draws the quote message. Asked; the user chose "Mirror
+    WhatsApp (Recommended)": an outgoing bubble with the
+    `13-quote.json` header, body, footer and the two buttons as
+    non-interactive labels.
+  - Assignment: `docs/HANDOFF-OWNER-APP.md` "T5.2 assignment".
+- L46 (user, 2026-10-30): "si, apruebo todas" (Q1-Q10 of the T5.2 RED report).
+  - RED by the Sonnet coder: 9 new test files; owner 472 tests, 453 pass,
+    19 fail (operator re-ran); the 452 existing tests green; tsc errors only
+    in the new tests, from missing code.
+  - Answers: the body builder and its wording live in
+    `shared/lib/quoteMessage.ts` (jobs writes `Message.text`), the chats
+    copys reference those constants; the SuggestionRow hides once the
+    thread holds a quote message; the reply buttons are non-interactive
+    chips (no role, no tab stop, 16px, contrast >= 4.5:1, `data-testid`);
+    `getBusinessName()` on the chats service, a failed lookup shows the
+    plain text; `sharedX`/`resetSharedX` names, reset clears in place; the
+    cross-feature test stays in `features/chats/services/`; the quote
+    message has no `delivery`; a re-send appends a second message; a failed
+    `reload()` keeps the previous thread.
+  - Operator added the Q2 tests (`conversationSession.quoteMessage.test.ts`)
+    and deleted the duplicate `features/jobs/lib/arrivalWindow.test.ts`
+    (the shared test pins the same two cases). Tests locked
+    (`t5-2-quote-message`). GREEN coder: Claude Sonnet 5.5, effort high.
+- L47 (user, 2026-10-30): "Fix the test (Recommended)". GREEN by the Sonnet
+  coder left one locked test failing: `jobsService.quoteMessage.test.ts`
+  expected `sendQuote()` to return the approved job, but it returns the job
+  as saved (`quoted`, D11) and the demo approval shows on the next read. The
+  operator lifted the lock, changed only that case to read through
+  `getJob`, and re-locked; the other 93 test files' hashes are unchanged.
+- L48 (2026-10-30): T5.2 GREEN.
+  - Gates (operator re-ran): owner `npm test` 493/493, tsc clean; root
+    `npm test` and `typecheck` pass; iOS export OK (coder).
+  - Review: no blocker. `useConversation` returns `{ conversation, reload }`
+    (the route is its only caller); the shared chat service keeps sent
+    messages across chat visits in one app session (D13).
+  - E2E from the worktree's Metro: 11 (new) passes, with its evidence in
+    `apps/owner/.maestro/evidence/2026-10-30-quote-message/`; 04, 05 and 08
+    pass, each from a fresh Expo Go opened on the Metro URL. Killing Expo Go
+    and running a flow straight away fails its first `openLink`.
+  - Decision D13. Lock removed. Next: T6 is already on main (#24, #25), so
+    the next open item is the L37 gap (error state for a rejected load).
+
+- L49 (user, 2026-10-30): "Abre pr". PR #57 (`feat/owner-quote-message` ->
+  `feat/owner-jobs-list`, stacked on #30; 788dade + f371561 + docs) with the
+  before (flow 08) and after (flow 11) screenshots inline. After #30 merges,
+  retarget #57 to `main`. Next: the L37 gap (error state for a rejected load).

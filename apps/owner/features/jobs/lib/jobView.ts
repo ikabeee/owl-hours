@@ -1,10 +1,10 @@
 import type { Job } from "../../../shared/data/types.ts";
+import { arrivalWindowText } from "../../../shared/lib/arrivalWindow.ts";
 import { firstName } from "../../../shared/lib/firstName.ts";
 import { moneyRangeText } from "../../../shared/lib/moneyText.ts";
 import { wallClockTimeText } from "../../../shared/lib/wallClockTime.ts";
 import { visibleAddress } from "./addressVisibility.ts";
 import { approvalLine } from "./approvalLine.ts";
-import { arrivalWindowText } from "./arrivalWindow.ts";
 import { canFinish } from "./finishAvailability.ts";
 import { isJobFooterVisible } from "./jobFooter.ts";
 import { primaryAction } from "./jobAction.ts";
