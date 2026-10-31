@@ -82,6 +82,14 @@ returns to sign-up.
   "That code didn't work. Try again."
 - In live mode the onboarding drafts (name, profile, prices, area) stay in memory;
   they are not saved to Supabase yet.
+- Seeded owners have only an email. A phone sign-in with `shouldCreateUser: true`
+  creates a new auth user with no business membership, so seed each owner's
+  `phone` before a live acceptance run.
+- The auth gate leaves every `/onboarding/*` route open without a session, and a
+  protected screen renders for one frame before the redirect. Hold a splash until
+  the stored session is restored.
+- Phone numbers are only stripped of spaces and dashes before sending; numbers
+  with parentheses or without a `+` country code reach Supabase malformed.
 
 References: [Supabase phone login](https://supabase.com/docs/guides/auth/phone-login),
 [Supabase React Native sessions](https://supabase.com/docs/guides/auth/quickstarts/react-native),
