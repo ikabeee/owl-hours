@@ -1,4 +1,5 @@
 import { useCallback } from "react";
+import { Platform } from "react-native";
 import * as Notifications from "expo-notifications";
 import { API_BASE_URL } from "../../../lib/api-client";
 import type { Session } from "../../../shared/infra/ownerSessionService.ts";
@@ -14,6 +15,8 @@ export function useAllowNotifications(options: {
   const { session, configured } = options;
 
   return useCallback(async function allowNotifications(): Promise<void> {
+    // Expo push tokens exist only on phones; on the web the step just moves on.
+    if (Platform.OS === "web") return;
     const permission = await Notifications.requestPermissionsAsync();
     await registerPushToken({
       session,

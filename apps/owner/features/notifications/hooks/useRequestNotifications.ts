@@ -15,8 +15,10 @@ import { routeForNotificationResponse } from "../../requests/lib/notificationRou
 // https://docs.expo.dev/versions/latest/sdk/notifications/). The listener and
 // the cold-start check can fire for the same response, so each response
 // identifier navigates once.
+// The web build gets no request pushes: expo-notifications has no categories or responses there.
 export function useRequestNotifications(): void {
   useEffect(() => {
+    if (Platform.OS === "web") return;
     setupRequestNotifications({
       highImportance: Notifications.AndroidImportance.HIGH,
       setCategory: async (identifier, actions) => {

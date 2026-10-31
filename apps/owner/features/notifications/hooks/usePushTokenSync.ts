@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { Platform } from "react-native";
 import * as Notifications from "expo-notifications";
 import { API_BASE_URL } from "../../../lib/api-client";
 import type { Session } from "../../../shared/infra/ownerSessionService.ts";
@@ -12,7 +13,8 @@ export function usePushTokenSync(options: {
   const { session, configured } = options;
 
   useEffect(() => {
-    if (!session) return;
+    // Expo push tokens exist only on phones.
+    if (!session || Platform.OS === "web") return;
     let cancelled = false;
     async function sync(current: Session) {
       const permission = await Notifications.getPermissionsAsync();
