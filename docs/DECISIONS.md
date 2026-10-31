@@ -326,3 +326,18 @@ it with a new one.
 - **Consequences:** export authorizes twice, renders three 1080×1920 PNGs in the DOM, then packages them with `caption.txt` and `manifest.json`. Web downloads the ZIP; native receives bounded base64 through an async callback, saves a temporary file, awaits the share sheet and removes it. A share-sheet result does not prove recipient delivery. Text fitting preserves the full allowed copy. The separate local `deliveryReceipt` records opening the delivery UI; it is not part of `StoryPackStatus`. SQL remains `approved`.
 - **Session boundary:** hooks accept injected dependencies. Live mode requires explicit API/Supabase settings and a persisted owner session; the existing-owner magic-link flow does not create accounts. Missing configuration never silently falls back to demo. Browser CORS is allowlisted only on owner routes. Native magic-link callback/device acceptance remains to be verified.
 - **Migration boundary:** Supabase CLI 2.122.0 reproduced PostgreSQL `55P04` when the new enum value was used in the same migration transaction. Its addition is now a preceding migration; the local DB harness wraps each migration in a transaction so this regression is visible.
+
+## Story Pack follow-up: write version and deletion notice (2026-10-31)
+
+- Keep the current server pack separate from the version on which dirty edits
+  began. Atomically reject stale saves, and preserve local text on conflict.
+- Do not export dirty copy after remote approval; offer explicit discard to
+  restore the authoritative saved pack. Detect a changed selected version during
+  pending writes without rejecting the ordinary save-then-approve success path.
+- Keep the team's existing component split and source-photo fetch dependency.
+  Enforce exactly two selected photos at the frontend boundary as well.
+- Record the user's Story-only draft deletion choice, but do not invent an owner
+  delete feature. The existing workspace shows a scope notice; any actual future
+  UI or maintenance deletion still needs explicit confirmation. Original photo
+  files and unverified backup retention are separate concerns. See
+  `docs/STORY-PACK-FOLLOWUP.md` for the data-follow-up dependency and scope.
