@@ -292,7 +292,42 @@ it with a new one.
 - Consolidate never-deployed Story migrations into a preceding enum addition and one data migration; preserve main migrations and T6 permissions.
 - See `docs/STORY-PACK-DATA.md` for the contract and local verification boundary.
 
-## Story Pack follow-up: source-job deletion (2026-10-31)
+## D17 — Story Pack review and export boundary (2026-10-29; revised 2026-10-30)
+
+- **Decision:** Story Pack organizes a completed job with current customer photo consent and owner-confirmed before/after images into three editable slides, owner approval and manual image/copy export. It is an opt-in workspace separate from T6's Content publishing flow (D19).
+- **Why:** the day workflow can reuse completed night jobs without implying that a customer agreed to marketing, or that an approved/exported file was published.
+- **Consequences:** the real adapter persists three slides and selected media under the owner's RLS session. Demo mode must be explicitly enabled and stays fictional/in-memory. Source reads, approval and delivery check consent and exact photo eligibility. Signed links expire after ten minutes; issued links and downloaded files cannot be recalled. No Meta account connection, scheduling or publishing call is added by Story Pack. Existing T6 scheduling rights remain intact.
+
+## D18 — Reuse the supplied Zukki pack in Content (2026-10-29)
+
+- **Decision:** use the existing shared `Owl` component and the canonical
+  nine-action pack: `review` at the drafts headers, `idle` in empty states,
+  and `failed` beside errors. Preserve uniform cell scaling and the static
+  fallback for reduced motion.
+- **Why:** the supplied `golden-owl-nine-actions.zip` already matches the repo's
+  nine WebP animations and static frame byte for byte. Reusing these modules
+  gives the day and night workflows the same mascot without duplicating assets
+  or showing unrelated animations in Content.
+- **Consequences:** only three animation states enter the Content screen's
+  bundle. Generic reference leak photos are not added: this demo does not need
+  them, and they do not establish a matched customer before/after story. The
+  existing fictional job visuals and consent labels remain explicit.
+
+## D19 — Preserve T6 and isolate Story Pack (2026-10-30)
+
+- **Decision:** restore `features/content`, the Content tab route, and the four `OwContent`/`OwPostReview` handoff files byte for byte from `main`. Story Pack lives in `features/story-pack` at `/story-pack`, with no tab replacement. Its API source type is `story_pack`; the existing non-Story-Pack review/scheduling behavior is preserved.
+- **Why:** maintainer review identified overlap with T6's in-progress publish/schedule flow. A manual export workspace is not its replacement and does not satisfy the handoff retirement rule.
+- **Consequences:** the feature remains opt-in and the PR remains a draft. The team can review it without inheriting an unsolicited product switch. No claim is made that the native device flow or a platform publishing integration is accepted.
+
+## D20 — Persisted review contract and portable export (2026-10-30)
+
+- **Decision:** share the client/API schema; persist exactly three slides and selected media. Bind approval to the displayed `updatedAt` and each selected photo's ID, role and immutable-path revision. Use one SQL eligibility helper and target-job lookups instead of relying on the source-picker's 100-row window.
+- **Why:** a replacement after-photo must not keep a stale draft eligible, and another tab must not change copy or swap photo roles after the owner reviewed it.
+- **Consequences:** export authorizes twice, renders three 1080×1920 PNGs in the DOM, then packages them with `caption.txt` and `manifest.json`. Web downloads the ZIP; native receives bounded base64 through an async callback, saves a temporary file, awaits the share sheet and removes it. A share-sheet result does not prove recipient delivery. Text fitting preserves the full allowed copy. The separate local `deliveryReceipt` records opening the delivery UI; it is not part of `StoryPackStatus`. SQL remains `approved`.
+- **Session boundary:** hooks accept injected dependencies. Live mode requires explicit API/Supabase settings and a persisted owner session; the existing-owner magic-link flow does not create accounts. Missing configuration never silently falls back to demo. Browser CORS is allowlisted only on owner routes. Native magic-link callback/device acceptance remains to be verified.
+- **Migration boundary:** Supabase CLI 2.122.0 reproduced PostgreSQL `55P04` when the new enum value was used in the same migration transaction. Its addition is now a preceding migration; the local DB harness wraps each migration in a transaction so this regression is visible.
+
+## D21 — Story Pack source-job deletion (2026-10-31)
 
 - Following Crystal's explicit retention choice, a new forward migration deletes
   only linked Story Pack rows when the source job is deleted, including approved
