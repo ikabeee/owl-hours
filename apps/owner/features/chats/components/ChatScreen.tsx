@@ -31,8 +31,10 @@ import { Owl } from '../../../shared/mascot/Owl';
 import owlRunning from '../../../shared/mascot/owl/running';
 import owlStatic from '../../../shared/mascot/owl/static';
 import type { PolishPreview } from '../../../shared/data/types.ts';
+import { wallClockTimeText } from '../../../shared/lib/wallClockTime.ts';
 import type { ComposerStep, SendOutcome, ThreadMessage } from '../lib/chatView.ts';
 import type { PolishChoice } from '../lib/ownerDelivery.ts';
+import type { QuoteCard } from '../lib/quoteCard.ts';
 import { chatsCopys } from '../copys/chatsCopys';
 import { arrivedOwnMessage } from '../lib/followLatest.ts';
 import { SuggestionRow } from './SuggestionRow';
@@ -120,6 +122,7 @@ function ThreadEntry(props: { message: ThreadMessage; onOpenJob: (() => Promise<
   const { message } = props;
   if (message.from === 'zukki') return <ZukkiSummary text={message.text} onOpenJob={props.onOpenJob} />;
   if (message.from === 'customer') return <CustomerMessage text={message.text} />;
+  if (message.quoteCard) return <QuoteMessage card={message.quoteCard} sentAt={message.sentAt} />;
   return <OwnerMessage text={message.text} label={message.deliveryLabel} />;
 }
 
@@ -152,6 +155,46 @@ function OwnerMessage(props: { text: string; label: string | null }) {
     </ChatMessage>
   );
 }
+
+// The sent quote, drawn as the WhatsApp message the customer receives (13-quote.json). The reply
+// buttons are the customer's, so they are labels here, not controls.
+function QuoteMessage(props: { card: QuoteCard; sentAt: string }) {
+  const { card } = props;
+  const time = wallClockTimeText(props.sentAt);
+  return (
+    <ChatMessage sender="user" metadata={time ? <ChatMessageMetadata timestamp={time} /> : undefined}>
+      <ChatMessageBubble>
+        <VStack gap={3}>
+          <Text type="label">{card.header}</Text>
+          <Text>{card.arrivalLine}</Text>
+          <VStack gap={1}>
+            {card.lines.map((line) => (
+              <Text key={line}>{line}</Text>
+            ))}
+            <Text weight="bold">{card.totalLine}</Text>
+          </VStack>
+          <Text>{card.payLine}</Text>
+          <Text type="supporting">{card.footer}</Text>
+          <div style={replyLabelsStyle}>
+            {card.replyLabels.map((label) => (
+              <div key={label} data-testid="quote-reply-label" style={replyLabelStyle}>
+                <Text color="secondary">{label}</Text>
+              </div>
+            ))}
+          </div>
+        </VStack>
+      </ChatMessageBubble>
+    </ChatMessage>
+  );
+}
+
+const replyLabelsStyle = { display: 'flex', flexWrap: 'wrap', gap: 8 } as const;
+const replyLabelStyle = {
+  padding: '8px 16px',
+  borderRadius: 9999,
+  border: '1px solid var(--color-border-emphasized)',
+  background: 'var(--color-background-card)',
+} as const;
 
 type FooterProps = Pick<
   Parameters<typeof ChatScreen>[0],

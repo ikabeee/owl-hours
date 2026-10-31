@@ -1,5 +1,6 @@
 // Native wrapper: owns data, navigation and safe areas. The DOM screen only draws.
-import { useLocalSearchParams, router } from 'expo-router';
+import { useCallback } from 'react';
+import { useLocalSearchParams, router, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import ChatLoadError from '../../features/chats/components/ChatLoadError';
 import ChatScreen from '../../features/chats/components/ChatScreen';
@@ -8,7 +9,9 @@ import { useConversation } from '../../features/chats/hooks/useConversation';
 export default function ChatRoute() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const insets = useSafeAreaInsets();
-  const conversation = useConversation(id);
+  const { conversation, reload } = useConversation(id);
+  // Coming back from the quote modal shows the quote message that was just sent.
+  useFocusEffect(useCallback(() => { reload(); }, [reload]));
   const safeInsets = { top: insets.top, bottom: insets.bottom };
 
   if (conversation.status === 'failed') {
