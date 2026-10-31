@@ -2,6 +2,7 @@
 // as that user, so each business only ever reaches its own data.
 import { Hono } from "hono";
 import { z } from "zod";
+import { storyPackCreateSchema, storyPackUpdateSchema, storyPackReviewSchema } from "@owl-hours/shared";
 import { ownerContentPhotoRoutes } from "./owner-content-photos.ts";
 import { requireOwner, type OwnerEnv } from "../http/auth.ts";
 import { rateLimit } from "../http/rate-limit.ts";
@@ -115,6 +116,26 @@ export function ownerRoutes(deps: V1Deps): Hono<OwnerEnv> {
     const body = await readJson(c, transitionBody);
     return ok(c, await owner.transitionJob(c.get("session"), id, body.to, body.reason));
   });
+
+  app.get("/content/sources", async (c) => ok(c, await owner.listContentSources(c.get("session"))));
+  app.get("/content/drafts", async (c) => ok(c, await owner.listContentDrafts(c.get("session"))));
+  app.post("/content/drafts", async (c) => {
+    const body = await readJson(c, storyPackCreateSchema);
+    return ok(c, await owner.createContentDraft(c.get("session"), body), 201);
+  });
+  app.patch("/content/drafts/:id", async (c) => {
+    const id = readId(c);
+    const body = await readJson(c, storyPackUpdateSchema);
+    return ok(c, await owner.updateContentDraft(c.get("session"), id, body));
+  });
+  app.post("/content/drafts/:id/review", async (c) => {
+    const id = readId(c);
+    const body = await readJson(c, storyPackReviewSchema);
+    return ok(c, await owner.reviewContentDraft(c.get("session"), id, body));
+  });
+
+  app.post("/content/drafts/:id/handoff", async (c) =>
+    ok(c, await owner.handoffContentDraft(c.get("session"), readId(c))));
 
   app.post("/test-zukki", async (c) => {
     const body = await readJson(c, testZukkiBody);
