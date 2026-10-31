@@ -23,6 +23,7 @@
     "build:owner": "turbo run build --filter=@owl-hours/owner",
     "dev": "turbo run dev",
     "dev:api": "turbo run dev --filter=@owl-hours/api",
+    "dev:api:local": "turbo run dev:local --filter=@owl-hours/api",
     "dev:landing": "turbo run dev --filter=@owl-hours/landing",
     "dev:owner": "turbo run dev --filter=@owl-hours/owner"
   },

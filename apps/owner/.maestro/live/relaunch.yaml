@@ -3,7 +3,7 @@ appId: host.exp.Exponent
 ---
 - launchApp:
     stopApp: true
-- openLink: "exp://127.0.0.1:8082"
+- openLink: "exp://127.0.0.1:8081"
 - extendedWaitUntil:
     visible: "Requests"
     timeout: 120000

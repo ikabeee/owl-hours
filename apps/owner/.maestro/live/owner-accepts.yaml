@@ -1,7 +1,7 @@
 # Owner side on the live stack: the new request, accept, the chat, the quote.
 appId: host.exp.Exponent
 ---
-- openLink: "exp://127.0.0.1:8082/--/requests"
+- openLink: "exp://127.0.0.1:8081/--/requests"
 - tapOn: ".*Chats.*"
 - tapOn: ".*Requests.*"
 - extendedWaitUntil:

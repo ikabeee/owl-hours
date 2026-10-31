@@ -6,7 +6,7 @@ env:
 ---
 - launchApp:
     stopApp: true
-- openLink: "exp://127.0.0.1:8082"
+- openLink: "exp://127.0.0.1:8081"
 - extendedWaitUntil:
     visible: "Create your account"
     timeout: 120000
