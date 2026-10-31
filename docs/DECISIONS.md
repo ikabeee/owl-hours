@@ -220,6 +220,37 @@ it with a new one.
     Website rows do nothing until their screens land.
   - The added price row's label "Name" has no handoff source (operator
     accepted).
+
+## D14 — Onboarding slice and its routes (2026-10-29, T7)
+
+- **Decision:** `features/onboarding` owns the first run, from intro to live.
+  - The routes live in a real folder, `app/onboarding/`
+    (`/onboarding/intro` … `/onboarding/live`, then `/requests`), not in an
+    `(onboarding)` group.
+  - One module-level `demoOnboardingService` backs every step, so data
+    entered on one step reaches the next.
+  - Routes navigate with `resolveNext(route, "next" | "facebook" | "has-account")`.
+  - The demo code is `482910`. A phone number is valid with 10–15 digits once
+    spaces, "+" and dashes are removed.
+- **Why:** an `(onboarding)` group does not change the URL, so
+  `(onboarding)/business.tsx` would resolve to `/business`, the same URL as
+  the Business tab. The operator's answers are in
+  `odd/tasks/owner-onboarding.md` L2.
+- **Consequences:**
+  - "Allow notifications" is `requestNotificationPermissionStub` until
+    `expo-notifications` is added, which is a dependency decision.
+  - "Link accounts" opens `/content/accounts`, which lands with the content
+    slice.
+  - The auth gate and the entry redirect (`app/_layout.tsx`,
+    `app/index.tsx`) are not wired yet.
+  - `PricesScreen` triggers an Expo CLI 58.1.16 defect: `expo export` fails
+    with `Asset not found: …/__common-<hash>.js` unless
+    `EXPO_NO_BUNDLE_SPLITTING=1` is set. `exportDomComponents.js` renames the
+    DOM chunks to md5 names without updating `metadata.requires`.
+    `expo export:embed` (native release) is not affected. The `build`
+    script sets `EXPO_NO_BUNDLE_SPLITTING=1` (user's decision, 2026-10-30),
+    so each DOM component ships as one unsplit bundle. Drop the variable
+    once an Expo CLI release fixes the rename.
   - Coded by muse (Spark 1.3, effort xhigh) test-first; the operator locked
     the tests and reviewed one cleaner round.
 
