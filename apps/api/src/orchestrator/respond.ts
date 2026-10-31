@@ -156,8 +156,8 @@ async function onMessage(deps: RespondDeps, ctx: TurnContext, turn: Extract<Turn
   }
   const urgent = facts.category ? facts.urgency === "now" : understanding.urgent;
   // A category picked from the list is saved without a title; the description
-  // that follows names the request the business sees on the offer.
-  if (!facts.category || understanding.title) {
+  // that follows names the request the business sees on the offer, once.
+  if (!facts.category || (understanding.title && !facts.hasTitle)) {
     await deps.store.saveNeed(ctx.conversationId, {
       category,
       urgency: facts.urgency ?? (urgent ? "now" : "today"),

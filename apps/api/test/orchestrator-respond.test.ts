@@ -44,6 +44,7 @@ const baseFacts: ConversationFacts = {
   safety: "none",
   locationAsked: false,
   hasLocation: false,
+  hasTitle: false,
 };
 
 type Queued = { message: ZukkiMessage; tenantId: string | null };
@@ -369,6 +370,15 @@ describe("respond: need picked from the category list", () => {
     assert.deepEqual(needs, [
       { category: "plumbing", urgency: "now", title: "Kitchen sink leaking", summary: "Leak under the cabinet, water on the floor." },
     ]);
+  });
+
+  it("keeps the title the request already has when the customer writes again", async () => {
+    const { deps, needs } = setup({
+      facts: { category: "plumbing", urgency: "now", hasTitle: true },
+      understanding: { category: "plumbing", title: "How long will it take", summary: "Asks for an arrival time." },
+    });
+    await respond(deps, ctx(), text("how long?"));
+    assert.deepEqual(needs, []);
   });
 
   it("saves nothing when the description gives no title", async () => {
