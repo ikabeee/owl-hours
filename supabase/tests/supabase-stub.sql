@@ -16,7 +16,11 @@ create table auth.users (
   raw_app_meta_data jsonb,
   raw_user_meta_data jsonb,
   created_at timestamptz,
-  updated_at timestamptz
+  updated_at timestamptz,
+  confirmation_token text,
+  recovery_token text,
+  email_change_token_new text,
+  email_change text
 );
 
 -- Same body as Supabase's auth.uid().
