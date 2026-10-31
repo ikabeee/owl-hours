@@ -29,7 +29,6 @@ export function WorkspaceToolbar({
           label={copy.reload}
           variant="secondary"
           size="lg"
-          style={toolbarButtonStyle}
           onClick={() => {
             void onReload();
           }}
@@ -39,7 +38,6 @@ export function WorkspaceToolbar({
           variant="secondary"
           size="lg"
           isLoading={authBusy}
-          style={toolbarButtonStyle}
           onClick={() => {
             void onSignOut();
           }}
@@ -61,10 +59,6 @@ const toolbarActionsStyle = {
   display: 'flex',
   flexWrap: 'wrap',
   gap: 8,
-} as const;
-
-const toolbarButtonStyle = {
-  minHeight: 48,
 } as const;
 
 const userEmailStyle = {

@@ -1,8 +1,11 @@
-import { VStack } from '@astryxdesign/core/Layout';
-import { Card } from '@astryxdesign/core/Card';
+import { HStack, VStack } from '@astryxdesign/core/Layout';
 import { Heading, Text } from '@astryxdesign/core/Text';
 import { Divider } from '@astryxdesign/core/Divider';
-import { Check, ChevronRight } from 'lucide-react';
+import { EmptyState } from '@astryxdesign/core/EmptyState';
+import { ClickableCard } from '@astryxdesign/core/ClickableCard';
+import { StatusDot } from '@astryxdesign/core/StatusDot';
+import { Badge } from '@astryxdesign/core/Badge';
+import { ChevronRight } from 'lucide-react';
 import { Owl } from '../../../shared/mascot/Owl';
 import owlReview from '../../../shared/mascot/owl/review';
 import owlIdle from '../../../shared/mascot/owl/idle';
@@ -24,201 +27,88 @@ export type OverviewProps = {
 export function Overview({ sources, packs, onCreate, onSelect }: OverviewProps) {
   return (
     <VStack gap={4}>
-      <section>
-        <div style={sectionHeaderStyle}>
-          <div>
-            <Heading level={2}>{copy.sourceTitle}</Heading>
-            <Text type="supporting" style={sectionDescriptionStyle}>
-              {copy.sourceDescription}
-            </Text>
-          </div>
-          <span style={eligibleChipStyle}>
-            <Check size={15} aria-hidden="true" />
-            {copy.eligible}
-          </span>
-        </div>
-        {sources.length === 0 ? (
-          <Card padding={4}>
-            <VStack gap={2}>
-              <Heading level={2}>{copy.emptyTitle}</Heading>
-              <Text>{copy.noSources}</Text>
-            </VStack>
-          </Card>
-        ) : (
-          <div style={sourceGridStyle}>
-            {sources.map((source, index) => (
-              <SourceCard
-                key={source.id}
-                source={source}
-                primary={index === 0}
-                onCreate={onCreate}
-              />
-            ))}
-          </div>
-        )}
-      </section>
-
+      <SourcesSection sources={sources} onCreate={onCreate} />
       <Divider />
-
-      <section>
-        <div style={sectionHeaderStyle}>
-          <div style={mascotHeadingStyle}>
-            {packs.length > 0 && (
-              <Owl src={owlReview} scale={0.36} clip alt="" />
-            )}
-            <div>
-              <Heading level={2}>{copy.packsTitle}</Heading>
-              <Text type="supporting" style={sectionDescriptionStyle}>
-                {copy.draftFlowSummary}
-              </Text>
-            </div>
-          </div>
-          {packs.length > 0 && (
-            <span style={countChipStyle}>{packs.length}</span>
-          )}
-        </div>
-        {packs.length === 0 ? (
-          <div style={emptyListStyle}>
-            <Owl src={owlIdle} scale={0.6} clip alt="" />
-            <p style={emptyListTextStyle}>{copy.noPacks}</p>
-          </div>
-        ) : (
-          <div style={packListStyle}>
-            {packs.map((pack) => (
-              <button
-                key={pack.id}
-                type="button"
-                aria-label={`${pack.jobTitle} - ${storyPackStatusLabel(pack.status)}`}
-                style={packRowStyle}
-                onClick={() => onSelect(pack.id)}
-              >
-                <div style={packInfoStyle}>
-                  <strong>{pack.jobTitle}</strong>
-                  <span style={packMetaStyle}>
-                    {pack.isDemo ? copy.demoMarker : ''}
-                    {pack.businessName}
-                  </span>
-                </div>
-                <span style={statusBadgeStyle}>
-                  {storyPackStatusLabel(pack.status)}
-                </span>
-                <ChevronRight size={18} aria-hidden="true" />
-              </button>
-            ))}
-          </div>
-        )}
-      </section>
+      <PacksSection packs={packs} onSelect={onSelect} />
     </VStack>
   );
 }
 
-const sectionHeaderStyle = {
-  display: 'flex',
-  flexWrap: 'wrap',
-  justifyContent: 'space-between',
-  alignItems: 'end',
-  gap: 12,
-  marginBottom: 12,
-} as const;
+function SourcesSection({ sources, onCreate }: Pick<OverviewProps, 'sources' | 'onCreate'>) {
+  return (
+    <VStack gap={3} as="section">
+      <VStack gap={1}>
+        <Heading level={2}>{copy.sourceTitle}</Heading>
+        <Text type="supporting">{copy.sourceDescription}</Text>
+        <HStack gap={2} align="center">
+          <StatusDot variant="success" label={copy.eligible} aria-hidden="true" />
+          <Text>{copy.eligible}</Text>
+        </HStack>
+      </VStack>
+      {sources.length === 0 ? (
+        <EmptyState
+          title={copy.emptyTitle}
+          description={copy.noSources}
+          icon={<Owl src={owlIdle} scale={0.6} clip alt="" />}
+        />
+      ) : (
+        <div style={sourceGridStyle}>
+          {sources.map((source) => (
+            <SourceCard key={source.id} source={source} onCreate={onCreate} />
+          ))}
+        </div>
+      )}
+    </VStack>
+  );
+}
 
-const sectionDescriptionStyle = {
-  fontSize: 16,
-  lineHeight: 1.5,
-} as const;
+function PacksSection({ packs, onSelect }: Pick<OverviewProps, 'packs' | 'onSelect'>) {
+  return (
+    <VStack gap={3} as="section">
+      <HStack gap={3} align="center">
+        {packs.length > 0 && <Owl src={owlReview} scale={0.36} clip alt="" />}
+        <VStack gap={1} className="zukki-grow">
+          <Heading level={2}>{copy.packsTitle}</Heading>
+          <Text type="supporting">{copy.draftFlowSummary}</Text>
+        </VStack>
+        {packs.length > 0 && <Badge variant="neutral" label={String(packs.length)} />}
+      </HStack>
+      {packs.length === 0 ? (
+        <EmptyState
+          title={copy.noPacks}
+          icon={<Owl src={owlIdle} scale={0.6} clip alt="" />}
+        />
+      ) : (
+        packs.map((pack) => (
+          <PackRow key={pack.id} pack={pack} onSelect={onSelect} />
+        ))
+      )}
+    </VStack>
+  );
+}
 
-const eligibleChipStyle = {
-  borderRadius: 9999,
-  background: 'var(--color-background-muted)',
-  color: 'var(--color-success)',
-  padding: '7px 10px',
-  display: 'inline-flex',
-  alignItems: 'center',
-  gap: 6,
-  fontSize: 16,
-  fontWeight: 700,
-  flexShrink: 0,
-} as const;
+function PackRow({ pack, onSelect }: { pack: StoryPack; onSelect: (id: string) => void }) {
+  const status = storyPackStatusLabel(pack.status);
+  return (
+    <ClickableCard
+      label={copy.packRowLabel(pack.jobTitle, status)}
+      padding={3}
+      onClick={() => onSelect(pack.id)}
+    >
+      <HStack gap={3} align="center">
+        <VStack gap={1} className="zukki-grow">
+          <Text type="label">{pack.jobTitle}</Text>
+          <Text type="supporting">{copy.packMeta(pack.businessName, pack.isDemo)}</Text>
+          <Text>{status}</Text>
+        </VStack>
+        <ChevronRight size={18} aria-hidden="true" />
+      </HStack>
+    </ClickableCard>
+  );
+}
 
 const sourceGridStyle = {
   display: 'grid',
   gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 320px), 1fr))',
   gap: 12,
-} as const;
-
-const mascotHeadingStyle = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: 10,
-  minWidth: 0,
-} as const;
-
-const countChipStyle = {
-  minWidth: 28,
-  height: 28,
-  borderRadius: 9999,
-  display: 'grid',
-  placeItems: 'center',
-  background: 'var(--color-background-muted)',
-  fontSize: 16,
-  fontWeight: 700,
-} as const;
-
-const emptyListStyle = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: 12,
-  padding: 16,
-  color: 'var(--color-text-secondary)',
-  border: '1px dashed var(--color-border-emphasized)',
-  borderRadius: 12,
-} as const;
-
-const emptyListTextStyle = {
-  margin: 0,
-  fontSize: 16,
-} as const;
-
-const packListStyle = {
-  display: 'flex',
-  flexDirection: 'column',
-  border: '1px solid var(--color-border)',
-  borderRadius: 12,
-  overflow: 'hidden',
-  background: 'var(--color-background-card)',
-} as const;
-
-const packRowStyle = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: 10,
-  minHeight: 64,
-  padding: '8px 12px',
-  border: 0,
-  borderBottom: '1px solid var(--color-border)',
-  background: 'transparent',
-  cursor: 'pointer',
-  font: 'inherit',
-} as const;
-
-const packInfoStyle = {
-  flex: 1,
-  minWidth: 0,
-  textAlign: 'left',
-} as const;
-
-const packMetaStyle = {
-  display: 'block',
-  marginTop: 3,
-  color: 'var(--color-text-secondary)',
-  fontSize: 16,
-} as const;
-
-const statusBadgeStyle = {
-  borderRadius: 9999,
-  padding: '6px 9px',
-  background: 'var(--color-background-muted)',
-  color: 'var(--color-text-primary)',
-  fontSize: 16,
-  fontWeight: 700,
-  flexShrink: 0,
 } as const;

@@ -1,9 +1,9 @@
 import { storyPackExportCopys as exportCopy } from '../copys/storyPackExportCopys.ts';
 import { contentCopys as copy } from '../copys/contentCopys.ts';
 import { fitStoryText } from '../lib/storyTextLayout.ts';
-import type { ExportFile, ExportHandoff } from '../lib/storyPackExport.ts';
+import type { ExportFile, ExportHandoff, FetchStoryPhoto } from '../lib/storyPackExport.ts';
 
-export async function renderStoryImages({ pack, source }: ExportHandoff): Promise<ExportFile[]> {
+export async function renderStoryImages({ pack, source }: ExportHandoff, fetchPhoto: FetchStoryPhoto): Promise<ExportFile[]> {
   const selected = source.assets.filter(asset => pack.sourceMediaIds.includes(asset.id));
   const before = selected.find(asset => asset.role === 'before');
   const after = selected.find(asset => asset.role === 'after');
@@ -11,8 +11,8 @@ export async function renderStoryImages({ pack, source }: ExportHandoff): Promis
   const images: Awaited<ReturnType<typeof loadPhoto>>[] = [];
   try {
     // Keep the first decoded image inside this cleanup scope if the second fails.
-    images.push(await loadPhoto(before.imageUrl, pack.isDemo));
-    images.push(await loadPhoto(after.imageUrl, pack.isDemo));
+    images.push(await loadPhoto(await fetchPhoto(before.imageUrl, pack.isDemo)));
+    images.push(await loadPhoto(await fetchPhoto(after.imageUrl, pack.isDemo)));
     return await Promise.all(pack.slides.map(async (slide, index) => {
       const canvas = document.createElement('canvas');
       canvas.width = 1080; canvas.height = 1920;
@@ -42,15 +42,7 @@ export async function renderStoryImages({ pack, source }: ExportHandoff): Promis
   } finally { for (const image of images) URL.revokeObjectURL(image.url); }
 }
 
-async function loadPhoto(url: string, isDemo: boolean): Promise<{ image: HTMLImageElement; url: string }> {
-  const syntheticSvg = isDemo && url.startsWith('data:image/svg+xml');
-  if (!/^https?:/.test(url) && !syntheticSvg) throw new Error(exportCopy.unsupportedSource);
-  const response = await fetch(url, { credentials: 'omit', cache: 'no-store', signal: AbortSignal.timeout(15_000) });
-  if (!response.ok) throw new Error(exportCopy.photoUnavailable);
-  const blob = await response.blob();
-  if ((!['image/png', 'image/jpeg', 'image/webp'].includes(blob.type) && !syntheticSvg) || blob.size > 15 * 1024 * 1024) {
-    throw new Error(exportCopy.photoFormat);
-  }
+async function loadPhoto(blob: Blob): Promise<{ image: HTMLImageElement; url: string }> {
   const objectUrl = URL.createObjectURL(blob);
   const image = new Image(); image.src = objectUrl;
   try { await image.decode(); } catch (error) { URL.revokeObjectURL(objectUrl); throw error; }

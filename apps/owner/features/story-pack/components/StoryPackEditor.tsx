@@ -1,7 +1,6 @@
-import { VStack } from '@astryxdesign/core/Layout';
+import { HStack, VStack } from '@astryxdesign/core/Layout';
 import { Card } from '@astryxdesign/core/Card';
 import { Heading, Text } from '@astryxdesign/core/Text';
-import { Button } from '@astryxdesign/core/Button';
 import { TextArea } from '@astryxdesign/core/TextArea';
 import { Divider } from '@astryxdesign/core/Divider';
 import { Camera, Share2 } from 'lucide-react';
@@ -12,6 +11,7 @@ import {
   type StoryTargets,
 } from '../lib/storyPack.ts';
 import { contentCopys as copy } from '../copys/contentCopys.ts';
+import { storyPackServiceCopys } from '../copys/storyPackServiceCopys.ts';
 import { StatusSteps } from './StatusSteps.tsx';
 import { TargetToggle } from './TargetToggle.tsx';
 import { STORY_PACK_LIMITS } from '@owl-hours/shared';
@@ -27,11 +27,6 @@ export type StoryPackEditorProps = {
     value: string,
   ) => void;
   onChangeTarget: (key: keyof StoryTargets, checked: boolean) => void;
-  onSave: () => Promise<StoryPack | null>;
-  onApprove: () => Promise<void>;
-  onPrepare: () => Promise<void>;
-  exporting: boolean;
-  saving: boolean;
   approving: boolean;
   dirty: boolean;
 };
@@ -43,277 +38,201 @@ export function StoryPackEditor({
   onChangeCaption,
   onChangeSlide,
   onChangeTarget,
-  onSave,
-  onApprove,
-  onPrepare,
-  exporting,
-  saving,
   approving,
   dirty,
 }: StoryPackEditorProps) {
-  const editable = draft.status === 'draft';
-  const approved = draft.status === 'approved';
-  const isBusy = saving || approving;
+  const isReadOnly = draft.status !== 'draft' || approving;
 
   return (
     <VStack gap={4}>
-      <section style={editorHeadingStyle}>
-        <div>
-          <div style={eyebrowStyle}>{copy.previewLabel}</div>
-          <Heading level={2}>{draft.jobTitle}</Heading>
-          <Text type="supporting" style={sourceSubtitleStyle}>
-            {copy.sourceLabel}: {draft.businessName}
-            {draft.isDemo ? ` · ${copy.demoSample}` : ''}
-          </Text>
-        </div>
-        <span style={statusBadgeStyle}>
-          {storyPackStatusLabel(draft.status)}
-        </span>
-      </section>
-
+      <EditorHeading draft={draft} />
       <StatusSteps status={draft.status} />
-
       {draft.isDemo && (
-        <div style={demoInlineStyle}>
-          <strong>{copy.demoContentLabel}</strong>
-          <span>{copy.demoVisualDescription}</span>
-        </div>
-      )}
-
-      <div style={slideGridStyle}>
-        {draft.slides.map((slide, index) => {
-          const expectedRole = index === 0 ? 'before' : 'after';
-          const asset = source?.assets.find(
-            (candidate) =>
-              draft.sourceMediaIds.includes(candidate.id) &&
-              candidate.role === expectedRole,
-          );
-          const unavailableLabel = draft.isDemo
-            ? copy.sampleVisual
-            : copy.photoUnavailable;
-          const imageLabel = asset?.label ?? unavailableLabel;
-
-          return (
-            <article key={index} style={slideCardStyle}>
-              <div style={storyCanvasStyle}>
-                {asset?.imageUrl ? (
-                  <img
-                    src={asset.imageUrl}
-                    alt={asset.label}
-                    style={storyImageStyle}
-                  />
-                ) : (
-                  <div style={visualPlaceholderStyle}>
-                    <span style={storyKickerStyle}>
-                      {copy.storyKicker(index)}
-                    </span>
-                    <span style={visualLabelStyle}>{imageLabel}</span>
-                  </div>
-                )}
-                <div style={storyTextOverlayStyle}>
-                  <h3 style={storyTitleStyle}>{slide.title}</h3>
-                  <p style={storyBodyStyle}>{slide.body}</p>
-                </div>
-                <span style={storyCountStyle}>{copy.pageCount(index)}</span>
-              </div>
-              <div style={slideFieldsStyle}>
-                <TextArea
-                  label={copy.slideTitleLabel}
-                  value={slide.title}
-                  onChange={(value) => onChangeSlide(index, 'title', value)}
-                  rows={2}
-                  maxLength={STORY_PACK_LIMITS.slideTitle}
-                  isReadOnly={!editable || approving}
-                  size="md"
-                />
-                <TextArea
-                  label={copy.slideBodyLabel}
-                  value={slide.body}
-                  onChange={(value) => onChangeSlide(index, 'body', value)}
-                  rows={3}
-                  maxLength={STORY_PACK_LIMITS.slideBody}
-                  isReadOnly={!editable || approving}
-                  size="md"
-                />
-              </div>
-            </article>
-          );
-        })}
-      </div>
-
-      <Card padding={4}>
-        <VStack gap={3}>
-          <div>
-            <Heading level={2}>{copy.captionLabel}</Heading>
-            <Text type="supporting" style={captionGuidanceStyle}>
-              {copy.captionGuidance}
-            </Text>
-          </div>
-          <TextArea
-            label={copy.captionLabel}
-            isLabelHidden
-            value={draft.caption}
-            onChange={onChangeCaption}
-            rows={3}
-            maxLength={STORY_PACK_LIMITS.caption}
-            isReadOnly={!editable || approving}
-            size="md"
-          />
-          <Divider />
-          <VStack gap={1}>
-            <Text type="label">{copy.destinations}</Text>
-            <Text type="supporting" style={captionGuidanceStyle}>
-              {copy.destinationGuidance}
-            </Text>
-          </VStack>
-          <div style={targetGridStyle}>
-            <TargetToggle
-              label={copy.facebook}
-              selected={draft.platforms.facebook}
-              disabled={!editable || approving}
-              onClick={() =>
-                onChangeTarget('facebook', !draft.platforms.facebook)
-              }
-              icon={<Share2 size={18} />}
-            />
-            <TargetToggle
-              label={copy.instagram}
-              selected={draft.platforms.instagram}
-              disabled={!editable || approving}
-              onClick={() =>
-                onChangeTarget('instagram', !draft.platforms.instagram)
-              }
-              icon={<Camera size={18} />}
-            />
-          </div>
+        <VStack gap={1}>
+          <Text type="label">{copy.demoContentLabel}</Text>
+          <Text type="supporting">{copy.demoVisualDescription}</Text>
         </VStack>
-      </Card>
-
-      <div style={actionRowStyle}>
-        {editable && (
-          <>
-            <Button
-              label={copy.save}
-              variant="secondary"
-              size="lg"
-              isDisabled={saving}
-              style={actionButtonStyle}
-              onClick={() => {
-                void onSave();
-              }}
-            />
-            <Button
-              label={copy.approve}
-              variant="primary"
-              size="lg"
-              isLoading={isBusy}
-              isDisabled={
-                draft.slides.length !== 3 ||
-                (!draft.platforms.facebook && !draft.platforms.instagram)
-              }
-              style={actionButtonStyle}
-              onClick={() => {
-                void onApprove();
-              }}
-            />
-          </>
-        )}
-        {approved && (
-          <Button
-            label={copy.downloadLabel}
-            variant="primary"
-            size="lg"
-            isLoading={exporting}
-            isDisabled={!draft.canHandoff}
-            style={actionButtonStyle}
-            onClick={() => {
-              void onPrepare();
-            }}
+      )}
+      <div style={slideGridStyle}>
+        {draft.slides.map((slide, index) => (
+          <SlideEditor
+            key={index}
+            draft={draft}
+            source={source}
+            index={index}
+            isReadOnly={isReadOnly}
+            onChangeSlide={onChangeSlide}
           />
-        )}
-        {!editable && !approved && (
-          <div style={lockedNoteStyle}>{copy.editLocked}</div>
-        )}
+        ))}
       </div>
-
-      {dirty && (
-        <p role="status" style={stateNoteStyle}>
-          {copy.unsavedChanges}
-        </p>
-      )}
-      {approved && <p style={stateNoteStyle}>{copy.approvalStatus}</p>}
-      {receipt && <p style={stateNoteStyle}>{copy.receipt(receipt)}</p>}
-      {approved && !draft.canHandoff && (
-        <p role="status" style={stateNoteStyle}>
-          {copy.handoffBlocked}
-        </p>
-      )}
-      {editable &&
-        !draft.platforms.facebook &&
-        !draft.platforms.instagram && (
-          <p style={stateNoteStyle}>{copy.chooseFormat}</p>
-        )}
-      {draft.slides.length !== 3 && (
-        <p role="status" style={stateNoteStyle}>
-          {copy.legacyDraft}
-        </p>
-      )}
-      <p style={actualPublishNoteStyle}>{copy.exportContents}</p>
-      {draft.status === 'published' && (
-        <p style={publishedNoteStyle}>{copy.publishedStatus}</p>
-      )}
-      <p style={actualPublishNoteStyle}>{copy.actualPublishStatus}</p>
+      <CaptionAndTargets
+        draft={draft}
+        isReadOnly={isReadOnly}
+        onChangeCaption={onChangeCaption}
+        onChangeTarget={onChangeTarget}
+      />
+      <EditorNotes draft={draft} receipt={receipt} dirty={dirty} />
     </VStack>
   );
 }
 
-const editorHeadingStyle = {
-  display: 'flex',
-  flexWrap: 'wrap',
-  justifyContent: 'space-between',
-  gap: 12,
-  alignItems: 'center',
-} as const;
+function EditorHeading({ draft }: { draft: StoryPack }) {
+  return (
+    <VStack gap={1}>
+      <Text type="label">{copy.previewLabel}</Text>
+      <Heading level={2}>{draft.jobTitle}</Heading>
+      <Text type="supporting">{copy.sourceLine(draft.businessName, draft.isDemo)}</Text>
+      <Text type="label" role="status">{storyPackStatusLabel(draft.status)}</Text>
+    </VStack>
+  );
+}
 
-const eyebrowStyle = {
-  color: 'var(--color-accent)',
-  fontSize: 16,
-  fontWeight: 700,
-  letterSpacing: '.09em',
-  textTransform: 'uppercase',
-  marginBottom: 4,
-} as const;
+function SlideEditor({
+  draft,
+  source,
+  index,
+  isReadOnly,
+  onChangeSlide,
+}: {
+  draft: StoryPack;
+  source: StorySource | null;
+  index: number;
+  isReadOnly: boolean;
+  onChangeSlide: StoryPackEditorProps['onChangeSlide'];
+}) {
+  const slide = draft.slides[index];
+  const expectedRole = index === 0 ? 'before' : 'after';
+  const asset = source?.assets.find(
+    (candidate) =>
+      draft.sourceMediaIds.includes(candidate.id) &&
+      candidate.role === expectedRole,
+  );
+  const unavailableLabel = draft.isDemo ? copy.sampleVisual : copy.photoUnavailable;
+  const imageLabel = asset?.label ?? unavailableLabel;
 
-const sourceSubtitleStyle = {
-  fontSize: 16,
-  lineHeight: 1.5,
-} as const;
+  return (
+    <article style={slideCardStyle}>
+      <div style={storyCanvasStyle}>
+        {asset?.imageUrl ? (
+          <img src={asset.imageUrl} alt={asset.label} style={storyImageStyle} />
+        ) : (
+          <div style={visualPlaceholderStyle}>
+            <span style={storyKickerStyle}>{copy.storyKicker(index)}</span>
+            <span style={visualLabelStyle}>{imageLabel}</span>
+          </div>
+        )}
+        <div style={storyTextOverlayStyle}>
+          <h3 style={storyTitleStyle}>{slide.title}</h3>
+          <p style={storyBodyStyle}>{slide.body}</p>
+        </div>
+        <span style={storyCountStyle}>{copy.pageCount(index)}</span>
+      </div>
+      <div style={slideFieldsStyle}>
+        <TextArea
+          label={copy.slideTitleLabel}
+          value={slide.title}
+          onChange={(value) => onChangeSlide(index, 'title', value)}
+          rows={2}
+          maxLength={STORY_PACK_LIMITS.slideTitle}
+          isReadOnly={isReadOnly}
+          size="md"
+        />
+        <TextArea
+          label={copy.slideBodyLabel}
+          value={slide.body}
+          onChange={(value) => onChangeSlide(index, 'body', value)}
+          rows={3}
+          maxLength={STORY_PACK_LIMITS.slideBody}
+          isReadOnly={isReadOnly}
+          size="md"
+        />
+      </div>
+    </article>
+  );
+}
 
-const captionGuidanceStyle = {
-  fontSize: 16,
-  lineHeight: 1.5,
-} as const;
+function CaptionAndTargets({
+  draft,
+  isReadOnly,
+  onChangeCaption,
+  onChangeTarget,
+}: {
+  draft: StoryPack;
+  isReadOnly: boolean;
+  onChangeCaption: StoryPackEditorProps['onChangeCaption'];
+  onChangeTarget: StoryPackEditorProps['onChangeTarget'];
+}) {
+  return (
+    <Card padding={4}>
+      <VStack gap={3}>
+        <VStack gap={1}>
+          <Heading level={2}>{copy.captionLabel}</Heading>
+          <Text type="supporting">{copy.captionGuidance}</Text>
+        </VStack>
+        <TextArea
+          label={copy.captionLabel}
+          isLabelHidden
+          value={draft.caption}
+          onChange={onChangeCaption}
+          rows={3}
+          maxLength={STORY_PACK_LIMITS.caption}
+          isReadOnly={isReadOnly}
+          size="md"
+        />
+        <Divider />
+        <VStack gap={1}>
+          <Text type="label">{copy.destinations}</Text>
+          <Text type="supporting">{copy.destinationGuidance}</Text>
+        </VStack>
+        <HStack gap={4} wrap="wrap">
+          <TargetToggle
+            label={copy.facebook}
+            selected={draft.platforms.facebook}
+            disabled={isReadOnly}
+            onChange={(checked) => onChangeTarget('facebook', checked)}
+            icon={<Share2 size={18} />}
+          />
+          <TargetToggle
+            label={copy.instagram}
+            selected={draft.platforms.instagram}
+            disabled={isReadOnly}
+            onChange={(checked) => onChangeTarget('instagram', checked)}
+            icon={<Camera size={18} />}
+          />
+        </HStack>
+      </VStack>
+    </Card>
+  );
+}
 
-const statusBadgeStyle = {
-  borderRadius: 9999,
-  padding: '6px 9px',
-  background: 'var(--color-background-muted)',
-  color: 'var(--color-text-primary)',
-  fontSize: 16,
-  fontWeight: 700,
-  flexShrink: 0,
-} as const;
+function EditorNotes({
+  draft,
+  receipt,
+  dirty,
+}: {
+  draft: StoryPack;
+  receipt: string | null;
+  dirty: boolean;
+}) {
+  const editable = draft.status === 'draft';
+  const approved = draft.status === 'approved';
+  const hasNoFormat = !draft.platforms.facebook && !draft.platforms.instagram;
 
-const demoInlineStyle = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 4,
-  borderRadius: 10,
-  background: 'var(--color-background-muted)',
-  padding: '10px 12px',
-  color: 'var(--color-text-secondary)',
-  fontSize: 16,
-} as const;
+  return (
+    <VStack gap={2}>
+      {!editable && !approved && <Text type="supporting">{copy.editLocked}</Text>}
+      {dirty && <Text role="status">{copy.unsavedChanges}</Text>}
+      {approved && <Text>{copy.approvalStatus}</Text>}
+      {receipt && <Text>{copy.receipt(receipt)}</Text>}
+      {approved && !draft.canHandoff && <Text role="status">{copy.handoffBlocked}</Text>}
+      {editable && hasNoFormat && <Text>{storyPackServiceCopys.chooseFormat}</Text>}
+      {draft.slides.length !== 3 && <Text role="status">{copy.legacyDraft}</Text>}
+      <Text type="supporting">{copy.exportContents}</Text>
+      {draft.status === 'published' && <Text weight="bold">{copy.publishedStatus}</Text>}
+      <Text type="supporting">{copy.actualPublishStatus}</Text>
+    </VStack>
+  );
+}
 
 const slideGridStyle = {
   display: 'grid',
@@ -414,50 +333,4 @@ const slideFieldsStyle = {
   flexDirection: 'column',
   gap: 10,
   paddingTop: 12,
-} as const;
-
-const targetGridStyle = {
-  display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 240px), 1fr))',
-  gap: 10,
-} as const;
-
-const actionRowStyle = {
-  display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 240px), 1fr))',
-  gap: 10,
-} as const;
-
-const actionButtonStyle = {
-  minHeight: 48,
-} as const;
-
-const lockedNoteStyle = {
-  gridColumn: '1 / -1',
-  borderRadius: 10,
-  background: 'var(--color-background-muted)',
-  padding: 12,
-  color: 'var(--color-text-secondary)',
-  fontSize: 16,
-} as const;
-
-const stateNoteStyle = {
-  margin: 0,
-  color: 'var(--color-text-primary)',
-  fontSize: 16,
-  lineHeight: 1.4,
-} as const;
-
-const publishedNoteStyle = {
-  margin: 0,
-  color: 'var(--color-success)',
-  fontWeight: 700,
-  fontSize: 16,
-} as const;
-
-const actualPublishNoteStyle = {
-  margin: 0,
-  color: 'var(--color-text-secondary)',
-  fontSize: 16,
-  lineHeight: 1.4,
 } as const;

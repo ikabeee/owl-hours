@@ -42,7 +42,6 @@ export function SignInForm({
           type="submit"
           isLoading={authBusy}
           isDisabled={authBusy || !email.trim()}
-          style={signInButtonStyle}
         />
       </form>
     </Card>
@@ -54,8 +53,4 @@ const signInFormStyle = {
   flexDirection: 'column',
   gap: 12,
   maxWidth: 420,
-} as const;
-
-const signInButtonStyle = {
-  minHeight: 48,
 } as const;
