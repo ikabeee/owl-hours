@@ -292,10 +292,8 @@ it with a new one.
 - Consolidate never-deployed Story migrations into a preceding enum addition and one data migration; preserve main migrations and T6 permissions.
 - See `docs/STORY-PACK-DATA.md` for the contract and local verification boundary.
 
-## Story Pack follow-up: versioned edits and source-job deletion (2026-10-31)
+## Story Pack follow-up: source-job deletion (2026-10-31)
 
-- PATCH requires the displayed version and compares it in the write predicate.
-  A failed comparison never refreshes the version and retries an unseen overwrite.
 - Following Crystal's explicit retention choice, a new forward migration deletes
   only linked Story Pack rows when the source job is deleted, including approved
   packs. Preserve the existing legacy FK semantics and historical tombstone guards.

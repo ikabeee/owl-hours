@@ -47,12 +47,6 @@ signing must not cause stale links to be returned. This cannot recall a link
 already issued; links expire after ten minutes. No-source/no-sign paths skip the
 second read. Every actual export must authorize again.
 
-PATCH requires the displayed `expectedUpdatedAt` plus an editable field. A single
-conditional database UPDATE compares that version while saving. A stale active
-draft returns 409 without overwriting copy; an unavailable or historically
-logically deleted draft returns 404. The existence read after a failed conditional
-write classifies the response only; it never retries the write with a new version.
-
 ## Source-job deletion: active database, photos, and backups
 
 A new forward migration removes all linked `source = 'story_pack'` rows when the
