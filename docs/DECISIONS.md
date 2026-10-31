@@ -282,3 +282,12 @@ it with a new one.
   infer trusted browser origins from client-controlled forwarded headers.
 - Hosted Email provider settings and real Android sign-in acceptance remain
   separate from synthetic tests and bundle compilation; see `docs/OWNER-AUTH.md`.
+
+## D16 — Story Pack data and review contract (2026-10-30)
+
+- Keep Story photo purpose in `media.story_role`; preserve original evidence roles and first job assignment audit. Use shared SQL job/consent and original-photo predicates.
+- SQL produces the single media revision; UUID snapshots use consistent C collation and API comparisons match fields by ID.
+- Atomic approval owns eligibility. Review receipts do not promise fresh export availability; refresh and handoff recalculate it. Retain post-sign checks only across actual Storage I/O.
+- Use `PT409` for stale displayed copy or photo conflicts. `40001` is reserved for actual serialization failures because PostgREST may retry it.
+- Consolidate never-deployed Story migrations into a preceding enum addition and one data migration; preserve main migrations and T6 permissions.
+- See `docs/STORY-PACK-DATA.md` for the contract and local verification boundary.
