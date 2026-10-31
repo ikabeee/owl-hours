@@ -7,6 +7,6 @@
 2. [Content: drafts, post review, linked accounts](tasks/owner-content.md) — done
 3. [Business: profile, prices, settings](tasks/owner-business.md) — done
 4. [Push notification + Test Zukki](tasks/owner-notification-test-zukki.md) — pending
-5. [Onboarding: intro to live](tasks/owner-onboarding.md) — pending
+5. [Onboarding: intro to live](tasks/owner-onboarding.md) — done
 6. [Customer WhatsApp payloads 01–15](tasks/whatsapp-payloads.md) — pending
 7. [UI close-out: handoff retirement + demo on real phones](tasks/ui-closeout.md) — pending

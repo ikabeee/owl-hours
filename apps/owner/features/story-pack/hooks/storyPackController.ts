@@ -210,19 +210,6 @@ export function createStoryPackController(
       return null;
     }
   }
-  async function signIn(email: string) {
-    if (!runtime.auth) return;
-    const version = epoch;
-    update({ authBusy: true, error: null });
-    try {
-      await runtime.auth.signIn(email);
-      if (current(version)) update({ notice: authCopys.linkSent });
-    } catch (error) {
-      if (current(version)) report(error, authCopys.signInError);
-    } finally {
-      if (active) update({ authBusy: false });
-    }
-  }
   async function signOut() {
     if (!runtime.auth) return;
     epoch++;
@@ -306,7 +293,6 @@ export function createStoryPackController(
         listeners.delete(listener);
       };
     },
-    signIn,
     signOut,
     assignPhotos,
     prepareHandoff,
