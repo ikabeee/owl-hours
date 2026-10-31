@@ -25,6 +25,12 @@ export type OwnerAuthController = {
   signOut(): Promise<void>;
 };
 
+// Best-effort work before the session ends (the device push-token delete):
+// it runs first with the current session, and a failure never blocks sign-out.
+export type OwnerAuthControllerOptions = {
+  beforeSignOut?: ((session: Session | null) => Promise<void>) | undefined;
+};
+
 const safeMessages = new Set<string>(Object.values(authCopys));
 
 // Network failures read as a rejected send or code: the handoff has no other copy.
@@ -43,7 +49,10 @@ function safeError(failure: unknown, fallback: string): string {
   return fallback;
 }
 
-export function createOwnerAuthController(runtime: OwnerAuthRuntime | null): OwnerAuthController {
+export function createOwnerAuthController(
+  runtime: OwnerAuthRuntime | null,
+  options?: OwnerAuthControllerOptions | undefined,
+): OwnerAuthController {
   let state: OwnerAuthControllerState = { session: null, loading: runtime !== null, error: null };
   const listeners = new Set<() => void>();
   let unsubscribeRuntime: (() => void) | null = null;
@@ -150,6 +159,7 @@ export function createOwnerAuthController(runtime: OwnerAuthRuntime | null): Own
     if (runtime === null) {
       return;
     }
+    await options?.beforeSignOut?.(state.session).catch(() => {});
     ensureRuntimeSubscription();
     update({ loading: true, error: null });
     signingOut = true;

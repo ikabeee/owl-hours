@@ -656,10 +656,17 @@ export async function testZukki(
 
 // Push tokens ---------------------------------------------------------------
 
+// One device belongs to one user: registering a token first removes the same
+// token from every other user (service_role sees rows RLS hides from the
+// caller), then upserts it for the signed-in user.
 export async function savePushToken(
   s: OwnerSession,
   input: { expoToken: string; platform: "ios" | "android" | "web" },
+  deps: { serviceDb: SupabaseClient },
 ) {
+  unwrap(
+    await deps.serviceDb.from("push_tokens").delete().neq("user_id", s.userId).eq("expo_token", input.expoToken),
+  );
   unwrap(
     await s.db.from("push_tokens").upsert(
       { user_id: s.userId, expo_token: input.expoToken, platform: input.platform },
@@ -667,4 +674,9 @@ export async function savePushToken(
     ),
   );
   return { expoToken: input.expoToken, platform: input.platform };
+}
+
+export async function deletePushToken(s: OwnerSession, input: { expoToken: string }) {
+  unwrap(await s.db.from("push_tokens").delete().eq("user_id", s.userId).eq("expo_token", input.expoToken));
+  return { expoToken: input.expoToken };
 }

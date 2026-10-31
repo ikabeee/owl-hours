@@ -351,3 +351,13 @@ it with a new one.
   `sources`: the price-rule items the price tool returned while answering,
   deduplicated in first-returned order (user decision "API returns sources").
   An empty `sources` renders "Not in your services".
+- Amendment (2026-10-31, verifier blockers): one device belongs to one owner.
+  Registering a token deletes the same `expo_token` for every other user
+  (service-role client, scoped to that exact token); `DELETE
+  /v1/owner/push-tokens` removes the caller's row; sign-out deletes this
+  device's token before the session ends, best-effort (a failure never blocks
+  sign-out). The Expo push `fetch` aborts after `EXPO_PUSH_TIMEOUT_MS` (5 s,
+  `AbortSignal.timeout`); a timeout counts as a failure. `connectBusiness`
+  logs a warning with the offer id and the `sent`/`failed`/`removed` counts
+  when `failed > 0`. Clarified: `sources` records the items the price tool
+  returned to the model, so a filtered call contributes only matching rules.

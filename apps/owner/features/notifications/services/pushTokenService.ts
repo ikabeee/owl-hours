@@ -1,13 +1,16 @@
 import { Platform } from "react-native";
 import * as Notifications from "expo-notifications";
+import { postPushToken, deletePushToken } from "../lib/pushTokenApi.ts";
 import { syncPushToken } from "../lib/pushRegistration.ts";
 import type { Session } from "../../../shared/infra/ownerSessionService.ts";
 
 // Push-token plumbing behind the S9 decision (pushRegistration.ts): the Expo
 // token from the device, and the sender that upserts it into the owner API's
-// push_tokens (user_id, expo_token, platform) for the signed-in owner.
+// push_tokens (user_id, expo_token, platform) for the signed-in owner, and
+// deletes it again on sign-out so a shared phone keeps no other business's pushes.
 export type PushTokenSender = {
   sendToken: (expoToken: string, platform: "ios" | "android") => Promise<void>;
+  deleteToken: (expoToken: string) => Promise<void>;
 };
 
 export type PushTokenSenderDeps = {
@@ -30,8 +33,10 @@ export async function requestExpoPushToken(): Promise<string | null> {
 
 export function createPushTokenSender(deps: PushTokenSenderDeps): PushTokenSender {
   const push = deps.push ?? fetch;
+  const api = { ...deps, push };
   return {
-    sendToken: (expoToken, platform) => postPushToken({ ...deps, push }, expoToken, platform),
+    sendToken: (expoToken, platform) => postPushToken(api, expoToken, platform),
+    deleteToken: (expoToken) => deletePushToken(api, expoToken),
   };
 }
 
@@ -66,16 +71,3 @@ export async function registerPushToken(options: {
   });
 }
 
-async function postPushToken(
-  deps: { baseUrl: string; getSessionToken: () => Promise<string>; push: typeof fetch },
-  expoToken: string,
-  platform: "ios" | "android",
-): Promise<void> {
-  const sessionToken = await deps.getSessionToken();
-  const response = await deps.push(`${deps.baseUrl}/v1/owner/push-tokens`, {
-    method: "POST",
-    headers: { authorization: `Bearer ${sessionToken}`, "content-type": "application/json" },
-    body: JSON.stringify({ expoToken, platform }),
-  });
-  if (!response.ok) throw new Error(`Push token answered ${response.status}`);
-}

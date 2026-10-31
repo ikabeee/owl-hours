@@ -10,6 +10,9 @@ import { unwrap } from "./db-result.ts";
 
 // POST a single message or an array of up to 100 messages; no auth.
 export const EXPO_PUSH_URL = "https://exp.host/--/api/v2/push/send";
+// A hanging Expo call must not hold "Connect me": the push aborts after a few
+// seconds, and the timeout counts as a failure (the offer stands).
+export const EXPO_PUSH_TIMEOUT_MS = 5_000;
 // Android channel id the app registers for urgent requests (S4); Expo routes by id, not by the "Urgent requests" display name.
 export const REQUEST_CHANNEL_ID = "urgent-requests";
 // Notification category the app registers with its Open/Decline actions.
@@ -89,6 +92,7 @@ export async function sendOfferPush(
   store: PushTokenStore,
   push: typeof fetch,
   input: { businessId: string; notification: BuiltRequestPush },
+  options?: { timeoutMs?: number } | undefined,
 ): Promise<PushSummary> {
   const tokens = await store.listTokens(input.businessId);
   const summary: PushSummary = { sent: 0, failed: 0, removed: [] };
@@ -101,6 +105,7 @@ export async function sendOfferPush(
       method: "POST",
       headers: { "content-type": "application/json", accept: "application/json", "accept-encoding": "gzip, deflate" },
       body: JSON.stringify(tokens.map((token) => toExpoMessage(token.expoToken, input.notification))),
+      signal: AbortSignal.timeout(options?.timeoutMs ?? EXPO_PUSH_TIMEOUT_MS),
     });
     if (!response.ok) {
       throw new Error(`expo push failed with status ${response.status}`);

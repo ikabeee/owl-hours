@@ -4,7 +4,7 @@
 // there are no tools that search other businesses or message anyone.
 import { z } from "zod";
 import type { ChatMessage, ChatChoice, ChatRequest } from "@owl-hours/meta-models";
-import type { ZukkiRepository } from "../db/repository.ts";
+import type { PriceRuleRow, ZukkiRepository } from "../db/repository.ts";
 import { runAgent } from "./run-agent.ts";
 import { defineTool, type AgentTool } from "./tools.ts";
 
@@ -18,7 +18,11 @@ export const TEST_ZUKKI_SYSTEM_PROMPT = [
 
 export const MAX_TEST_QUESTION_LENGTH = 1000;
 
-export function createTestZukkiTools(tenantId: string, repo: Pick<ZukkiRepository, "getBusinessProfile" | "getPriceRules">): AgentTool[] {
+export function createTestZukkiTools(
+  tenantId: string,
+  repo: Pick<ZukkiRepository, "getBusinessProfile" | "getPriceRules">,
+  onPriceRules?: ((rules: PriceRuleRow[]) => void) | undefined,
+): AgentTool[] {
   return [
     defineTool({
       name: "get_business_profile",
@@ -39,7 +43,9 @@ export function createTestZukkiTools(tenantId: string, repo: Pick<ZukkiRepositor
       run: async ({ item }) => {
         const rules = await repo.getPriceRules(tenantId);
         const needle = item?.toLowerCase();
-        return needle ? rules.filter((rule) => rule.item.toLowerCase().includes(needle)) : rules;
+        const returned = needle ? rules.filter((rule) => rule.item.toLowerCase().includes(needle)) : rules;
+        onPriceRules?.(returned);
+        return returned;
       },
     }),
   ];
@@ -64,19 +70,16 @@ export async function askTestZukki(input: TestZukkiInput): Promise<{ reply: stri
     ...(input.history ?? []).slice(-10),
     { role: "user", content: question },
   ];
+  // Sources are what the price tool RETURNED to the model, not what the store
+  // holds: a filtered call contributes only its matching rules.
   const seen: string[] = [];
-  const recording: typeof input.repo = {
-    getBusinessProfile: (tenantId) => input.repo.getBusinessProfile(tenantId),
-    getPriceRules: async (tenantId) => {
-      const rules = await input.repo.getPriceRules(tenantId);
-      for (const rule of rules) {
-        if (!seen.includes(rule.item)) {
-          seen.push(rule.item);
-        }
+  const tools = createTestZukkiTools(input.tenantId, input.repo, (returned) => {
+    for (const rule of returned) {
+      if (!seen.includes(rule.item)) {
+        seen.push(rule.item);
       }
-      return rules;
-    },
-  };
-  const { reply } = await runAgent({ chat: input.chat, tools: createTestZukkiTools(input.tenantId, recording), messages });
+    }
+  });
+  const { reply } = await runAgent({ chat: input.chat, tools, messages });
   return { reply, sources: seen };
 }
