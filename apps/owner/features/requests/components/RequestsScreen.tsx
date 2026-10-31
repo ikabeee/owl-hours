@@ -117,7 +117,7 @@ function OfferUrgency(props: { card: WaitingRequestCard }) {
   return (
     <HStack gap={1} align="center">
       <StatusDot variant="error" label={requestsListCopys.urgent} />
-      <Text type="supporting">· {props.card.distanceText}</Text>
+      <Text type="supporting">{`${requestsListCopys.urgent} · ${props.card.distanceText}`}</Text>
     </HStack>
   );
 }

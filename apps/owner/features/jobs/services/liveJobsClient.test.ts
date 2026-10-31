@@ -121,7 +121,8 @@ describe("live jobs client: reading", () => {
     const suggested = { ...proposedJob, total: { min: 80, max: 110 } };
     const { client } = liveClient({ "GET /jobs": { status: 200, data: [suggested] } });
 
-    const [job] = await client.listJobs();
+    const job = await client.findJobByConversationId("c2");
+    assert.ok(job);
     assert.equal(job.status, "quoted");
     assert.equal(job.address, undefined);
     assert.equal(job.approvedAt, undefined);
@@ -137,7 +138,8 @@ describe("live jobs client: reading", () => {
   it("seeds a zero range when the job has no suggested range; the owner fills the amounts in", async () => {
     const { client } = liveClient({ "GET /jobs": { status: 200, data: [proposedJob] } });
 
-    const [job] = await client.listJobs();
+    const job = await client.findJobByConversationId("c2");
+    assert.ok(job);
     assert.deepEqual(job.quote.lines, [{ label: "Leaking toilet", amount: { min: 0, max: 0 } }]);
     assert.deepEqual(job.quote.total, { min: 0, max: 0 });
   });
@@ -146,7 +148,8 @@ describe("live jobs client: reading", () => {
     const { api } = fakeApi({ "GET /jobs": { status: 200, data: [proposedJob] } });
     const client = createLiveJobsClient(api, { now: () => new Date("2026-10-28T00:15:00-05:00") });
 
-    const [job] = await client.listJobs();
+    const job = await client.findJobByConversationId("c2");
+    assert.ok(job);
     assert.deepEqual(job.quote.arrival, { from: "12:45 AM", to: "1:45 AM" });
   });
 
