@@ -358,3 +358,22 @@ describe("respond: failures", () => {
     assert.match(queued.at(-1)?.message.body ?? "", /something went wrong on my side/);
   });
 });
+
+describe("respond: need picked from the category list", () => {
+  it("saves the title and summary from the description, keeping the chosen category and urgency", async () => {
+    const { deps, needs } = setup({
+      facts: { category: "plumbing", urgency: "now" },
+      understanding: { category: "plumbing", urgent: false, title: "Kitchen sink leaking", summary: "Leak under the cabinet, water on the floor." },
+    });
+    await respond(deps, ctx(), text("My kitchen sink is leaking under the cabinet"));
+    assert.deepEqual(needs, [
+      { category: "plumbing", urgency: "now", title: "Kitchen sink leaking", summary: "Leak under the cabinet, water on the floor." },
+    ]);
+  });
+
+  it("saves nothing when the description gives no title", async () => {
+    const { deps, needs } = setup({ facts: { category: "plumbing", urgency: "now" }, understanding: { category: "plumbing" } });
+    await respond(deps, ctx(), text("help"));
+    assert.deepEqual(needs, []);
+  });
+});
