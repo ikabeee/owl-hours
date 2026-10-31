@@ -58,7 +58,7 @@ test('owner change discards pending mutations and clears previous owner data imm
   const auth = {
     restore: async () => ({access_token:'A',user:{id:'owner-a',email:'a@example.test'}}),
     subscribe: (callback: typeof authChanged) => { authChanged=callback;return()=>{}; },
-    getAccessToken: async () => 'token', signIn:async()=>{},signOut:async()=>{},
+    getAccessToken: async () => 'token', sendCode:async()=>false,verifyCode:async()=>false,signOut:async()=>{},
   };
   const controller=createStoryPackController({mode:'live',auth,service});
   await controller.start();

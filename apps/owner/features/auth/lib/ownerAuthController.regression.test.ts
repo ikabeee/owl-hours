@@ -29,7 +29,8 @@ it('R1 keeps the subscription session when a stale restore resolves afterwards',
   const listeners = new Set<(session: Session | null) => void>();
   const runtime = {
     restore: (): Promise<Session | null> => restoreGate.promise,
-    signIn: async (): Promise<void> => undefined,
+    sendCode: async (): Promise<boolean> => true,
+    verifyCode: async (): Promise<boolean> => true,
     signOut: async (): Promise<void> => undefined,
     subscribe: (next: (session: Session | null) => void): (() => void) => {
       listeners.add(next);
@@ -50,26 +51,11 @@ it('R1 keeps the subscription session when a stale restore resolves afterwards',
   assert.equal(controller.getState().session, signedIn);
 });
 
-it('R2 surfaces a whitelisted sign-in failure as-is', async () => {
-  const runtime = {
-    restore: async (): Promise<Session | null> => null,
-    signIn: async (): Promise<void> => {
-      throw new Error(authCopys.sessionExpired);
-    },
-    signOut: async (): Promise<void> => undefined,
-    subscribe: (): (() => void) => (): void => undefined,
-  };
-  const controller = createOwnerAuthController(runtime);
-
-  await controller.signIn('owner@example.test');
-
-  assert.equal(controller.getState().error, authCopys.sessionExpired);
-});
-
 it('R2 surfaces a whitelisted sign-out failure as-is when nothing was cleared', async () => {
   const runtime = {
     restore: async (): Promise<Session | null> => ownerSession('owner@example.test'),
-    signIn: async (): Promise<void> => undefined,
+    sendCode: async (): Promise<boolean> => true,
+    verifyCode: async (): Promise<boolean> => true,
     signOut: async (): Promise<void> => {
       throw new Error(authCopys.sessionExpired);
     },
