@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { DEMO_NOW, business } from "../../../shared/data/mock.ts";
-import type { ID, OfferStatus, PossibleFault, RequestOffer } from "../../../shared/data/types.ts";
+import type { DeclineReason, ID, OfferStatus, PossibleFault, RequestOffer } from "../../../shared/data/types.ts";
 import type { AcceptOutcome } from "../lib/acceptOutcome.ts";
 import { acceptWindowSeconds, formatCountdown, secondsLeft } from "../lib/countdown.ts";
 import { requestFaults } from "../lib/requestFaults.ts";
@@ -29,7 +29,7 @@ export type RequestOfferView = {
   maxSeconds: number;
   isExpired: boolean;
   accept: () => Promise<AcceptOutcome>;
-  decline: () => Promise<boolean>;
+  decline: (reason?: DeclineReason) => Promise<boolean>;
 };
 
 // Returns null while the offer loads, or when it does not exist.
@@ -58,8 +58,8 @@ export function useRequestOffer(id: ID, deps?: Partial<RequestOfferDeps>): Reque
     return () => clearInterval(timer);
   }, [clock]);
 
-  async function answer(transition: (id: ID) => Promise<RequestOffer | null>) {
-    const answered = await transition(id);
+  async function answer(transition: () => Promise<RequestOffer | null>) {
+    const answered = await transition();
     if (!answered) return false;
 
     setOffer(answered);
@@ -67,7 +67,7 @@ export function useRequestOffer(id: ID, deps?: Partial<RequestOfferDeps>): Reque
   }
 
   async function acceptAndFindChat(): Promise<AcceptOutcome> {
-    if (!(await answer(service.accept))) return { kind: "not-offered" };
+    if (!(await answer(() => service.accept(id)))) return { kind: "not-offered" };
 
     return { kind: "accepted", chatId: await service.findChat(id) };
   }
@@ -83,7 +83,7 @@ export function useRequestOffer(id: ID, deps?: Partial<RequestOfferDeps>): Reque
     maxSeconds: acceptWindowSeconds(offer.urgent, acceptWindowMin),
     isExpired: remaining === 0,
     accept: acceptAndFindChat,
-    decline: () => answer(service.decline),
+    decline: (reason) => answer(() => service.decline(id, reason)),
   };
 }
 
