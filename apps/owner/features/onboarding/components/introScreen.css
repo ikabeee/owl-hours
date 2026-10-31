@@ -1,0 +1,21 @@
+/* Swipe pager: one slide per viewport, snap-aligned; the dots and buttons follow the index. */
+.zukki-pager-track {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+}
+
+.zukki-pager-track::-webkit-scrollbar {
+  display: none;
+}
+
+.zukki-pager-page {
+  flex: 0 0 100%;
+  min-width: 0;
+  scroll-snap-align: center;
+  display: flex;
+  flex-direction: column;
+}

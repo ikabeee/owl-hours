@@ -220,6 +220,37 @@ it with a new one.
     Website rows do nothing until their screens land.
   - The added price row's label "Name" has no handoff source (operator
     accepted).
+
+## D14 — Onboarding slice and its routes (2026-10-29, T7)
+
+- **Decision:** `features/onboarding` owns the first run, from intro to live.
+  - The routes live in a real folder, `app/onboarding/`
+    (`/onboarding/intro` … `/onboarding/live`, then `/requests`), not in an
+    `(onboarding)` group.
+  - One module-level `demoOnboardingService` backs every step, so data
+    entered on one step reaches the next.
+  - Routes navigate with `resolveNext(route, "next" | "facebook" | "has-account")`.
+  - The demo code is `482910`. An email is valid when the trimmed value holds
+    one "@" with a "." in the domain part; Supabase validates the rest.
+- **Why:** an `(onboarding)` group does not change the URL, so
+  `(onboarding)/business.tsx` would resolve to `/business`, the same URL as
+  the Business tab. The operator's answers are in
+  `odd/tasks/owner-onboarding.md` L2.
+- **Consequences:**
+  - "Allow notifications" is `requestNotificationPermissionStub` until
+    `expo-notifications` is added, which is a dependency decision.
+  - "Link accounts" opens `/content/accounts`, which lands with the content
+    slice.
+  - The auth gate and the entry redirect (`app/_layout.tsx`,
+    `app/index.tsx`) are not wired yet.
+  - `PricesScreen` triggers an Expo CLI 58.1.16 defect: `expo export` fails
+    with `Asset not found: …/__common-<hash>.js` unless
+    `EXPO_NO_BUNDLE_SPLITTING=1` is set. `exportDomComponents.js` renames the
+    DOM chunks to md5 names without updating `metadata.requires`.
+    `expo export:embed` (native release) is not affected. The `build`
+    script sets `EXPO_NO_BUNDLE_SPLITTING=1` (user's decision, 2026-10-30),
+    so each DOM component ships as one unsplit bundle. Drop the variable
+    once an Expo CLI release fixes the rename.
   - Coded by muse (Spark 1.3, effort xhigh) test-first; the operator locked
     the tests and reviewed one cleaner round.
 
@@ -227,14 +258,27 @@ it with a new one.
 
 - Extract app-wide owner authentication into a separate PR. Keep the singleton,
   session contract, and encrypted persistence in `shared/infra`, consumed by the
-  auth routes and live feature services. Auth never imports Story Pack.
-- Use PKCE and a dedicated `/auth/callback`, including native
-  `zukki-owner://auth/callback`. One root provider owns cold/warm URL listeners
-  and foreground refresh; explicit URL exchange is independent of auto-refresh.
+  root provider and live feature services. Auth never imports Story Pack.
+- The owner signs in by emailed 6-digit code through the handoff `OwSignUp` →
+  `OwVerify` screens (user decision "mejor hazlo por email, no tenemos proveedor
+  de sms", 2026-10-30), not an email magic link:
+  `signInWithOtp({ email, options: { shouldCreateUser: true } })` on sign-up,
+  then `verifyOtp({ email, token, type: 'email' })`. The `/auth` routes, the old
+  email screen and the PKCE callback code are removed. Live mode needs the
+  Supabase Email provider with the Magic Link and Confirm sign up templates carrying `{{ .Token }}`
+  (`docs/OWNER-AUTH.md`).
+- The sign-up/verify copy deviates from the handoff because there is no SMS
+  provider: `emailLabel` "Email", `emailHelp` "We'll email you a code to confirm
+  it." and `changeEmail` "Change email" replace the phone wording; every other
+  handoff string stays byte-identical.
+- The root provider owns the session controller and foreground refresh, and
+  injects the emailed-code send/verify into onboarding; demo mode (no Supabase variables)
+  keeps the `DEMO_CODE` fake with the onboarding demo-seed email. In live mode
+  a signed-out owner outside `/onboarding/*` is redirected to `/onboarding/sign-up`.
 - Store oversized native sessions as bounded encrypted SecureStore chunks with
   a write-last manifest. Surface persistence/cleanup failures and remove the
   manifest before sign-out cleanup to prevent resurrection of old credentials.
 - Configure the API's external origin explicitly for TLS termination; do not
   infer trusted browser origins from client-controlled forwarded headers.
-- Hosted allow-lists and real Android sign-in acceptance remain separate from
-  synthetic callback tests and bundle compilation; see `docs/OWNER-AUTH.md`.
+- Hosted Email provider settings and real Android sign-in acceptance remain
+  separate from synthetic tests and bundle compilation; see `docs/OWNER-AUTH.md`.
