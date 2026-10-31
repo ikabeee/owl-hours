@@ -644,12 +644,27 @@ export async function testZukki(
   if (!business) {
     throw new HttpError(404, "not_found", "No business on this account.");
   }
-  const { reply } = await askTestZukki({
+  const { reply, sources } = await askTestZukki({
     tenantId: business.id,
     question: input.question,
     history: input.history,
     chat: deps.chat,
     repo: createSupabaseRepository(deps.serviceDb),
   });
-  return { businessId: business.id, reply };
+  return { businessId: business.id, reply, sources };
+}
+
+// Push tokens ---------------------------------------------------------------
+
+export async function savePushToken(
+  s: OwnerSession,
+  input: { expoToken: string; platform: "ios" | "android" | "web" },
+) {
+  unwrap(
+    await s.db.from("push_tokens").upsert(
+      { user_id: s.userId, expo_token: input.expoToken, platform: input.platform },
+      { onConflict: "user_id,expo_token" },
+    ),
+  );
+  return { expoToken: input.expoToken, platform: input.platform };
 }

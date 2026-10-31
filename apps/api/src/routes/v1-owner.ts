@@ -53,6 +53,12 @@ const testZukkiBody = z
     businessId: z.string().uuid().optional(),
   })
   .strict();
+const pushTokenBody = z
+  .object({
+    expoToken: z.string().regex(/^Expo(nent)?PushToken\[.+\]$/, "must be an Expo push token"),
+    platform: z.enum(["ios", "android", "web"]),
+  })
+  .strict();
 
 export function ownerRoutes(deps: V1Deps): Hono<OwnerEnv> {
   const app = new Hono<OwnerEnv>();
@@ -140,6 +146,11 @@ export function ownerRoutes(deps: V1Deps): Hono<OwnerEnv> {
   app.post("/test-zukki", async (c) => {
     const body = await readJson(c, testZukkiBody);
     return ok(c, await owner.testZukki(c.get("session"), body, deps));
+  });
+
+  app.post("/push-tokens", async (c) => {
+    const body = await readJson(c, pushTokenBody);
+    return ok(c, await owner.savePushToken(c.get("session"), body));
   });
 
   return app;

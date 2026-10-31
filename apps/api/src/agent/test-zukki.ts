@@ -54,7 +54,7 @@ export type TestZukkiInput = {
   repo: Pick<ZukkiRepository, "getBusinessProfile" | "getPriceRules">;
 };
 
-export async function askTestZukki(input: TestZukkiInput): Promise<{ reply: string }> {
+export async function askTestZukki(input: TestZukkiInput): Promise<{ reply: string; sources: string[] }> {
   const question = input.question.trim();
   if (!question || question.length > MAX_TEST_QUESTION_LENGTH) {
     throw new Error(`question must be 1-${MAX_TEST_QUESTION_LENGTH} characters`);
@@ -64,5 +64,19 @@ export async function askTestZukki(input: TestZukkiInput): Promise<{ reply: stri
     ...(input.history ?? []).slice(-10),
     { role: "user", content: question },
   ];
-  return runAgent({ chat: input.chat, tools: createTestZukkiTools(input.tenantId, input.repo), messages });
+  const seen: string[] = [];
+  const recording: typeof input.repo = {
+    getBusinessProfile: (tenantId) => input.repo.getBusinessProfile(tenantId),
+    getPriceRules: async (tenantId) => {
+      const rules = await input.repo.getPriceRules(tenantId);
+      for (const rule of rules) {
+        if (!seen.includes(rule.item)) {
+          seen.push(rule.item);
+        }
+      }
+      return rules;
+    },
+  };
+  const { reply } = await runAgent({ chat: input.chat, tools: createTestZukkiTools(input.tenantId, recording), messages });
+  return { reply, sources: seen };
 }
