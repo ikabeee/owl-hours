@@ -57,6 +57,7 @@ export type RequestOffer = {
   offeredAt: ISODate;
   expiresAt: ISODate;               // countdown is computed from this, never stored client-side
   status: OfferStatus;
+  declineReason?: DeclineReason;    // set when the owner declines with one of the decline-sheet reasons
 };
 
 // ---------- chats ----------

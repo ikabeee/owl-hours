@@ -1,13 +1,14 @@
-// Native wrapper: owns data, navigation, haptics and safe areas. The DOM screen only draws.
+// Native wrapper: owns data, navigation, haptics and safe areas. The DOM screen draws.
 import { useLocalSearchParams, router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import RequestScreen from '../../features/requests/components/RequestScreen';
 import { destinationAfterAccept } from '../../features/requests/lib/acceptOutcome';
+import { shouldOpenDeclineSheet } from '../../features/requests/lib/declineSheet';
 import { useRequestOffer } from '../../features/requests/hooks/useRequestOffer';
 
 export default function RequestRoute() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, decline } = useLocalSearchParams<{ id: string; decline?: string | string[] }>();
   const insets = useSafeAreaInsets();
   const request = useRequestOffer(id);
   if (!request) return null;
@@ -20,6 +21,7 @@ export default function RequestRoute() {
       maxSeconds={request.maxSeconds}
       isExpired={request.isExpired}
       insets={{ top: insets.top, bottom: insets.bottom }}
+      startDeclineOpen={shouldOpenDeclineSheet(decline)}
       onAccept={async () => {
         const destination = destinationAfterAccept(await request.accept());
         if (destination.kind === 'stay') return;
@@ -27,8 +29,8 @@ export default function RequestRoute() {
         if (destination.kind === 'chat') router.replace({ pathname: '/chat/[id]', params: { id: destination.chatId } });
         else router.replace('/chats');
       }}
-      onDecline={async () => {
-        if (!(await request.decline())) return;
+      onDecline={async (reason) => {
+        if (!(await request.decline(reason))) return;
         await Haptics.selectionAsync();
         router.back();
       }}
