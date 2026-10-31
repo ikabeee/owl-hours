@@ -26,6 +26,10 @@ const copys = {
   // polish states
   polishing: "Polishing…",
   polishFailed: "Couldn't polish. Send yours or try again.",
+  // the Chats list
+  chatsTitle: "Chats",
+  chatsEmpty: "No chats yet. Accept a request to start one.",
+  noMessagesYet: "No messages yet",
   // error state, HANDOFF-RN-UI.md section 8 "Every screen also needs"
   somethingWentWrong: "Something went wrong.",
   tryAgain: "Try again",

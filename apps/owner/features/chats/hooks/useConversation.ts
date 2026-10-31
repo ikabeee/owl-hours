@@ -2,6 +2,8 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 import type { ID } from "../../../shared/data/types.ts";
 import type { ChatView, ConversationSnapshot, SendOutcome } from "../lib/chatView.ts";
 import type { PolishChoice } from "../lib/ownerDelivery.ts";
+import { liveOwnerApi } from "../../../lib/liveOwnerApi";
+import { createLiveConversationsService } from "../services/conversationsLive.ts";
 import { createConversationsService, createFakeConversationsClient } from "../services/conversationsService.ts";
 import type { ConversationsService } from "../services/conversationsService.ts";
 import { createConversationSession } from "./conversationSession.ts";
@@ -27,7 +29,7 @@ const NO_SESSION = { subscribe: () => () => {}, getSnapshot: () => LOADING };
 
 // The polish switch is session state, default off, until Settings can provide the default.
 export function useConversation(id: ID, deps?: Partial<ConversationDeps>): Conversation {
-  const [defaults] = useState(createDemoDeps);
+  const [defaults] = useState(createDefaultDeps);
   const session = useSession(deps?.service ?? defaults.service, id);
   const store = session ?? NO_SESSION;
   const snapshot = useSyncExternalStore(store.subscribe, store.getSnapshot);
@@ -63,6 +65,11 @@ function toConversation(session: ConversationSession, snapshot: ConversationSnap
       setPolishEnabled: async (enabled) => session.setPolishEnabled(enabled),
     },
   };
+}
+
+function createDefaultDeps(): ConversationDeps {
+  const api = liveOwnerApi();
+  return api ? { service: createLiveConversationsService(api) } : createDemoDeps();
 }
 
 function createDemoDeps(): ConversationDeps {

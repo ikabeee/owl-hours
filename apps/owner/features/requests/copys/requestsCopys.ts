@@ -18,4 +18,11 @@ export const requestsCopys = {
   possibleFaultsHeading: "Possible faults",
   likelihoodLikely: "Likely",
   likelihoodPossible: "Possible",
+  // the Requests inbox
+  inboxTitle: "Requests",
+  inboxEmpty: "No requests yet. Zukki sends new ones here.",
+  statusWaiting: "Waiting for you",
+  statusAccepted: "Accepted",
+  statusDeclined: "Declined",
+  statusExpired: "Expired",
 } as const;

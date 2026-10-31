@@ -1,6 +1,13 @@
 import { useState } from "react";
-import { createFakeTestZukkiClient, createTestZukkiSession } from "../services/testZukkiService.ts";
+import { liveOwnerAuth } from "../../../lib/liveOwnerApi";
+import { createFakeTestZukkiClient, createLiveTestZukkiClient, createTestZukkiSession } from "../services/testZukkiService.ts";
 import type { TestZukkiClient, TestZukkiTurn } from "../services/testZukkiService.ts";
+
+// Live mode asks the owner API; the demo keeps the two design exchanges.
+function defaultTestZukkiClient(): TestZukkiClient {
+  const auth = liveOwnerAuth();
+  return auth ? createLiveTestZukkiClient({ ...auth, push: (input, init) => fetch(input, init) }) : createFakeTestZukkiClient();
+}
 
 export type TestZukkiDeps = { client: TestZukkiClient };
 
@@ -14,7 +21,7 @@ export type TestZukkiView = {
 };
 
 export function useTestZukki(deps?: Partial<TestZukkiDeps>): TestZukkiView {
-  const [session] = useState(() => createTestZukkiSession(deps?.client ?? createFakeTestZukkiClient()));
+  const [session] = useState(() => createTestZukkiSession(deps?.client ?? defaultTestZukkiClient()));
   const [snapshot, setSnapshot] = useState(session.getSnapshot);
 
   async function sendQuestion(question: string): Promise<boolean> {

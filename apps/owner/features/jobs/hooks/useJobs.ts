@@ -9,7 +9,7 @@ import { scheduledJobLine } from "../lib/scheduledJobLine.ts";
 import { segmentTabs } from "../lib/segmentTabs.ts";
 import type { SegmentTab } from "../lib/segmentTabs.ts";
 import type { JobsService } from "../services/jobsService.ts";
-import { sharedDemoJobsService, sharedDemoNow } from "./demoJobsService.ts";
+import { defaultJobsNow, defaultJobsService } from "./defaultJobsService.ts";
 
 export type JobsDeps = { service: JobsService; now: () => ISODate };
 
@@ -90,5 +90,5 @@ function cardsIn(jobs: Job[], segment: JobSegment, now: ISODate): JobCardView[] 
 }
 
 function createDemoDeps(): JobsDeps {
-  return { service: sharedDemoJobsService(), now: sharedDemoNow };
+  return { service: defaultJobsService(), now: defaultJobsNow };
 }

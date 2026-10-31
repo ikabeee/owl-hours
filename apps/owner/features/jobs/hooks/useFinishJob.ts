@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import type { ID, Job, MoneyRange, QuoteLine } from "../../../shared/data/types.ts";
 import { firstName } from "../../../shared/lib/firstName.ts";
 import type { FinishJobInput, JobsService } from "../services/jobsService.ts";
-import { sharedDemoJobsService } from "./demoJobsService.ts";
+import { defaultJobsService } from "./defaultJobsService.ts";
 
 export type FinishJobDeps = { service: JobsService };
 
@@ -65,5 +65,5 @@ async function finishJob(service: JobsService, id: ID, input: FinishJobInput): P
 }
 
 function createDemoDeps(): FinishJobDeps {
-  return { service: sharedDemoJobsService() };
+  return { service: defaultJobsService() };
 }

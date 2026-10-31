@@ -4,6 +4,8 @@ import type { DeclineReason, ID, OfferStatus, PossibleFault, RequestOffer } from
 import type { AcceptOutcome } from "../lib/acceptOutcome.ts";
 import { acceptWindowSeconds, formatCountdown, secondsLeft } from "../lib/countdown.ts";
 import { requestFaults } from "../lib/requestFaults.ts";
+import { liveOwnerApi } from "../../../lib/liveOwnerApi";
+import { createLiveOffersService } from "../services/offersLive.ts";
 import { createFakeOffersClient, createOffersService } from "../services/offersService.ts";
 import type { OffersService } from "../services/offersService.ts";
 
@@ -35,7 +37,7 @@ export type RequestOfferView = {
 // Returns null while the offer loads, or when it does not exist.
 // Pass stable deps (module constants or memoized): changing them restarts the clock.
 export function useRequestOffer(id: ID, deps?: Partial<RequestOfferDeps>): RequestOfferView | null {
-  const [defaults] = useState(createDemoDeps);
+  const [defaults] = useState(createDefaultDeps);
   const service = deps?.service ?? defaults.service;
   const clock = deps?.clock ?? defaults.clock;
   const acceptWindowMin = deps?.acceptWindowMin ?? defaults.acceptWindowMin;
@@ -85,6 +87,13 @@ export function useRequestOffer(id: ID, deps?: Partial<RequestOfferDeps>): Reque
     accept: acceptAndFindChat,
     decline: (reason) => answer(() => service.decline(id, reason)),
   };
+}
+
+// Live mode reads the owner API on the wall clock; the demo keeps its seed and clock.
+function createDefaultDeps(): RequestOfferDeps {
+  const api = liveOwnerApi();
+  if (!api) return createDemoDeps();
+  return { service: createLiveOffersService(api), clock: () => new Date().toISOString(), acceptWindowMin: business.acceptWindowMin };
 }
 
 function createDemoDeps(): RequestOfferDeps {

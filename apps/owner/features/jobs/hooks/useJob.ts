@@ -3,7 +3,7 @@ import type { ID, Job } from "../../../shared/data/types.ts";
 import { buildJobView } from "../lib/jobView.ts";
 import type { JobView } from "../lib/jobView.ts";
 import type { JobsService } from "../services/jobsService.ts";
-import { sharedDemoJobsService } from "./demoJobsService.ts";
+import { defaultJobsService } from "./defaultJobsService.ts";
 
 export type JobDeps = { service: JobsService };
 
@@ -60,5 +60,5 @@ async function moveToNextStatus(
 }
 
 function createDemoDeps(): JobDeps {
-  return { service: sharedDemoJobsService() };
+  return { service: defaultJobsService() };
 }
