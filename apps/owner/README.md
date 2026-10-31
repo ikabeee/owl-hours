@@ -17,6 +17,7 @@ Theme: Astryx neutral, Figtree, accent `#0074e2` (tokens in `design/tokens.json`
 
 ## Owner sign-in
 
-`/auth` is the app-wide existing-owner magic-link screen. Set the public Supabase
-variables in `.env.example`; follow [owner authentication](../../docs/OWNER-AUTH.md)
-for native redirects, persistence, API origins, and the live acceptance checklist.
+The owner signs in on the onboarding sign-up and verify screens with an emailed 6-digit code.
+Set the public Supabase variables in `.env.example` (without them the app runs the
+demo); follow [owner authentication](../../docs/OWNER-AUTH.md) for the Email
+provider setup, persistence, API origins, and the live acceptance checklist.
