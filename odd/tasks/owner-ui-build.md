@@ -537,3 +537,7 @@ slice, delegated with test-first discipline.
   - Decision D13. Lock removed. Next: T6 is already on main (#24, #25), so
     the next open item is the L37 gap (error state for a rejected load).
 
+- L49 (user, 2026-10-30): "Abre pr". PR #57 (`feat/owner-quote-message` ->
+  `feat/owner-jobs-list`, stacked on #30; 788dade + f371561 + docs) with the
+  before (flow 08) and after (flow 11) screenshots inline. After #30 merges,
+  retarget #57 to `main`. Next: the L37 gap (error state for a rejected load).
