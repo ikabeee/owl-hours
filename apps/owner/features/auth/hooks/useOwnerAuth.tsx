@@ -1,32 +1,38 @@
+// The app's one owner session: the root provider restores it, keeps it refreshed in the
+// foreground, and hands the emailed-code send/verify to onboarding. Demo mode has no runtime.
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { getOwnerAuthRuntime, mountOwnerAuth } from '../services/ownerAuthRuntime';
+import { getOwnerAuthRuntime, mountOwnerAuth, type OwnerAuthRuntime } from '../services/ownerAuthRuntime';
 import type { Session } from '../../../shared/infra/ownerSessionService.ts';
 import { createOwnerAuthController } from '../lib/ownerAuthController.ts';
 
-type OwnerAuthRuntime = NonNullable<ReturnType<typeof getOwnerAuthRuntime>>;
+// The emailed-code send/verify; null in demo mode, where onboarding keeps its fake.
+export type OwnerCodeAuth = {
+  sendCode(email: string): Promise<boolean>;
+  verifyCode(email: string, code: string): Promise<boolean>;
+};
 
-type AuthState = {
+export type OwnerAuthState = {
+  configured: boolean;
   session: Session | null;
   loading: boolean;
   error: string | null;
-  notice: string | null;
-  signIn(email: string): Promise<void>;
+  codeAuth: OwnerCodeAuth | null;
   signOut(): Promise<void>;
-  configured: boolean;
 };
 
-const AuthContext = createContext<AuthState | null>(null);
+const AuthContext = createContext<OwnerAuthState | null>(null);
 
-export function OwnerAuthProvider({ children, runtime }: { children: ReactNode; runtime?: OwnerAuthRuntime | null }) {
+type ProviderProps = { children: ReactNode; runtime?: OwnerAuthRuntime | null };
+
+export function OwnerAuthProvider({ children, runtime }: ProviderProps) {
   const resolvedRuntime = useMemo(() => runtime ?? getOwnerAuthRuntime(), [runtime]);
   const controller = useMemo(() => createOwnerAuthController(resolvedRuntime), [resolvedRuntime]);
   const [snapshot, setSnapshot] = useState(() => controller.getState());
+  const codeAuth = useMemo(() => codeAuthOf(resolvedRuntime, controller), [resolvedRuntime, controller]);
 
   useEffect(() => {
     setSnapshot(controller.getState());
-    return controller.subscribe(() => {
-      setSnapshot(controller.getState());
-    });
+    return controller.subscribe(() => setSnapshot(controller.getState()));
   }, [controller]);
 
   useEffect(() => {
@@ -36,36 +42,28 @@ export function OwnerAuthProvider({ children, runtime }: { children: ReactNode; 
   }, [controller]);
 
   useEffect(() => {
-    if (resolvedRuntime === null) {
-      return;
-    }
-    return mountOwnerAuth(resolvedRuntime, (failure) => {
-      controller.reportError(failure);
-    });
-  }, [resolvedRuntime, controller]);
+    if (resolvedRuntime === null) return;
+    return mountOwnerAuth(resolvedRuntime);
+  }, [resolvedRuntime]);
 
-  async function signIn(email: string): Promise<void> {
-    await controller.signIn(email);
-  }
-
-  async function signOut(): Promise<void> {
-    await controller.signOut();
-  }
-
-  const value: AuthState = {
+  const value: OwnerAuthState = {
+    configured: resolvedRuntime !== null,
     session: snapshot.session,
     loading: snapshot.loading,
     error: snapshot.error,
-    notice: snapshot.notice,
-    signIn,
-    signOut,
-    configured: resolvedRuntime !== null,
+    codeAuth,
+    signOut: controller.signOut,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
-export function useOwnerAuth() {
+function codeAuthOf(runtime: OwnerAuthRuntime | null, controller: OwnerCodeAuth): OwnerCodeAuth | null {
+  if (runtime === null) return null;
+  return { sendCode: controller.sendCode, verifyCode: controller.verifyCode };
+}
+
+export function useOwnerAuth(): OwnerAuthState {
   const value = useContext(AuthContext);
   if (!value) {
     throw new Error('OwnerAuthProvider is required.');
