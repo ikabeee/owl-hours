@@ -1,4 +1,6 @@
-import { OWNER_TEXT, POLISHED_TEXT, anaJob, anaMessages, conversations as seedConversations, offers as seedOffers } from "../../../shared/data/mock.ts";
+import { OWNER_TEXT, POLISHED_TEXT, anaJob, business, conversations as seedConversations, offers as seedOffers } from "../../../shared/data/mock.ts";
+import { createThreadStore } from "../../../shared/data/threadStore.ts";
+import type { ThreadStore } from "../../../shared/data/threadStore.ts";
 import type { Conversation, ID, ISODate, Message, MoneyRange, PolishPreview } from "../../../shared/data/types.ts";
 import { buildAsWrittenMessage, buildChosenMessage } from "../lib/ownerDelivery.ts";
 import type { MessageStamp, PolishChoice } from "../lib/ownerDelivery.ts";
@@ -6,6 +8,7 @@ import type { MessageStamp, PolishChoice } from "../lib/ownerDelivery.ts";
 export type ConversationsClient = {
   findConversation(id: ID): Promise<Conversation | null>;
   findQuoteSuggestion(conversationId: ID): Promise<QuoteSuggestion | null>;
+  findBusinessName(): Promise<string>;
   listMessages(conversationId: ID): Promise<Message[]>;
   saveMessage(conversationId: ID, message: Message): Promise<void>;
   polish(text: string): Promise<PolishPreview>;
@@ -25,6 +28,7 @@ export type SendResult = { sent: Message } | PolishPreview;
 export type ConversationsService = {
   getConversation(id: ID): Promise<Conversation | null>;
   getQuoteSuggestion(conversationId: ID): Promise<QuoteSuggestion | null>;
+  getBusinessName(): Promise<string>; // the name in the quote bubble's header
   getMessages(conversationId: ID): Promise<Message[] | null>;
   sendMessage(conversationId: ID, text: string, options: { polish: boolean }): Promise<SendResult | null>;
   sendPolishChoice(conversationId: ID, preview: PolishPreview, choice: PolishChoice): Promise<Message | null>;
@@ -52,6 +56,8 @@ export function createConversationsService(
 
     getQuoteSuggestion: (conversationId) => client.findQuoteSuggestion(conversationId),
 
+    getBusinessName: () => client.findBusinessName(),
+
     getMessages: async (conversationId) =>
       (await hasConversation(conversationId)) ? client.listMessages(conversationId) : null,
 
@@ -70,19 +76,20 @@ export function createConversationsService(
   };
 }
 
-// In-memory client seeded with private copies of the demo conversations and Ana's thread.
-export function createFakeConversationsClient(): ConversationsClient {
+// In-memory client seeded with private copies of the demo conversations. Messages live in a thread
+// store: independent when omitted, or the shared one when the demo meets the jobs side.
+export type FakeConversationsClientDeps = { threads: ThreadStore };
+
+export function createFakeConversationsClient(deps: Partial<FakeConversationsClientDeps> = {}): ConversationsClient {
+  const threads = deps.threads ?? createThreadStore();
   const conversationsById = new Map(structuredClone(seedConversations).map((conversation) => [conversation.id, conversation]));
-  const threadsById = new Map<ID, Message[]>([["c_ana", structuredClone([...anaMessages])]]);
 
   return {
     findConversation: async (id) => structuredClone(conversationsById.get(id) ?? null),
-    listMessages: async (conversationId) => structuredClone(threadsById.get(conversationId) ?? []),
+    listMessages: async (conversationId) => threads.messages(conversationId),
     findQuoteSuggestion: async (conversationId) => findDemoQuoteSuggestion(conversationsById.get(conversationId)),
-    saveMessage: async (conversationId, message) => {
-      const thread = threadsById.get(conversationId) ?? [];
-      threadsById.set(conversationId, [...thread, structuredClone(message)]);
-    },
+    findBusinessName: async () => business.name,
+    saveMessage: async (conversationId, message) => threads.append(conversationId, message),
     polish: async (text) => ({
       original: text,
       polished: text === OWNER_TEXT ? POLISHED_TEXT : text,

@@ -386,6 +386,101 @@ here → Finish → Mark as done → Ana under Done.
 **Report:** RED output first; after GREEN the gates with observed results,
 e2e results, and a one-line diff summary per file. Do not commit.
 
+## T5.2 assignment (Claude Sonnet 5.5 subagent, effort high): the quote message in the chat
+
+**Spec.** HANDOFF-RN-UI §7 flow "Chat": "Review" on the suggestion →
+`chat/[id]/quote` → "Send quote" → "back to the chat with the quote
+message". No design HTML draws that message. User decision (L45): the
+message mirrors what the customer receives on WhatsApp, the
+`handoff-ui/whatsapp/payloads/13-quote.json` interactive message, so no copy
+is invented:
+
+- header `"Quote from {{business_name}}"` → "Quote from Northside Plumbing"
+  (`business.name` in `shared/data/mock.ts`);
+- body `"{{technician}} · arrives {{arrival_window}}"`, a blank line, one
+  `"<label>: <amount>"` line per quote line, `"*Estimated total:
+  {{total_range}}*"` (WhatsApp bold: render it bold, never the asterisks), a
+  blank line, `"You pay {{technician_first_name}} after the repair."`. Demo:
+  "Mario R. · arrives 12:55–1:25 AM", "Visit: $45", "Night fee: $25", "Fill
+  valve repair: $60–90", "Estimated total: $130–160", "You pay Mario after
+  the repair.";
+- footer `"Nothing is booked until you approve"`;
+- the two reply buttons `"Approve visit"` and `"Ask a question"` drawn as
+  non-interactive labels (the owner cannot press the customer's buttons);
+- an outgoing (owner) bubble with its time, "12:07 AM" in the demo.
+
+Operator decisions (do not reopen):
+- The store shared by chats and jobs lives in `apps/owner/shared/data/`
+  (two real callers): a module-level demo thread store holding the
+  conversations' messages, with a reset for tests, like
+  `resetSharedDemoJobsService`. The chats fake client reads and writes it
+  when it is the shared demo; `createFakeConversationsClient()` keeps
+  returning independent clients.
+- The jobs side appends the quote message when a quote is sent, the way the
+  backend will post it to the thread: the demo jobs client writes it into
+  the shared thread store on `quoted`. No feature imports another; both
+  depend only on `shared/`.
+- `Message` gains an optional, additive `quote?: Quote`; the message's
+  `text` holds the body text (so a chat list preview has something to
+  read). Everything else in `shared/data/types.ts` and `mock.ts` stays
+  byte-identical.
+- The body's text building is a pure function. `arrivalWindowText` moves
+  from `features/jobs/lib/` to `shared/lib/` (now two callers), with its
+  tests; money ranges reuse `shared/lib/moneyText.ts`.
+- The chat route reloads its conversation when it regains focus
+  (`useFocusEffect` in `app/chat/[id].tsx`, `reload()` on the hook), the
+  D22 pattern, so coming back from the modal shows the new message.
+- The copy lives in `features/chats/copys/`, quoted verbatim from
+  `13-quote.json`. `13-quote.json` stays byte-identical: it retires only
+  when `packages/whatsapp` sends it.
+
+Out of T5.2: the real WhatsApp send, Ana pressing a button, the chat list
+preview line, an error state for a rejected load (L37 gap).
+
+**Edit surface.** `apps/owner/features/chats/**`,
+`apps/owner/features/jobs/{hooks,services,lib}/**` (only the shared store
+wiring and the `arrivalWindowText` move), `apps/owner/shared/data/types.ts`
+and `mock.ts` additively, new files in `apps/owner/shared/data/` and
+`apps/owner/shared/lib/`; in GREEN only, `apps/owner/app/chat/[id].tsx` and
+a new Maestro flow under `apps/owner/.maestro/`. Do not touch other
+features, `handoff-ui/`, or locked tests; report gaps instead.
+
+**Write these tests first, show them failing (RED), then stop for review:**
+
+1. Pure (`features/chats/lib/*.test.ts`, `shared/lib/*.test.ts`): the quote
+   message body built from `anaJob.quote` equals the demo text above, line
+   by line; one line per quote line in order; a single-amount line reads
+   "$45", a range "$60–90"; the arrival line uses "12:55–1:25 AM"; the
+   first-name line reads "You pay Mario after the repair."; the moved
+   `arrivalWindowText` keeps its current behavior.
+2. Shared store (no React): a message appended through one consumer is
+   visible to the next read from another; reset returns to the seed;
+   independent fake clients stay independent.
+3. Cross-feature, through the public services: sending Ana's quote with the
+   shared demo jobs service makes the shared demo conversations service
+   return Ana's thread with one more owner message carrying the quote, at
+   the jobs demo clock's time; a refused `sendQuote` (invalid quote,
+   unknown conversation) appends nothing; sending twice appends two.
+4. `features/chats/copys/*.test.ts`: every new key exists and is non-empty;
+   verbatim: `"Quote from"`, `"Nothing is booked until you approve"`,
+   `"Approve visit"`, `"Ask a question"`, `"Estimated total"`, `"You pay"`,
+   `"after the repair."`.
+5. One test per touched existing behavior: Ana's seeded thread, the
+   SuggestionRow and polish sending are unchanged.
+
+List every open question with the RED report (for example: whether the
+SuggestionRow hides once the quote is sent, and how the bubble marks the
+reply buttons as not pressable).
+
+**Then implement (GREEN):** the shared store, the jobs wiring, the chats
+lib/copys/service/hook changes, the quote bubble in
+`components/ChatScreen.tsx` (DOM, serializable props, Astryx chat parts per
+§5, body ≥ 16px), the route reload, and a Maestro flow: Chat → Review →
+Send quote → back in the chat with the quote message visible.
+
+**Report:** RED output first; after GREEN the gates with observed results,
+e2e results, and a one-line diff summary per file. Do not commit.
+
 ## Environment notes (this machine)
 
 - Use `/tmp/pnpm10` for installs (the system pnpm 12 cannot write this

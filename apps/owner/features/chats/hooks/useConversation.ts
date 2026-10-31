@@ -2,10 +2,10 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 import type { ID } from "../../../shared/data/types.ts";
 import type { ChatView, ConversationSnapshot, SendOutcome } from "../lib/chatView.ts";
 import type { PolishChoice } from "../lib/ownerDelivery.ts";
-import { createConversationsService, createFakeConversationsClient } from "../services/conversationsService.ts";
 import type { ConversationsService } from "../services/conversationsService.ts";
 import { createConversationSession } from "./conversationSession.ts";
 import type { ConversationSession } from "./conversationSession.ts";
+import { sharedDemoConversationsService } from "./demoConversationsService.ts";
 
 export type ConversationDeps = { service: ConversationsService };
 
@@ -22,18 +22,22 @@ export type Conversation =
   | { status: "failed"; retry: () => Promise<void> }
   | { status: "ready"; view: ConversationView };
 
+// `reload` refetches a ready chat in place; call it when the screen regains focus. It does nothing before the chat is ready.
+export type ConversationResult = { conversation: Conversation; reload: () => Promise<void> };
+
 const LOADING: ConversationSnapshot = { status: "loading" };
 const NO_SESSION = { subscribe: () => () => {}, getSnapshot: () => LOADING };
+const NOTHING_TO_RELOAD = async () => {};
 
 // The polish switch is session state, default off, until Settings can provide the default.
-export function useConversation(id: ID, deps?: Partial<ConversationDeps>): Conversation {
+export function useConversation(id: ID, deps?: Partial<ConversationDeps>): ConversationResult {
   const [defaults] = useState(createDemoDeps);
   const session = useSession(deps?.service ?? defaults.service, id);
   const store = session ?? NO_SESSION;
   const snapshot = useSyncExternalStore(store.subscribe, store.getSnapshot);
-  if (!session) return { status: "loading" };
+  if (!session) return { conversation: { status: "loading" }, reload: NOTHING_TO_RELOAD };
 
-  return toConversation(session, snapshot);
+  return { conversation: toConversation(session, snapshot), reload: session.reload };
 }
 
 // One session per service and id; the previous one is disposed so its late results are ignored.
@@ -66,5 +70,5 @@ function toConversation(session: ConversationSession, snapshot: ConversationSnap
 }
 
 function createDemoDeps(): ConversationDeps {
-  return { service: createConversationsService(createFakeConversationsClient()) };
+  return { service: sharedDemoConversationsService() };
 }

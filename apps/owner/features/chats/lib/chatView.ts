@@ -1,5 +1,6 @@
 // Serializable shapes shared by the chat hook and the chat screen.
 import type { Message, PolishPreview } from "../../../shared/data/types.ts";
+import type { QuoteCard } from "./quoteCard.ts";
 
 // composing → polishing → comparing → sent; "sent" behaves like "composing" for the composer.
 export type ComposerStep = "composing" | "polishing" | "comparing" | "sent";
@@ -7,7 +8,7 @@ export type ComposerStep = "composing" | "polishing" | "comparing" | "sent";
 // What the composer needs to know after Send: keep the draft only when nothing was sent or compared.
 export type SendOutcome = "sent" | "comparing" | "polish_failed" | "send_failed" | "not_sent";
 
-export type ThreadMessage = Message & { deliveryLabel: string | null };
+export type ThreadMessage = Message & { deliveryLabel: string | null; quoteCard: QuoteCard | null };
 
 // Serializable by design: it crosses into the DOM component as props.
 export type ChatView = {
@@ -18,7 +19,7 @@ export type ChatView = {
   step: ComposerStep;
   preview: PolishPreview | null; // set only while step is "comparing"
   jobId: string | null; // the job "View job and evidence" opens; null when the conversation has none
-  suggestedQuoteText: string | null; // "$130–160" for the SuggestionRow; null when Zukki suggests nothing
+  suggestedQuoteText: string | null; // "$130–160" for the SuggestionRow; null when Zukki suggests nothing or the quote was sent
   polishEnabled: boolean;
   polishFailed: boolean;
   sendFailed: boolean;

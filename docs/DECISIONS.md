@@ -400,3 +400,35 @@ it with a new one.
   - A rejected `getJob`/`listJobs` still leaves a blank screen (the L37
     gap): the new routes render null while loading and have no error state
     yet.
+
+## D23 — The sent quote as a chat message and the shared thread store (2026-10-30, T5.2)
+
+- **Decision:** a sent quote shows in the chat as an outgoing owner bubble that mirrors the WhatsApp
+  message the customer receives (`handoff-ui/whatsapp/payloads/13-quote.json`); no design HTML draws it.
+  - `shared/data/threadStore.ts` holds the conversations' messages: `createThreadStore()` (independent,
+    seeded with Ana's thread), `sharedThreadStore()` and `resetSharedThreadStore()` (clears in place).
+    The demo jobs client writes the quote message into it on `quoted`, as the backend will post it to the
+    thread; the demo chats client reads and writes it. `sharedDemoJobsService()` and the new
+    `sharedDemoConversationsService()` use the shared store; `createDemoJobsService()` and
+    `createFakeConversationsClient()` stay independent. Neither feature imports the other.
+  - `Message` gains an optional `quote?: Quote`; `text` holds the body as plain lines, so a chat list
+    preview has something to read. The quote message carries no `delivery`.
+  - `shared/lib/quoteMessage.ts` builds the body (`quoteMessageBody`, `quoteMessageText`) and owns the
+    wording; the chats copys reference those constants. `arrivalWindowText` moved to `shared/lib/`.
+  - Chats: `buildQuoteCard(quote, businessName)` is the serializable shape the bubble draws; the service
+    gains `getBusinessName()`, and a failed lookup shows the quote as plain text. The bubble draws the
+    total bold (no asterisks) and the two reply buttons as non-interactive labels (`data-testid`
+    `quote-reply-label`, no role, no tab stop). Once the thread holds a quote message the SuggestionRow
+    hides; the job link stays.
+  - The chat reloads when it regains focus: the session gains `reload()`, `useConversation` returns
+    `{ conversation, reload }`, and `app/chat/[id].tsx` wires `useFocusEffect` (the D22 pattern). A failed
+    reload keeps the thread on screen.
+- **Why:** the demo path returns from "Send quote" to the chat, and the owner needs to see what the
+  customer received (HANDOFF-RN-UI §7). Two features needed the same messages, so the store sits in
+  `shared/` (two real callers).
+- **Consequences:**
+  - The chat's default service is now module-level, so messages sent in one chat visit show in the next
+    one within a session; the e2e suite is order-dependent (flow 11 stops Expo Go to start from the seed).
+  - `13-quote.json` stays: it retires only when `packages/whatsapp` sends the message.
+  - Out of T5.2: the real WhatsApp send, the customer pressing a button, the chat list preview line, an
+    error state for a rejected load (L37 gap).
