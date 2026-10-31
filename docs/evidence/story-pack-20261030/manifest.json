@@ -1,0 +1,49 @@
+{
+  "format": "zukki-story-pack-v2",
+  "published": false,
+  "isDemo": false,
+  "checkedAt": "2026-10-29T19:04:51.220Z",
+  "sourceJobId": "80000000-0000-4000-8000-000000000001",
+  "sourceMediaIds": [
+    "60000000-0000-4000-8000-000000000091",
+    "60000000-0000-4000-8000-000000000092"
+  ],
+  "slides": [
+    {
+      "title": "Repair, ready for review",
+      "body": "Synthetic acceptance repair."
+    },
+    {
+      "title": "The work",
+      "body": "Our team completed this job."
+    },
+    {
+      "title": "Need a hand?",
+      "body": "Message Northside Plumbing to discuss what you need."
+    }
+  ],
+  "formats": {
+    "facebook": false,
+    "instagram": true
+  },
+  "images": [
+    {
+      "filename": "story-01.png",
+      "width": 1080,
+      "height": 1920,
+      "mimeType": "image/png"
+    },
+    {
+      "filename": "story-02.png",
+      "width": 1080,
+      "height": 1920,
+      "mimeType": "image/png"
+    },
+    {
+      "filename": "story-03.png",
+      "width": 1080,
+      "height": 1920,
+      "mimeType": "image/png"
+    }
+  ]
+}
