@@ -1,0 +1,115 @@
+import { OwnerApiError } from "../../../shared/infra/ownerApi.ts";
+import type { OwnerApi } from "../../../shared/infra/ownerApi.ts";
+import type { DeclineReason, ID, Media, MoneyRange, OfferStatus } from "../../../shared/data/types.ts";
+import type { Offer, OffersClient } from "./offersService.ts";
+
+// One offer as GET /offers returns it (supabase owner_offers, media links signed by the API).
+type ApiOffer = {
+  id: ID;
+  conversationId: ID | null;
+  status: string;
+  urgent: boolean;
+  distanceKm: number | null;
+  suggestedQuote: MoneyRange | null;
+  offeredAt: string;
+  expiresAt: string;
+  declineReason: DeclineReason | null;
+  title: string | null;
+  zukkiSummary: string | null;
+  customerName: string | null;
+  approxLocation: string | null;
+  customerQuote: string | null;
+  media: ApiMedia[];
+};
+
+type ApiMedia = { kind: string; durationMs: number | null; url: string | null; thumbUrl: string | null };
+
+const OWNER_STATUSES: readonly OfferStatus[] = ["offered", "accepted", "declined", "expired"];
+const MS_PER_SECOND = 1000;
+
+// The live offers client: the API has no single-offer route, so it keeps every offer it
+// read or answered, by id, and finds the conversation of an offer from that record.
+export function createOffersApiClient(api: OwnerApi): OffersClient {
+  const offersById = new Map<ID, Offer>();
+  const conversationIdByOfferId = new Map<ID, ID>();
+
+  async function readOffers(status: OfferStatus): Promise<Offer[]> {
+    const rows = (await api.get(`/offers?status=${status}`)) as ApiOffer[];
+    const offers = rows.filter(hasOwnerStatus).map(toOffer);
+    rows.forEach(rememberConversation);
+    offers.forEach((offer) => offersById.set(offer.id, offer));
+    return offers;
+  }
+
+  function rememberConversation(row: ApiOffer) {
+    if (row.conversationId) conversationIdByOfferId.set(row.id, row.conversationId);
+  }
+
+  async function saveOffer(offer: Offer): Promise<void> {
+    try {
+      await postAnswer(api, offer);
+      offersById.set(offer.id, offer);
+    } catch (error) {
+      if (isOfferExpired(error)) offersById.set(offer.id, { ...offer, status: "expired" });
+      throw error;
+    }
+  }
+
+  return {
+    listOffers: async () => newestFirst((await Promise.all(OWNER_STATUSES.map(readOffers))).flat()),
+    findOffer: async (id) => {
+      await readOffers("offered");
+      return offersById.get(id) ?? null;
+    },
+    saveOffer,
+    findConversationId: async (offerId) => conversationIdByOfferId.get(offerId) ?? null,
+  };
+}
+
+function postAnswer(api: OwnerApi, offer: Offer): Promise<unknown> {
+  if (offer.status === "accepted") return api.post(`/offers/${offer.id}/accept`);
+  return api.post(`/offers/${offer.id}/decline`, { reason: offer.declineReason ?? "other" });
+}
+
+function isOfferExpired(error: unknown): boolean {
+  return error instanceof OwnerApiError && error.status === 409 && error.code === "offer_expired";
+}
+
+function hasOwnerStatus(row: ApiOffer): row is ApiOffer & { status: OfferStatus } {
+  return (OWNER_STATUSES as readonly string[]).includes(row.status);
+}
+
+function newestFirst(offers: Offer[]): Offer[] {
+  return [...offers].sort((a, b) => Date.parse(b.offeredAt) - Date.parse(a.offeredAt));
+}
+
+function toOffer(row: ApiOffer & { status: OfferStatus }): Offer {
+  const offer: Offer = {
+    id: row.id,
+    customerName: row.customerName ?? "",
+    title: row.title ?? "",
+    urgent: row.urgent,
+    distanceKm: row.distanceKm ?? 0,
+    approxLocation: row.approxLocation ?? "",
+    media: row.media.flatMap(toMedia),
+    zukkiSummary: row.zukkiSummary ?? "",
+    suggestedQuote: row.suggestedQuote,
+    offeredAt: row.offeredAt,
+    expiresAt: row.expiresAt,
+    status: row.status,
+  };
+  if (row.customerQuote) offer.customerQuote = row.customerQuote;
+  if (row.declineReason) offer.declineReason = row.declineReason;
+  return offer;
+}
+
+// Only video and image evidence reach the owner; a photo without its own thumbnail shows itself.
+function toMedia(media: ApiMedia): Media[] {
+  const url = media.url ?? "";
+  if (media.kind === "image") return [{ kind: "photo", url, thumbUrl: media.thumbUrl ?? url }];
+  if (media.kind !== "video") return [];
+
+  const video: Media = { kind: "video", url, thumbUrl: media.thumbUrl ?? "" };
+  if (media.durationMs !== null) video.durationS = Math.floor(media.durationMs / MS_PER_SECOND);
+  return [video];
+}
