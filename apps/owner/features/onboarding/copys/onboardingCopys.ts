@@ -1,0 +1,81 @@
+// Visible text of the onboarding flow. Sources: handoff-ui/owner-app/design/html/Ow{Welcome,Intro2,
+// Intro3,SignUp,Verify,ProfileSetup,PricesSetup,AreaSetup,Live}.dc.html and
+// handoff-ui/owner-app/HANDOFF-RN-UI.md sections 7-8. Values are verbatim copy; key names are this module's.
+// The demo renderings pinned by the locked copys test (e.g. liveTitle) double as the expected outputs of the
+// composed-text helpers in lib/ (see lib/liveText.test.ts).
+export const onboardingCopys = {
+  // intro pager chrome (slide titles, leads and slide-3 actions live in lib/introSlides.ts)
+  introSkip: "Skip",
+  slideWord: "Slide",
+  nextAction: "Next",
+  createAccount: "Create my account",
+  hasAccount: "I already have an account",
+  // sign up
+  signUpLead: "Let's set up your account. It takes about 3 minutes.",
+  signUpTitle: "Create your account",
+  nameLabel: "Your name",
+  emailLabel: "Email",
+  emailHelp: "We'll email you a code to confirm it.",
+  termsLabel: "I accept the terms and the privacy policy.",
+  orDivider: "or",
+  continueWithFacebook: "Continue with Facebook",
+  sendCode: "Send code",
+  backLabel: "Back",
+  // verify
+  verifyTitle: "Enter the code",
+  verifySentPrefix: "We sent a 6-digit code to",
+  verifySentSuffix: ".",
+  verifyCodeLabel: "Verification code",
+  resendPrefix: "Resend code in",
+  resendLink: "Resend code",
+  changeEmail: "Change email",
+  verifyButton: "Verify",
+  codeError: "That code didn't work. Try again.",
+  // setup step header ("Step n of 3" is composed in lib/setupSteps.ts)
+  stepWord: "Step",
+  stepOf: "of",
+  // setup step 1: business
+  profileTitle: "Your business",
+  logoLabel: "Logo",
+  logoCaption: "Shown to customers in WhatsApp",
+  logoChange: "Change",
+  businessNameLabel: "Business name",
+  categoryLabel: "Category",
+  websiteLabel: "Website",
+  websiteReading: "Reading your website…",
+  websiteImported: "Imported 12 services and 4 prices",
+  continueButton: "Continue",
+  // setup step 2: prices
+  pricesTitle: "Prices and fees",
+  pricesLead: "I found these on your website. Check them before customers see them.",
+  extraFees: "Extra fees",
+  addPrice: "Add a price",
+  editAction: "Edit",
+  fromWord: "from",
+  currency: "$",
+  plusSign: "+",
+  atCost: "at cost",
+  // setup step 3: hours and area
+  areaTitle: "Hours and area",
+  radiusLabel: "Service radius",
+  kmUnit: "km",
+  regularHours: "Regular hours",
+  nightRequests: "Urgent night requests",
+  nightRequestsWindow: "10 PM–7 AM, with your night fee",
+  finishButton: "Finish",
+  mapAlt: "Map of the service area",
+  // live
+  liveTitle: "Northside is live on Zukki",
+  liveTitleTail: "is live on Zukki",
+  liveLead: "Zukki can now suggest you for",
+  liveWithin: "requests within",
+  notifyTitle: "Turn on notifications",
+  notifyBody: "Requests expire after 5 minutes. Without notifications you'll miss most of them.",
+  allowNotifications: "Allow notifications",
+  linkTitle: "Link Facebook and Instagram",
+  linkBody: "Optional. Zukki drafts posts from your jobs; you approve each one.",
+  linkAccounts: "Link accounts",
+  // load error (owl failed + retry, never the raw error)
+  loadError: "Something went wrong.",
+  retry: "Try again",
+} as const;
