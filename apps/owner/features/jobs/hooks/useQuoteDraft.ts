@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import type { ID, QuoteLine } from "../../../shared/data/types.ts";
+import { arrivalWindowText } from "../../../shared/lib/arrivalWindow.ts";
 import { firstName } from "../../../shared/lib/firstName.ts";
-import { arrivalWindowText } from "../lib/arrivalWindow.ts";
 import { buildQuote } from "../lib/quoteEditing.ts";
 import type { JobsService, QuoteDraft } from "../services/jobsService.ts";
 import { sharedDemoJobsService } from "./demoJobsService.ts";

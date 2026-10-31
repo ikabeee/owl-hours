@@ -69,6 +69,7 @@ export type Message = {
   // owner messages only
   delivery?: "as_written" | "polished";   // option A / option B
   ownerDraft?: string;                    // what the owner typed, when delivery = "polished"
+  quote?: Quote;                          // set when the owner sent a quote: `text` holds its body, the bubble draws `quote`
 };
 export type PolishPreview = { original: string; polished: string; language: string }; // shown before sending
 
