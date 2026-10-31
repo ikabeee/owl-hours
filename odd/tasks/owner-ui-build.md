@@ -529,12 +529,12 @@ slice, delegated with test-first discipline.
     `npm test` and `typecheck` pass; iOS export OK (coder).
   - Review: no blocker. `useConversation` returns `{ conversation, reload }`
     (the route is its only caller); the shared chat service keeps sent
-    messages across chat visits in one app session (D13).
+    messages across chat visits in one app session (D23).
   - E2E from the worktree's Metro: 11 (new) passes, with its evidence in
     `apps/owner/.maestro/evidence/2026-10-30-quote-message/`; 04, 05 and 08
     pass, each from a fresh Expo Go opened on the Metro URL. Killing Expo Go
     and running a flow straight away fails its first `openLink`.
-  - Decision D13. Lock removed. Next: T6 is already on main (#24, #25), so
+  - Decision D23. Lock removed. Next: T6 is already on main (#24, #25), so
     the next open item is the L37 gap (error state for a rejected load).
 
 - L49 (user, 2026-10-30): "Abre pr". PR #57 (`feat/owner-quote-message` ->

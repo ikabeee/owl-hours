@@ -1,6 +1,6 @@
 // Spec: docs/HANDOFF-OWNER-APP.md, T5.2 assignment: the sent quote shows in the chat as a bubble that
 // mirrors the WhatsApp message (13-quote.json), and the chat reloads its thread when it regains focus
-// ("reload() on the hook", the D12 pattern) so coming back from the quote modal shows the new message.
+// ("reload() on the hook", the D22 pattern) so coming back from the quote modal shows the new message.
 // Names (open question Q4): ThreadMessage gains `quoteCard: QuoteCard | null`; the service gains
 // getBusinessName() (the fake client answers business.name); the session gains reload(): Promise<void>.
 import { describe, it } from "node:test";

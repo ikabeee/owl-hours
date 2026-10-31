@@ -429,7 +429,7 @@ Operator decisions (do not reopen):
   tests; money ranges reuse `shared/lib/moneyText.ts`.
 - The chat route reloads its conversation when it regains focus
   (`useFocusEffect` in `app/chat/[id].tsx`, `reload()` on the hook), the
-  D12 pattern, so coming back from the modal shows the new message.
+  D22 pattern, so coming back from the modal shows the new message.
 - The copy lives in `features/chats/copys/`, quoted verbatim from
   `13-quote.json`. `13-quote.json` stays byte-identical: it retires only
   when `packages/whatsapp` sends it.

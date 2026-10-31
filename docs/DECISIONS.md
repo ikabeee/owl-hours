@@ -401,7 +401,7 @@ it with a new one.
     gap): the new routes render null while loading and have no error state
     yet.
 
-## D13 — The sent quote as a chat message and the shared thread store (2026-10-30, T5.2)
+## D23 — The sent quote as a chat message and the shared thread store (2026-10-30, T5.2)
 
 - **Decision:** a sent quote shows in the chat as an outgoing owner bubble that mirrors the WhatsApp
   message the customer receives (`handoff-ui/whatsapp/payloads/13-quote.json`); no design HTML draws it.
@@ -421,7 +421,7 @@ it with a new one.
     `quote-reply-label`, no role, no tab stop). Once the thread holds a quote message the SuggestionRow
     hides; the job link stays.
   - The chat reloads when it regains focus: the session gains `reload()`, `useConversation` returns
-    `{ conversation, reload }`, and `app/chat/[id].tsx` wires `useFocusEffect` (the D12 pattern). A failed
+    `{ conversation, reload }`, and `app/chat/[id].tsx` wires `useFocusEffect` (the D22 pattern). A failed
     reload keeps the thread on screen.
 - **Why:** the demo path returns from "Send quote" to the chat, and the owner needs to see what the
   customer received (HANDOFF-RN-UI §7). Two features needed the same messages, so the store sits in
