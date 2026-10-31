@@ -9,7 +9,8 @@
 -- * Pedro: a second customer offered to Eastside, used by isolation tests.
 -- * No model outputs here (transcripts, SAM boxes): those come from real
 --   runs only (handoff section 10).
--- Owners sign in with a magic link; no passwords are seeded.
+-- Owners sign in with an emailed 6-digit code; no passwords are seeded. Seeded
+-- owners already have an email, so code sign-in matches their auth user.
 
 insert into auth.users (id, instance_id, aud, role, email, email_confirmed_at,
                         raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
