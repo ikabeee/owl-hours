@@ -6,7 +6,8 @@ import type { Session } from '../../../shared/infra/ownerSessionService.ts';
 
 type TestRuntime = {
   restore(): Promise<Session | null>;
-  signIn(email: string): Promise<void>;
+  sendCode(phone: string): Promise<boolean>;
+  verifyCode(phone: string, code: string): Promise<boolean>;
   signOut(): Promise<void>;
   subscribe(next: (session: Session | null) => void): () => void;
 };
@@ -35,7 +36,8 @@ function fakeRuntimeWith(initial: Session | null): {
   };
   const runtime: TestRuntime = {
     restore: async () => current,
-    signIn: async () => undefined,
+    sendCode: async () => true,
+    verifyCode: async () => true,
     signOut: async () => {
       if (behavior === 'throw-before-clearing') {
         throw new Error('Network request failed.');
@@ -107,4 +109,77 @@ it('S4 keeps the sign-out error when sign-out fails before clearing the session'
 
   assert.equal(controller.getState().session?.user.email, 'owner@example.test');
   assert.equal(controller.getState().error, authCopys.signOutError);
+});
+
+it('S1 sends the SMS code through the injected runtime', async () => {
+  const sent: string[] = [];
+  const harness = fakeRuntimeWith(null);
+  const controller = createOwnerAuthController({
+    ...harness.runtime,
+    sendCode: async (phone) => {
+      sent.push(phone);
+      return true;
+    },
+  });
+
+  assert.equal(await controller.sendCode('+1 555 014 2290'), true);
+  assert.deepEqual(sent, ['+1 555 014 2290']);
+});
+
+it('S1 keeps the session the runtime emits once the SMS code is verified', async () => {
+  const session = ownerSession('owner@example.test');
+  const listeners = new Set<(next: Session | null) => void>();
+  const verified: string[][] = [];
+  const controller = createOwnerAuthController({
+    restore: async () => null,
+    sendCode: async () => true,
+    verifyCode: async (phone, code) => {
+      verified.push([phone, code]);
+      for (const listener of listeners) listener(session);
+      return true;
+    },
+    signOut: async () => undefined,
+    subscribe: (next) => {
+      listeners.add(next);
+      return () => {
+        listeners.delete(next);
+      };
+    },
+  });
+
+  assert.equal(await controller.verifyCode('+1 555 014 2290', '482910'), true);
+  assert.deepEqual(verified, [['+1 555 014 2290', '482910']]);
+  assert.equal(controller.getState().session, session);
+});
+
+it('S1 reports a rejected code as false and keeps the owner signed out', async () => {
+  const harness = fakeRuntimeWith(null);
+  const controller = createOwnerAuthController({ ...harness.runtime, verifyCode: async () => false });
+
+  assert.equal(await controller.verifyCode('+1 555 014 2290', '000000'), false);
+  assert.equal(controller.getState().session, null);
+});
+
+it('S1 resolves false when the runtime throws while sending or verifying', async () => {
+  const harness = fakeRuntimeWith(null);
+  const controller = createOwnerAuthController({
+    ...harness.runtime,
+    sendCode: async () => {
+      throw new Error('Network request failed.');
+    },
+    verifyCode: async () => {
+      throw new Error('Network request failed.');
+    },
+  });
+
+  assert.equal(await controller.sendCode('+1 555 014 2290'), false);
+  assert.equal(await controller.verifyCode('+1 555 014 2290', '482910'), false);
+});
+
+it('S3 demo mode has no runtime: sending and verifying resolve false', async () => {
+  const controller = createOwnerAuthController(null);
+
+  assert.equal(await controller.sendCode('+1 555 014 2290'), false);
+  assert.equal(await controller.verifyCode('+1 555 014 2290', '482910'), false);
+  assert.equal(controller.getState().loading, false);
 });
