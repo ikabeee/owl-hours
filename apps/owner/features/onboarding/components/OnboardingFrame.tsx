@@ -33,7 +33,7 @@ export default function OnboardingFrame(props: {
 
   return (
     <Theme theme={neutralTheme}>
-      <div className="zukki-root" style={{ ...pageStyle, paddingTop: insets.top, paddingBottom: insets.bottom }}>
+      <div className="zukki-root" style={{ ...pageStyle, paddingTop: insets.top }}>
         <Layout
           height="fill"
           header={
@@ -55,6 +55,8 @@ export default function OnboardingFrame(props: {
                 width="100%"
                 onClick={() => props.onFooter()}
               />
+              {/* The home-indicator inset sits inside the card-colored footer, not under it. */}
+              <div style={{ height: insets.bottom }} />
             </LayoutFooter>
           }
         />
