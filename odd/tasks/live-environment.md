@@ -8,8 +8,12 @@ Objective: a tester can open the owner app at a URL, sign in with an emailed cod
 
 ## Specs
 
-To write when this objective starts (see `live-accept-creates-job.md` L1–L3 for the request and the map).
+Blocked on the user: which accounts host the API (Railway config exists), hosted Supabase (migrations, Email provider, `{{ .Token }}` templates) and the owner web app.
 
 ## Tasks
 
+- T1 mobile builds: `apps/owner/eas.json` (development, preview APK, production) and ids `com.owlhours.zukki.owner`, commit `f78fd21`; documented in `docs/USAGE.md` section 8.
+
 ## Log
+
+- L1 (2026-10-31) No deploy CLI or deployed URL exists on the laptop; deploying is outward-facing, asked the user for accounts. Next: `eas login` + `eas init` (user) for APK and push.
