@@ -734,6 +734,9 @@ begin
   assert jsonb_array_length(offers) = 1 and offers -> 0 ->> 'customerName' = 'Pedro M.', 'Eastside sees Pedro''s request';
   assert not (offers::text like '%15550000002%'), 'no phone number in the offer';
   assert jsonb_array_length(public.owner_offers('accepted')) = 0, 'not Northside''s accepted request';
+  assert public.owner_offer((offers -> 0 ->> 'id')::uuid) ->> 'customerName' = 'Pedro M.', 'one offer by id';
+  assert public.owner_offer('50000000-0000-4000-8000-000000000001') is null, 'Northside''s offer is hidden by id too';
+  assert public.owner_offer('50000000-0000-4000-8000-0000000000ff') is null, 'unknown offer is null';
   assert jsonb_array_length(public.owner_jobs()) = 0, 'no other business''s jobs';
   begin
     perform public.owner_conversation_messages('40000000-0000-4000-8000-000000000001');
@@ -753,6 +756,7 @@ begin
   offers := public.owner_offers('accepted');
   assert offers -> 0 ->> 'distanceKm' = '1.2' and offers -> 0 -> 'suggestedQuote' ->> 'min' = '130';
   assert jsonb_array_length(offers -> 0 -> 'media') = 1, 'the video, not the voice note';
+  assert offers -> 0 ->> 'approxLocation' is not null, 'approximate location falls back to the distance';
   chats := public.owner_conversations();
   assert jsonb_array_length(chats) = 1 and chats -> 0 ->> 'title' = 'Toilet won''t stop running';
   assert (chats -> 0 ->> 'unread')::int = 4, 'unread was ' || (chats -> 0 ->> 'unread');

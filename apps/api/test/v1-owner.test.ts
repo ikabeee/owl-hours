@@ -86,6 +86,43 @@ describe("/v1/owner offers", () => {
     assert.deepEqual((calls[1]?.body as { expiresIn: number }).expiresIn, 600);
   });
 
+  it("reads one offer by id with signed media links, and 404s one it cannot see", async () => {
+    const { call, calls } = setup((c) => {
+      if (c.path.endsWith("/rpc/owner_offer")) {
+        const found = (c.body as { p_handoff_id: string }).p_handoff_id === ANA_OFFER;
+        return {
+          body: found
+            ? { id: ANA_OFFER, customerName: "Ana L.", media: [{ id: "m1", kind: "video", storagePath: `conversations/${ANA_CHAT}/v.mp4`, thumbPath: null }] }
+            : null,
+        };
+      }
+      if (c.path === "/storage/v1/object/sign/media") {
+        return { body: [{ path: `conversations/${ANA_CHAT}/v.mp4`, signedURL: "/object/sign/media/x?token=t", error: null }] };
+      }
+      return { status: 500, body: {} };
+    });
+
+    const res = await call(`/offers/${ANA_OFFER}`);
+    assert.equal(res.status, 200);
+    const body = (await res.json()) as { data: { customerName: string; media: Record<string, unknown>[] } };
+    assert.deepEqual(calls[0]?.body, { p_handoff_id: ANA_OFFER });
+    assert.equal(body.data.customerName, "Ana L.");
+    assert.match(String(body.data.media[0]?.url), /token=t/);
+    assert.equal(body.data.media[0]?.storagePath, undefined);
+
+    const missing = await call("/offers/50000000-0000-4000-8000-0000000000ff");
+    assert.equal(missing.status, 404);
+  });
+
+  it("declines with reason other when the app sends none", async () => {
+    const { call, calls } = setup(() => ({
+      body: { id: ANA_OFFER, status: "declined", expires_at: "2026-11-03T05:10:00Z", resolved_at: "2026-11-03T05:06:00Z", decline_reason: "other" },
+    }));
+    const res = await call(`/offers/${ANA_OFFER}/decline`, { method: "POST" });
+    assert.equal(res.status, 200);
+    assert.deepEqual(calls[0]?.body, { p_handoff_id: ANA_OFFER, p_reason: "other", p_note: null });
+  });
+
   it("rejects an unknown status filter", async () => {
     const { call, calls } = setup(() => ({ body: [] }));
     const res = await call("/offers?status=everything");
