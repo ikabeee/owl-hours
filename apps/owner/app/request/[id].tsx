@@ -3,6 +3,7 @@ import { useLocalSearchParams, router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import RequestScreen from '../../features/requests/components/RequestScreen';
+import RequestsLoadError from '../../features/requests/components/RequestsLoadError';
 import { destinationAfterAccept } from '../../features/requests/lib/acceptOutcome';
 import { shouldOpenDeclineSheet } from '../../features/requests/lib/declineSheet';
 import { useRequestOffer } from '../../features/requests/hooks/useRequestOffer';
@@ -10,8 +11,12 @@ import { useRequestOffer } from '../../features/requests/hooks/useRequestOffer';
 export default function RequestRoute() {
   const { id, decline } = useLocalSearchParams<{ id: string; decline?: string | string[] }>();
   const insets = useSafeAreaInsets();
-  const request = useRequestOffer(id);
-  if (!request) return null;
+  const screen = useRequestOffer(id);
+  const safeInsets = { top: insets.top, bottom: insets.bottom };
+  if (screen.status === 'failed') return <RequestsLoadError insets={safeInsets} onRetry={screen.retry} dom={domHost} />;
+  if (screen.status !== 'ready') return null;
+
+  const request = screen.view;
 
   return (
     <RequestScreen
@@ -20,7 +25,7 @@ export default function RequestRoute() {
       secondsLeft={request.secondsLeft}
       maxSeconds={request.maxSeconds}
       isExpired={request.isExpired}
-      insets={{ top: insets.top, bottom: insets.bottom }}
+      insets={safeInsets}
       startDeclineOpen={shouldOpenDeclineSheet(decline)}
       onAccept={async () => {
         const destination = destinationAfterAccept(await request.accept());
