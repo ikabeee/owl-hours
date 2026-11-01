@@ -6,12 +6,13 @@ import RequestScreen from '../../features/requests/components/RequestScreen';
 import { destinationAfterAccept } from '../../features/requests/lib/acceptOutcome';
 import { shouldOpenDeclineSheet } from '../../features/requests/lib/declineSheet';
 import { useRequestOffer } from '../../features/requests/hooks/useRequestOffer';
+import LoadingSkeleton from '../../shared/shell/LoadingSkeleton';
 
 export default function RequestRoute() {
   const { id, decline } = useLocalSearchParams<{ id: string; decline?: string | string[] }>();
   const insets = useSafeAreaInsets();
   const request = useRequestOffer(id);
-  if (!request) return null;
+  if (!request) return <LoadingSkeleton />;
 
   return (
     <RequestScreen

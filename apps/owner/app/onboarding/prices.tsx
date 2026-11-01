@@ -5,6 +5,7 @@ import OnboardingLoadError from '../../features/onboarding/components/Onboarding
 import PricesScreen from '../../features/onboarding/components/PricesScreen';
 import { usePrices } from '../../features/onboarding/hooks/usePrices';
 import { resolveNext } from '../../features/onboarding/lib/setupSteps';
+import LoadingSkeleton from '../../shared/shell/LoadingSkeleton';
 
 export default function PricesRoute() {
   const insets = useSafeAreaInsets();
@@ -14,7 +15,7 @@ export default function PricesRoute() {
   if (prices.status === 'failed') {
     return <OnboardingLoadError insets={safeInsets} onRetry={prices.retry} dom={domHost} />;
   }
-  if (prices.status !== 'ready') return null;
+  if (prices.status !== 'ready') return <LoadingSkeleton />;
 
   const { view } = prices;
   return (

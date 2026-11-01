@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import JobScreen from '../../features/jobs/components/JobScreen';
 import JobsLoadError from '../../features/jobs/components/JobsLoadError';
 import { useJob } from '../../features/jobs/hooks/useJob';
+import LoadingSkeleton from '../../shared/shell/LoadingSkeleton';
 
 export default function JobRoute() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -15,7 +16,7 @@ export default function JobRoute() {
   const safeInsets = { top: insets.top, bottom: insets.bottom };
 
   if (job.status === 'failed') return <JobsLoadError insets={safeInsets} onRetry={job.retry} dom={domHost} />;
-  if (job.status !== 'ready') return null;
+  if (job.status !== 'ready') return <LoadingSkeleton />;
 
   return (
     <JobScreen
