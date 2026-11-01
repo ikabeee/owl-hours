@@ -58,8 +58,9 @@ export function createOffersApiClient(api: OwnerApi): OffersClient {
 
   return {
     listOffers: async () => newestFirst((await Promise.all(OWNER_STATUSES.map(readOffers))).flat()),
+    // Every status is re-read, so an offer answered elsewhere carries its new status instead of the cached one.
     findOffer: async (id) => {
-      await readOffers("offered");
+      await Promise.all(OWNER_STATUSES.map(readOffers));
       return offersById.get(id) ?? null;
     },
     saveOffer,
@@ -68,8 +69,9 @@ export function createOffersApiClient(api: OwnerApi): OffersClient {
 }
 
 function postAnswer(api: OwnerApi, offer: Offer): Promise<unknown> {
-  if (offer.status === "accepted") return api.post(`/offers/${offer.id}/accept`);
-  return api.post(`/offers/${offer.id}/decline`, { reason: offer.declineReason ?? "other" });
+  const path = `/offers/${encodeURIComponent(offer.id)}`;
+  if (offer.status === "accepted") return api.post(`${path}/accept`);
+  return api.post(`${path}/decline`, { reason: offer.declineReason ?? "other" });
 }
 
 function isOfferExpired(error: unknown): boolean {
