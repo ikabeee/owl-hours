@@ -488,3 +488,22 @@ it with a new one.
 - **Decision:** `private.resolve_handoff` opens the job on accept (hosted migration `20261029101127`, ported from `fix/issue-14`). `private.open_job` (D24) returns the job the handoff already has and only inserts when there is none (`20261101100000_accept_opens_one_job.sql`).
 - **Why:** the hosted Supabase project already ran `20261029101127`; applying main's `20261031120000_accept_opens_job` on top would insert two jobs per accept, since `jobs.handoff_id` is not unique. Keeping the hosted versions byte-identical keeps the repo and hosted `schema_migrations` in step.
 - **Consequences:** the accepted job carries the business currency and the request ticket. `accept_handoff` locks the handoff row, so concurrent accepts cannot both open a job. `supabase/tests/accept_creates_job.test.sql` pins one job per accept.
+
+## D29 — The live chat shows the sent quote, quotes without a suggestion, and the accept time (2026-11-01)
+
+- **Decision:** `private.send_quote` (migration `20261101200000_quote_message_and_accepted_at.sql`) also
+  writes an owner `messages` row linked by the new `messages.quote_id`. The row is stored as `sent`, so
+  `claim_outbox` never picks it up: the customer still receives the quote as Zukki's notice 13.
+  `owner_conversation_messages` returns the row's `quote` (`lines, total, arrivalFrom, arrivalTo, note,
+  technician`, `delivery` null) and leaves out Zukki's notice for a quote the thread already shows.
+  `owner_conversations` returns `acceptedAt` (the handoff's `resolved_at`).
+  - The live chats client maps `quote` to `Message.quote` (arrival as device clock times), so the D23
+    bubble draws it; `Conversation` gains optional `jobId` and `acceptedAt`.
+  - The chat offers "Send a quote" (the quote modal's title) whenever its job has no sent quote and
+    Zukki suggests nothing; the SuggestionRow still wins when there is a suggestion.
+  - The chat's "You accepted at" reads `acceptedAt`; the demo, which has none, keeps its first message.
+- **Why:** live quotes only showed in Jobs, a request without a suggested range could not be quoted
+  from the chat, and the accept time was the oldest loaded message
+  (`odd/tasks/owner-chat-live-fixes.md`, S1-S3).
+- **Consequences:** quotes sent before this migration have no owner quote message; their Zukki notice
+  still shows as a Zukki message. `supabase/tests/owner_chat_quote.test.sql` pins the outbox exclusion.

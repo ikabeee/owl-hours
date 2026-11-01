@@ -82,6 +82,8 @@ export type Conversation = {
   statusLine: string;               // "visit 12:55 AM", "waiting for you", "quote sent", "done"
   lastMessage: Message;
   unread: number;
+  jobId?: ID;                       // the job the business opened by accepting, when it has one
+  acceptedAt?: ISODate;             // when the business accepted the offer
 };
 
 // ---------- jobs ----------

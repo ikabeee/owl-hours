@@ -1,18 +1,36 @@
 // The chats on the live owner API (`/v1/owner`, docs/API.md): rows from owner_conversations and
 // owner_conversation_messages become the app's Conversation and Message.
 import type { OwnerApi } from "../../../shared/infra/ownerApi.ts";
-import type { Conversation, ID, ISODate, Message, MoneyRange, PolishPreview, Sender } from "../../../shared/data/types.ts";
+import type { Conversation, ID, ISODate, Message, MoneyRange, PolishPreview, Quote, QuoteLine, Sender } from "../../../shared/data/types.ts";
 import { chatsListCopys } from "../copys/chatsListCopys.ts";
 import type { ConversationsClient, QuoteSuggestion } from "./conversationsService.ts";
 import { localTimestamp } from "../../../shared/lib/localIsoString.ts";
+import { wallClockTimeText } from "../../../shared/lib/wallClockTime.ts";
 
 type ApiJobSummary = { id: ID; state: string; arrivalWindow: string | null };
-type ApiMessage = { id: ID; from: Sender; kind?: string; text: string | null; sentAt: ISODate; delivery?: Message["delivery"] | null };
+type ApiQuote = {
+  lines: { label: string; min: number; max: number }[];
+  total: MoneyRange;
+  arrivalFrom: ISODate;
+  arrivalTo: ISODate;
+  note: string | null;
+  technician: string | null;
+};
+type ApiMessage = {
+  id: ID;
+  from: Sender;
+  kind?: string;
+  text: string | null;
+  sentAt: ISODate;
+  delivery?: Message["delivery"] | null;
+  quote?: ApiQuote | null; // set on the owner message that holds a sent quote
+};
 type ApiConversation = {
   id: ID;
   offerId: ID;
   title: string | null;
   customerName: string | null;
+  acceptedAt: ISODate | null;
   lastMessageAt: ISODate;
   job: ApiJobSummary | null;
   lastMessage: ApiMessage | null;
@@ -100,6 +118,8 @@ function toConversation(row: ApiConversation): Conversation {
     // A chat always opens with Zukki's handoff message; the empty stand-in only keeps the row drawable.
     lastMessage: row.lastMessage ? toMessage(row.lastMessage) : { id: `${row.id}:none`, from: "zukki", text: "", sentAt: localTimestamp(row.lastMessageAt) },
     unread: row.unread,
+    ...(row.job ? { jobId: row.job.id } : {}),
+    ...(row.acceptedAt ? { acceptedAt: localTimestamp(row.acceptedAt) } : {}),
   };
 }
 
@@ -113,10 +133,31 @@ function statusLineOf(job: ApiJobSummary | null): string {
   return "";
 }
 
-// Only owner messages carry how they were sent (option A or B).
+// Only owner messages carry how they were sent (option A or B), or the quote they hold.
 function toMessage(row: ApiMessage): Message {
   const message: Message = { id: row.id, from: row.from, text: row.text ?? "", sentAt: localTimestamp(row.sentAt) };
-  return row.from === "owner" && row.delivery ? { ...message, delivery: row.delivery } : message;
+  if (row.from !== "owner") return message;
+  if (row.quote) return { ...message, quote: toQuote(row.quote) };
+  return row.delivery ? { ...message, delivery: row.delivery } : message;
+}
+
+// The arrival window is shown as the device's clock times, like the quote screen writes them.
+function toQuote(quote: ApiQuote): Quote {
+  return {
+    lines: quote.lines.map(toQuoteLine),
+    total: quote.total,
+    arrival: { from: clockTimeOf(quote.arrivalFrom), to: clockTimeOf(quote.arrivalTo) },
+    technician: quote.technician ?? "",
+    ...(quote.note ? { note: quote.note } : {}),
+  };
+}
+
+function toQuoteLine({ label, min, max }: ApiQuote["lines"][number]): QuoteLine {
+  return { label, amount: min === max ? min : { min, max } };
+}
+
+function clockTimeOf(isoTimestamp: ISODate): string {
+  return wallClockTimeText(localTimestamp(isoTimestamp)) ?? "";
 }
 
 function quoteSuggestionOf(job: ApiJobSummary, offer: ApiOffer | undefined): QuoteSuggestion | null {
