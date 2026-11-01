@@ -468,7 +468,7 @@ it with a new one.
   backup erasure and recall of downloaded exports are outside this change.
 - See `docs/STORY-PACK-DATA.md` for preflight and exact preservation boundaries.
 
-## Story Pack follow-up: write version and deletion notice (2026-10-31)
+## D27 — Story Pack write version and deletion notice (2026-10-31)
 
 - Keep the current server pack separate from the version on which dirty edits
   began. Atomically reject stale saves, and preserve local text on conflict.
