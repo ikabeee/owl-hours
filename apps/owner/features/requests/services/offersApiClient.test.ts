@@ -151,6 +151,15 @@ describe("offersApiClient answers", () => {
     assert.equal(accepted?.status, "accepted");
   });
 
+  it("encodes the offer id in the answer path", async () => {
+    const odd = { ...anaOffer, id: "off/ana" };
+    const { calls, service } = fakeApi((call) => (call.method === "GET" ? ok([odd]) : ok({ id: "off/ana", status: "accepted" })));
+
+    await service.accept("off/ana");
+
+    assert.equal(calls.find((call) => call.method === "POST")?.url, `${API_URL}/v1/owner/offers/off%2Fana/accept`);
+  });
+
   it("after accept, the offer's conversationId is the chat to open", async () => {
     const { service } = fakeApi(offeredThen(() => ok({ id: "off_ana", status: "accepted" })));
 
@@ -192,6 +201,19 @@ describe("offersApiClient answers", () => {
     const { service } = fakeApi(offeredThen(() => ({ status: 500, body: { success: false, error: { code: "boom", message: "Boom" } } })));
 
     await assert.rejects(service.accept("off_ana"), { status: 500, code: "boom" });
+  });
+
+  it("getOffer reads an offer answered elsewhere with its new status, not the cached offered one", async () => {
+    let isAnsweredElsewhere = false;
+    const { service } = fakeApi((call) => {
+      if (!isAnsweredElsewhere) return offersByStatus(call);
+      const status = new URL(call.url).searchParams.get("status");
+      return ok(status === "accepted" ? [{ ...anaOffer, status: "accepted" }] : []);
+    });
+    await service.getOffer("off_ana");
+    isAnsweredElsewhere = true;
+
+    assert.equal((await service.getOffer("off_ana"))?.status, "accepted");
   });
 
   it("getOffer finds an offered request by id, and null for an unknown id", async () => {

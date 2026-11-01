@@ -93,6 +93,16 @@ describe("live conversations: the list", () => {
     assert.deepEqual(lines, ["quote sent", "done"]);
   });
 
+  it("writes 'visit' without a window, and nothing for a state it does not know", async () => {
+    const approved = { ...anaRow, id: "c5", job: { id: "j5", state: "en_route", arrivalWindow: null } };
+    const unknown = { ...anaRow, id: "c6", job: { id: "j6", state: "paused", arrivalWindow: null } };
+    const { service } = liveService({ "GET /conversations": { data: [approved, unknown] } });
+
+    const lines = (await service.getConversations()).map((conversation) => conversation.statusLine);
+
+    assert.deepEqual(lines, ["visit", ""]);
+  });
+
   it("finds one conversation by id in the list, or null when the owner cannot see it", async () => {
     const { service } = liveService({ "GET /conversations": { data: [anaRow, carlosRow] } });
 
@@ -196,6 +206,15 @@ describe("live conversations: polish with Zukki", () => {
 
     assert.deepEqual(calls.at(-1), { method: "POST", path: "/drafts/d1/send", body: { usePolished: false } });
     assert.equal(message?.text, "on my way");
+  });
+
+  it("sends a plain message through POST /conversations/:id/messages after an abandoned polish preview", async () => {
+    const { service, calls } = liveService({ ...draftRoutes, "POST /conversations/c1/messages": { status: 201, data: { id: "s2", sentAt: SENT_AT } } });
+    await service.sendMessage("c1", "on my way", { polish: true });
+
+    await service.sendMessage("c1", "on my way", { polish: false });
+
+    assert.deepEqual(calls.at(-1), { method: "POST", path: "/conversations/c1/messages", body: { text: "on my way" } });
   });
 
   it("fails the polish when Zukki has no version (polished null)", async () => {

@@ -21,7 +21,14 @@ env:
 - extendedWaitUntil:
     notVisible: "Create your account"
     timeout: 30000
-- runScript: mailpit-code.js
+# retry: https://docs.maestro.dev/api-reference/commands/retry (at most 3 retries).
+- retry:
+    maxRetries: 3
+    commands:
+      - runScript: mailpit-code.js
+      - assertTrue:
+          condition: ${output.code}
+          label: Mailpit has the sign-in code
 - tapOn: "Verification code"
 - inputText: ${output.code}
 - tapOn:

@@ -5,6 +5,7 @@ const copys = {
   // shared
   backLabel: "Back",
   somethingWentWrong: "Something went wrong.", // HANDOFF-RN-UI.md section 8, "Every screen also needs"
+  tryAgain: "Try again",
   // quote modal
   sendAQuote: "Send a quote",
   filledInByZukki: "Filled in by Zukki from your prices. Change anything.",

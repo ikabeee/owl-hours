@@ -9,12 +9,18 @@ import type { OffersService } from "../services/offersService.ts";
 export type RequestsRuntime = { service: OffersService; clock: () => ISODate };
 
 let liveRuntime: RequestsRuntime | null = null;
+let demoRuntime: RequestsRuntime | null = null;
 
-// Composition root of the requests hooks. Live: one service shared by every screen, so an
-// answer given on the detail shows on the list, on the real clock. Demo: as before, every
-// mount gets its own fake offers and a clock that starts at DEMO_NOW, so the demo replays.
+// Composition root of the requests hooks: one service shared by every screen, so an answer given
+// on the detail shows on the list. Live runs on the real clock; the demo on fake offers and a clock
+// that starts at DEMO_NOW when the app first shows a request, so the demo replays on each app start.
 export function createRequestsRuntime(): RequestsRuntime {
-  return getLiveRuntime() ?? { service: createOffersService(createFakeOffersClient()), clock: createDemoClock() };
+  return getLiveRuntime() ?? getDemoRuntime();
+}
+
+function getDemoRuntime(): RequestsRuntime {
+  demoRuntime ??= { service: createOffersService(createFakeOffersClient()), clock: createDemoClock() };
+  return demoRuntime;
 }
 
 function getLiveRuntime(): RequestsRuntime | null {
