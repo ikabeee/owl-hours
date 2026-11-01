@@ -83,8 +83,9 @@ export default function ProfileScreen(props: {
   async function readWebsite() {
     if (website.trim() === "" || importStatus !== "idle") return;
     setImportStatus("reading");
-    await props.onImportWebsite(website);
-    setImportStatus("imported");
+    const imported = await props.onImportWebsite(website);
+    // Nothing imported (live mode): no imported note, the field reads as before.
+    setImportStatus(imported.services > 0 ? "imported" : "idle");
   }
 
   function pickLogo(event: React.ChangeEvent<HTMLInputElement>) {

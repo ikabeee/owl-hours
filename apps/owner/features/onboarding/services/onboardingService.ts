@@ -1,6 +1,7 @@
-// Onboarding backend: sign-up code, website import, and the profile/prices/area drafts.
+// Onboarding backend: sign-up code, website import, and the profile/prices/area steps.
 // Demo mode checks DEMO_CODE; live mode emails and checks the code through CodeAuth
-// (Supabase email OTP behind the owner auth controller). Drafts stay in memory in both.
+// (Supabase email OTP behind the owner auth controller). Demo drafts stay in memory;
+// with the live owner API the steps save the business there (onboardingApiClient.ts).
 // The fake client is seeded with private copies of the demo business and owner
 // (structuredClone, never mutating the shared mock). Services return states
 // (e.g. "wrong_code"), never copy: the screens own the words.
@@ -9,6 +10,8 @@ import {
   owner as seedOwner,
 } from "../../../shared/data/mock.ts";
 import type { ExtraFee, PriceItem } from "../../../shared/data/types.ts";
+import type { OwnerEditApi } from "../../../shared/infra/ownerApi.ts";
+import { createApiOnboardingClient } from "./onboardingApiClient.ts";
 
 // Typed as string (not the literal): callers compare it against arbitrary user input,
 // which is exactly what the locked verify test does with its wrong-code branch.
@@ -68,6 +71,8 @@ export type OnboardingClient = {
   savePrices(prices: PriceItem[]): Promise<void>;
   findArea(): Promise<{ radiusKm: number; nightUrgent: boolean } | null>;
   saveArea(area: { radiusKm: number; nightUrgent: boolean }): Promise<void>;
+  findFees(): Promise<ExtraFee[]>;
+  findHoursSummary(): Promise<string>;
 };
 
 export function createOnboardingService(
@@ -87,10 +92,10 @@ export function createOnboardingService(
     saveProfile: (profile) => client.saveProfile(profile),
     getPrices: () => currentPrices(client),
     savePrices: (prices) => client.savePrices(prices),
-    getFees: async () => structuredClone(seedBusiness.fees),
+    getFees: () => client.findFees(),
     getArea: () => currentArea(client),
     saveArea: (area) => keepNightUrgent(client, area),
-    getHoursSummary: async () => seedBusiness.hours.summary,
+    getHoursSummary: () => client.findHoursSummary(),
     getNightUrgent: async () => (await storedArea(client)).nightUrgent,
     setNightUrgent: (nightUrgent) => storeNightUrgent(client, nightUrgent),
   };
@@ -131,6 +136,8 @@ export function createFakeOnboardingClient(): OnboardingClient {
     saveArea: async (next) => {
       area = structuredClone(next);
     },
+    findFees: async () => structuredClone(seedBusiness.fees),
+    findHoursSummary: async () => seedBusiness.hours.summary,
   };
 }
 
@@ -155,20 +162,25 @@ export const demoOnboardingService: OnboardingService = createOnboardingService(
 const liveServices = new WeakMap<CodeAuth, OnboardingService>();
 
 // Demo mode (no CodeAuth) keeps the fake; live mode reuses one service per CodeAuth,
-// so the address sent on sign-up is the one verify shows and checks.
-export function onboardingServiceFor(codeAuth: CodeAuth | null): OnboardingService {
+// so the address sent on sign-up is the one verify shows and checks. With the live
+// owner API the business steps save there; without it they stay in the shared drafts.
+export function onboardingServiceFor(
+  codeAuth: CodeAuth | null,
+  api: OwnerEditApi | null = null,
+): OnboardingService {
   if (codeAuth === null) return demoOnboardingService;
 
   const known = liveServices.get(codeAuth);
   if (known) return known;
 
-  const live = createLiveOnboardingService(codeAuth);
+  const live = createLiveOnboardingService(codeAuth, api);
   liveServices.set(codeAuth, live);
   return live;
 }
 
-function createLiveOnboardingService(codeAuth: CodeAuth): OnboardingService {
-  return createOnboardingService(createLiveOnboardingClient(codeAuth, sharedDrafts), {
+function createLiveOnboardingService(codeAuth: CodeAuth, api: OwnerEditApi | null): OnboardingService {
+  const steps = api ? createApiOnboardingClient(api, sharedDrafts) : sharedDrafts;
+  return createOnboardingService(createLiveOnboardingClient(codeAuth, steps), {
     owner: { name: "", email: "" },
   });
 }

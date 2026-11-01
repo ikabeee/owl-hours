@@ -2,8 +2,8 @@
 // the flow to the area step. New rows are a DOM-local draft until Continue saves them.
 import { useEffect, useState } from "react";
 import type { ExtraFee, PriceItem } from "../../../shared/data/types.ts";
-import { demoOnboardingService } from "../services/onboardingService.ts";
 import type { OnboardingService } from "../services/onboardingService.ts";
+import { useOnboardingService } from "./useOnboardingService.ts";
 
 export type PricesDeps = { service: OnboardingService };
 
@@ -19,8 +19,8 @@ export type Prices =
   | { status: "ready"; view: PricesView };
 
 export function usePrices(deps?: Partial<PricesDeps>): Prices {
-  const [defaults] = useState(createDemoDeps);
-  const service = deps?.service ?? defaults.service;
+  const configured = useOnboardingService();
+  const service = deps?.service ?? configured;
 
   const [prices, setPrices] = useState<PriceItem[] | null>(null);
   const [fees, setFees] = useState<ExtraFee[] | null>(null);
@@ -60,8 +60,4 @@ export function usePrices(deps?: Partial<PricesDeps>): Prices {
   async function relaunch(): Promise<void> {
     setAttempt((count) => count + 1);
   }
-}
-
-function createDemoDeps(): PricesDeps {
-  return { service: demoOnboardingService };
 }

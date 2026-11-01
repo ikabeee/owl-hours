@@ -2,8 +2,8 @@
 // that persists both and moves the flow to live.
 import { useEffect, useState } from "react";
 import { clampRadiusKm } from "../lib/areaRadius.ts";
-import { demoOnboardingService } from "../services/onboardingService.ts";
 import type { OnboardingService } from "../services/onboardingService.ts";
+import { useOnboardingService } from "./useOnboardingService.ts";
 
 export type AreaDeps = { service: OnboardingService };
 
@@ -20,8 +20,8 @@ export type Area =
   | { status: "ready"; view: AreaView };
 
 export function useArea(deps?: Partial<AreaDeps>): Area {
-  const [defaults] = useState(createDemoDeps);
-  const service = deps?.service ?? defaults.service;
+  const configured = useOnboardingService();
+  const service = deps?.service ?? configured;
 
   const [saved, setSaved] = useState<{
     radiusKm: number;
@@ -72,8 +72,4 @@ async function finishArea(
 ): Promise<void> {
   await service.saveArea({ radiusKm: clampRadiusKm(radiusKm) });
   await service.setNightUrgent(nightUrgent);
-}
-
-function createDemoDeps(): AreaDeps {
-  return { service: demoOnboardingService };
 }
