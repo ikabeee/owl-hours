@@ -4,7 +4,7 @@ Everything needed to build both sides of Zukki's UI. Hand this folder to the cod
 
 | Surface | Who | Built with | Brief |
 |---|---|---|---|
-| **Zukki on WhatsApp** | Customers | WhatsApp Cloud API messages (no app) | `whatsapp/MESSAGES.md` + `whatsapp/payloads/*.json` |
+| **Zukki on WhatsApp** | Customers | WhatsApp Cloud API messages (no app) | `whatsapp/MESSAGES.md` + the builders in `packages/whatsapp/src/payloads/` |
 | **Zukki for Business** | Business owners | Expo (SDK 58) native shell + **Astryx** components in Expo DOM components | `owner-app/HANDOFF-RN-UI.md` |
 
 Product context, rules and architecture are in `docs/`: `01-PRODUCT.md`, `02-HANDOFF.md`, `03-ARCHITECTURE.md`. The decisions from Oct 27 are in `01-PRODUCT.md`, under "Decisions".
@@ -84,7 +84,6 @@ Alternative and edge paths:
 HANDOFF-UI.md                this file
 whatsapp/
   MESSAGES.md                rules, catalog in order, reply routing
-  payloads/                  15 ready-to-send Cloud API bodies + _index.json
   screens/                   9 customer screens (2×)
 owner-app/
   HANDOFF-RN-UI.md           stack, architecture, Astryx mapping, navigation, every screen and state
