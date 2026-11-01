@@ -122,6 +122,57 @@ describe("PATCH /v1/owner/business", () => {
   });
 });
 
+describe("POST /v1/owner/business", () => {
+  it("creates or updates the caller's business with the onboarding profile", async () => {
+    const { call, calls } = setup(answersWithBusiness);
+
+    const res = await call("POST", "/business", {
+      name: "Northside Plumbing",
+      category: "plumbing",
+      website: "https://northside.example",
+      ownerName: "Mario R.",
+    });
+
+    assert.equal(res.status, 200);
+    assert.deepEqual(await dataOf(res), NORTHSIDE_BUSINESS);
+    assert.equal(calls[0]?.path, "/rest/v1/rpc/owner_create_business");
+    assert.deepEqual(calls[0]?.body, {
+      p_name: "Northside Plumbing",
+      p_category: "plumbing",
+      p_website: "https://northside.example",
+      p_owner_name: "Mario R.",
+    });
+    assert.equal(calls.length, 1);
+  });
+
+  it("stores the category as typed on screen in its key form and sends no absent field", async () => {
+    const { call, calls } = setup(answersWithBusiness);
+
+    await call("POST", "/business", { name: "Eastside Heat", category: " Water Heaters " });
+
+    assert.deepEqual(calls[0]?.body, { p_name: "Eastside Heat", p_category: "water_heaters" });
+  });
+
+  it("refuses a tenant id, a category outside a-z and a website that is not http(s)", async () => {
+    const { call, calls } = setup(answersWithBusiness);
+
+    assert.equal((await call("POST", "/business", { name: "Eastside", category: "plumbing", businessId: EASTSIDE })).status, 400);
+    assert.equal((await call("POST", "/business", { name: "Plomería Sur", category: "plomería" })).status, 400);
+    assert.equal((await call("POST", "/business", { name: "Eastside", category: "plumbing", website: "ftp://e.example" })).status, 400);
+    assert.equal((await call("POST", "/business", { category: "plumbing" })).status, 400);
+    assert.equal(calls.length, 0);
+  });
+
+  it("answers 403 when a staff member runs onboarding", async () => {
+    const { call } = setup(() => pgError("42501", "only the business owner can change it", 403));
+
+    const res = await call("POST", "/business", { name: "Takeover", category: "plumbing" });
+
+    assert.equal(res.status, 403);
+    assert.equal(((await res.json()) as { error: { code: string } }).error.code, "forbidden");
+  });
+});
+
 describe("PUT /v1/owner/business/prices", () => {
   it("replaces the price list through owner_save_prices", async () => {
     const { call, calls } = setup(answersWithBusiness);
