@@ -45,11 +45,11 @@ const quoteMessage = {
   },
 };
 
-type Answers = { messages: unknown[]; suggestedQuote: { min: number; max: number } | null };
+type Answers = { messages: unknown[]; suggestedQuote: { min: number; max: number } | null; jobState?: string };
 
-async function loadedLiveChat({ messages, suggestedQuote }: Answers): Promise<ChatView> {
+async function loadedLiveChat({ messages, suggestedQuote, jobState = "proposed" }: Answers): Promise<ChatView> {
   const routes: Record<string, unknown> = {
-    "/conversations": [chatRow],
+    "/conversations": [{ ...chatRow, job: { ...chatRow.job, state: jobState } }],
     "/conversations/c1/messages": messages,
     "/offers?status=accepted": [{ id: "h1", suggestedQuote }],
     "/me": { businesses: [{ name: "Northside Plumbing" }] },
@@ -114,6 +114,12 @@ describe("live chat: quoting without Zukki's suggestion (S2)", () => {
     const chat = await loadedLiveChat({ messages: [customerMessage, quoteMessage], suggestedQuote: { min: 130, max: 160 } });
 
     assert.equal(chat.suggestedQuoteText, null);
+    assert.equal(chat.canSendQuote, false);
+  });
+
+  it("offers no quote entry once the customer approved the job, as the API refuses that quote", async () => {
+    const chat = await loadedLiveChat({ messages: [customerMessage], suggestedQuote: null, jobState: "customer_approved" });
+
     assert.equal(chat.canSendQuote, false);
   });
 });

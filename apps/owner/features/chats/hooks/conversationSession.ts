@@ -218,7 +218,7 @@ function buildChatView(
     step: composer.step,
     jobId,
     suggestedQuoteText: suggestion && !isQuoteSent ? moneyRangeText(suggestion.suggestedQuote) : null,
-    canSendQuote: jobId !== null && !isQuoteSent,
+    canSendQuote: jobId !== null && !isQuoteSent && conversation.jobTakesQuote !== false,
     preview: composer.preview,
     polishEnabled: composer.polishEnabled,
     polishFailed: composer.polishFailed,

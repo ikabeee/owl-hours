@@ -41,6 +41,8 @@ type ApiOffer = { id: ID; suggestedQuote: MoneyRange | null };
 type ApiMe = { businesses: { name: string }[] };
 
 const WAITING_STATES = ["requested", "triaged", "proposed"];
+// The states private.send_quote accepts: after the customer approves, a new quote is refused.
+const QUOTABLE_STATES = ["proposed", "owner_confirmed"];
 const VISIT_STATES = ["customer_approved", "en_route", "on_site"];
 
 export function createLiveConversationsClient(api: OwnerApi): ConversationsClient {
@@ -118,7 +120,7 @@ function toConversation(row: ApiConversation): Conversation {
     // A chat always opens with Zukki's handoff message; the empty stand-in only keeps the row drawable.
     lastMessage: row.lastMessage ? toMessage(row.lastMessage) : { id: `${row.id}:none`, from: "zukki", text: "", sentAt: localTimestamp(row.lastMessageAt) },
     unread: row.unread,
-    ...(row.job ? { jobId: row.job.id } : {}),
+    ...(row.job ? { jobId: row.job.id, jobTakesQuote: QUOTABLE_STATES.includes(row.job.state) } : {}),
     ...(row.acceptedAt ? { acceptedAt: localTimestamp(row.acceptedAt) } : {}),
   };
 }

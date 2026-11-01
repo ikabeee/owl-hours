@@ -71,6 +71,7 @@ describe("live conversations: the list", () => {
         lastMessage: { id: "m5", from: "customer", text: "Perfect, thank you!", sentAt: "2026-10-28T00:07:00-05:00" },
         unread: 0,
         jobId: "j1",
+        jobTakesQuote: false,
       },
       {
         id: "c2",
@@ -81,6 +82,7 @@ describe("live conversations: the list", () => {
         lastMessage: { id: "m9", from: "customer", text: "Can you come Thursday instead?", sentAt: "2026-10-27T21:48:00-05:00" },
         unread: 2,
         jobId: "j2",
+        jobTakesQuote: true,
       },
     ]);
   });

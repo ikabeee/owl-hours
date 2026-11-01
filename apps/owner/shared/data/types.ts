@@ -84,6 +84,7 @@ export type Conversation = {
   unread: number;
   jobId?: ID;                       // the job the business opened by accepting, when it has one
   acceptedAt?: ISODate;             // when the business accepted the offer
+  jobTakesQuote?: boolean;          // live: the job is still before the customer's approval; the demo leaves it unset
 };
 
 // ---------- jobs ----------
