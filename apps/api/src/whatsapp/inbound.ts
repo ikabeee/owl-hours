@@ -6,7 +6,7 @@
 import { randomUUID } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
-import type { WebhookEvent, WhatsAppClient } from "@owl-hours/whatsapp";
+import { isQuestionTap, type WebhookEvent, type WhatsAppClient } from "@owl-hours/whatsapp";
 import { unwrap } from "../services/db-result.ts";
 import type { Turn, TurnContext } from "../orchestrator/types.ts";
 import * as whatsapp from "../services/whatsapp-service.ts";
@@ -89,7 +89,7 @@ async function handleMessage(deps: InboundDeps, event: MessageEvent): Promise<vo
         ...who,
         waMessageId: event.waMessageId,
         kind: content.kind,
-        text: content.title,
+        text: ownerFacingBody(content.id, content.title),
         payload: { id: content.id, title: content.title },
       });
       if (stored.duplicate) return;
@@ -120,6 +120,12 @@ async function handleMessage(deps: InboundDeps, event: MessageEvent): Promise<vo
       deps.log.info(`whatsapp: skipped ${content.type} message ${event.waMessageId}`);
       return;
   }
+}
+
+// The owner reads a question tap as the customer's "I have a question";
+// every other tap keeps its button title. The payload keeps the tap.
+function ownerFacingBody(id: string, title: string): string {
+  return isQuestionTap(id) ? "I have a question" : title;
 }
 
 // A business rule saying no (quote superseded, job moved on) is not a reason
