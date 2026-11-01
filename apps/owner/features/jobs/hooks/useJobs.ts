@@ -9,7 +9,7 @@ import { scheduledJobLine } from "../lib/scheduledJobLine.ts";
 import { segmentTabs } from "../lib/segmentTabs.ts";
 import type { SegmentTab } from "../lib/segmentTabs.ts";
 import type { JobsService } from "../services/jobsService.ts";
-import { sharedDemoJobsService, sharedDemoNow } from "./demoJobsService.ts";
+import { jobsRuntime } from "./jobsRuntime.ts";
 
 export type JobsDeps = { service: JobsService; now: () => ISODate };
 
@@ -38,7 +38,7 @@ export type JobsListResult = { jobs: JobsListView | null; reload: () => void };
 
 // Pass a stable service (a module constant or memoized): changing it reloads the jobs.
 export function useJobs(deps?: Partial<JobsDeps>): JobsListResult {
-  const [defaults] = useState(createDemoDeps);
+  const [defaults] = useState(createDefaultDeps);
   const service = deps?.service ?? defaults.service;
   const now = deps?.now ?? defaults.now;
   const [jobs, setJobs] = useState<Job[] | null>(null);
@@ -89,6 +89,7 @@ function cardsIn(jobs: Job[], segment: JobSegment, now: ISODate): JobCardView[] 
   });
 }
 
-function createDemoDeps(): JobsDeps {
-  return { service: sharedDemoJobsService(), now: sharedDemoNow };
+// The live API when configured, the demo otherwise (S7).
+function createDefaultDeps(): JobsDeps {
+  return jobsRuntime();
 }

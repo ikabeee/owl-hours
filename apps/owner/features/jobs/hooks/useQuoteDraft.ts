@@ -4,7 +4,7 @@ import { arrivalWindowText } from "../../../shared/lib/arrivalWindow.ts";
 import { firstName } from "../../../shared/lib/firstName.ts";
 import { buildQuote } from "../lib/quoteEditing.ts";
 import type { JobsService, QuoteDraft } from "../services/jobsService.ts";
-import { sharedDemoJobsService } from "./demoJobsService.ts";
+import { jobsRuntime } from "./jobsRuntime.ts";
 
 export type QuoteDraftDeps = { service: JobsService };
 
@@ -24,15 +24,20 @@ export type QuoteDraftView = {
 // Returns null while the draft loads, or when the conversation has no job to quote.
 // Pass a stable service (a module constant or memoized): changing it reloads the draft.
 export function useQuoteDraft(conversationId: ID, deps?: Partial<QuoteDraftDeps>): QuoteDraftView | null {
-  const [defaults] = useState(createDemoDeps);
+  const [defaults] = useState(createDefaultDeps);
   const service = deps?.service ?? defaults.service;
   const [draft, setDraft] = useState<QuoteDraft | null>(null);
 
   useEffect(() => {
     let isCurrent = true;
-    service.getQuoteDraft(conversationId).then((loaded) => {
-      if (isCurrent) setDraft(loaded);
-    });
+    service
+      .getQuoteDraft(conversationId)
+      .then((loaded) => {
+        if (isCurrent) setDraft(loaded);
+      })
+      .catch(() => {
+        // A rejected load (the live API failed) keeps the view null: no error state yet (D22).
+      });
     return () => {
       isCurrent = false;
     };
@@ -61,6 +66,7 @@ async function sendQuote(service: JobsService, conversationId: ID, draft: QuoteD
   }
 }
 
-function createDemoDeps(): QuoteDraftDeps {
-  return { service: sharedDemoJobsService() };
+// The live API when configured, the demo otherwise (S7).
+function createDefaultDeps(): QuoteDraftDeps {
+  return { service: jobsRuntime().service };
 }
