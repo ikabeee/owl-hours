@@ -489,7 +489,7 @@ it with a new one.
 - **Why:** the hosted Supabase project already ran `20261029101127`; applying main's `20261031120000_accept_opens_job` on top would insert two jobs per accept, since `jobs.handoff_id` is not unique. Keeping the hosted versions byte-identical keeps the repo and hosted `schema_migrations` in step.
 - **Consequences:** the accepted job carries the business currency and the request ticket. `accept_handoff` locks the handoff row, so concurrent accepts cannot both open a job. `supabase/tests/accept_creates_job.test.sql` pins one job per accept.
 
-## D29 — The live chat shows the sent quote, quotes without a suggestion, and the accept time (2026-11-01)
+## D30 — The live chat shows the sent quote, quotes without a suggestion, and the accept time (2026-11-01)
 
 - **Decision:** `private.send_quote` (migration `20261101200000_quote_message_and_accepted_at.sql`) also
   writes an owner `messages` row linked by the new `messages.quote_id`. The row is stored as `sent`, so
