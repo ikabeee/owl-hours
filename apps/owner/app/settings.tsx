@@ -4,11 +4,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import SettingsScreen from "../features/business/components/SettingsScreen";
 import BusinessLoadError from "../features/business/components/BusinessLoadError";
 import { useSettings } from "../features/business/hooks/useSettings";
+import { useOwnerAuth } from "../features/auth/hooks/useOwnerAuth";
 import LoadingSkeleton from '../shared/shell/LoadingSkeleton';
 
 export default function SettingsRoute() {
   const insets = useSafeAreaInsets();
   const settings = useSettings();
+  const auth = useOwnerAuth();
   const safeInsets = { top: insets.top, bottom: insets.bottom };
 
   if (settings.status === 'failed') {
@@ -27,7 +29,12 @@ export default function SettingsRoute() {
       onBack={async () => router.back()}
       onToggleSetting={view.toggleSetting}
       onOpenAccounts={async () => router.push('/content/accounts')} // owned by the content slice
-      onSignOut={async () => {}} // intro lands in another slice
+      // Live: the session ends and the auth gate opens sign-up; the demo has no session and goes to the intro.
+      // A failed sign-out keeps the owner here, still signed in; the controller holds the error.
+      onSignOut={async () => {
+        await auth.signOut().catch(() => {});
+        if (!auth.configured) router.replace('/onboarding/intro');
+      }}
       dom={domHost}
     />
   );

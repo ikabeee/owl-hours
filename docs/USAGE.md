@@ -164,6 +164,15 @@ bash scripts/e2e/run-live.sh
 ```
 *Note: Requires openjdk@17 / Maestro installed for native UI validation.*
 
+### Owner Screens Read the API
+Check that the Business tab, Prices and Content show what the database holds, and that the Requests "Taking requests" switch writes it. Each check writes a unique value to the local database, waits for the screen to show it, and restores the value at exit:
+```sh
+bash scripts/e2e/run-live-owner.sh
+```
+*Note: Needs Expo Go signed in as the demo owner. From a worktree without `apps/api/.env.local`, pass the main checkout's env script: `E2E_ENV=<main checkout>/scripts/e2e/env.sh`.*
+
+`apps/owner/shared/infra/liveClientsReadTheApi.test.ts` runs with the owner tests and fails if a live client's runtime imports reach `shared/data/mock.ts`.
+
 ### Suite Checks
 Run the project's standard verification checks:
 - **Unit and integration test suite**:
