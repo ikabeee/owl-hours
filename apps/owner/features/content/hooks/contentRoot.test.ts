@@ -3,18 +3,26 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { accounts as mockAccounts } from "../../../shared/data/mock.ts";
-import type { OwnerApi } from "../../../shared/infra/ownerApi.ts";
+import type { OwnerEditApi } from "../../../shared/infra/ownerApi.ts";
 import { contentRootFor } from "./contentRoot.ts";
 
 function recordingApi(answers: Record<string, unknown>) {
   const calls: string[] = [];
-  const api: OwnerApi = {
+  const api: OwnerEditApi = {
     get: async (path) => {
       calls.push(`GET ${path}`);
       return answers[path];
     },
     post: async (path) => {
       calls.push(`POST ${path}`);
+      return undefined;
+    },
+    patch: async (path) => {
+      calls.push(`PATCH ${path}`);
+      return undefined;
+    },
+    put: async (path) => {
+      calls.push(`PUT ${path}`);
       return undefined;
     },
   };

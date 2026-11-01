@@ -20,6 +20,7 @@ const AFTER_ID = "55555555-5555-4555-8555-555555555555";
 const REVISION_BEFORE = "a".repeat(64);
 const REVISION_AFTER = "b".repeat(64);
 const UPDATED_AT = "2026-10-28T05:06:00+00:00";
+const EDITED_AT = "2026-10-28T05:07:30+00:00";
 
 function draftRow(overrides: Record<string, unknown> = {}) {
   return {
@@ -79,6 +80,15 @@ function fakeContentApi(state: FakeState) {
     }
     if (method === "GET" && path === "/me") {
       return Response.json({ success: true, data: { businesses: [{ name: "Northside Plumbing" }] } });
+    }
+    const patchMatch = method === "PATCH" && /^\/content\/drafts\/[^/]+$/.test(path);
+    if (patchMatch) {
+      const id = decodeURIComponent(path.split("/")[3] ?? "");
+      const draft = state.drafts.find((row) => row.id === id);
+      if (!draft) return Response.json({ success: false, error: { code: "not_found", message: "Not found." } }, { status: 404 });
+      const { expectedUpdatedAt: _expected, ...changes } = JSON.parse(String(init.body)) as Record<string, unknown>;
+      Object.assign(draft, changes, { updatedAt: EDITED_AT });
+      return Response.json({ success: true, data: draft });
     }
     const reviewMatch = method === "POST" && /^\/content\/drafts\/[^/]+\/review$/.test(path);
     if (reviewMatch) {
@@ -159,7 +169,7 @@ describe("live posts client: S3 approves through the review endpoint", () => {
     assert.equal(reviewCall?.method, "POST");
     assert.deepEqual(reviewCall?.body, {
       approve: true,
-      expectedUpdatedAt: UPDATED_AT,
+      expectedUpdatedAt: EDITED_AT,
       expectedMedia: [
         { id: BEFORE_ID, role: "before", revision: REVISION_BEFORE },
         { id: AFTER_ID, role: "after", revision: REVISION_AFTER },
@@ -170,6 +180,30 @@ describe("live posts client: S3 approves through the review endpoint", () => {
     assert.equal(approved?.status, "approved");
     assert.deepEqual((await service.getDrafts()).map((draft) => draft.id), [SECOND_ID]);
     assert.equal((await service.getPost(DRAFT_ID))?.status, "approved");
+  });
+
+  it("saves the owner's caption and platforms before approving, so the API approves what the owner sees", async () => {
+    const { client, calls } = fakeContentApi({ drafts: [draftRow()], sources: [sourceRow()] });
+    const service = createPostsService(client, { now: () => "2026-10-28T00:07:00-05:00" });
+
+    await service.approve(DRAFT_ID, { caption: "Same-night repairs.", targets: { facebook: true, instagram: false } });
+
+    const writes = calls.filter(({ method }) => method !== "GET");
+    assert.deepEqual(writes.map(({ method, url }) => `${method} ${url.replace(`${API}/v1/owner`, "")}`), [
+      `PATCH /content/drafts/${DRAFT_ID}`,
+      `POST /content/drafts/${DRAFT_ID}/review`,
+    ]);
+    assert.deepEqual(writes[0]?.body, { caption: "Same-night repairs.", platforms: ["facebook_page"], expectedUpdatedAt: UPDATED_AT });
+    assert.equal((writes[1]?.body as { expectedUpdatedAt: string }).expectedUpdatedAt, EDITED_AT);
+  });
+
+  it("approves an unedited draft with no PATCH", async () => {
+    const { client, calls } = fakeContentApi({ drafts: [draftRow()], sources: [sourceRow()] });
+    const service = createPostsService(client, { now: () => "2026-10-28T00:07:00-05:00" });
+
+    await service.approve(DRAFT_ID);
+
+    assert.equal(calls.filter(({ method }) => method === "PATCH").length, 0);
   });
 
   it("shows the API's status after approve: a draft with no time is approved, never published", async () => {
