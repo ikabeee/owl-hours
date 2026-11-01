@@ -494,3 +494,22 @@ it with a new one.
 - **Approve:** `PostsClient.savePost` returns the post as the store holds it, and `postsService.approve` answers that. In live mode the status is the API's (`approved` after `review_content_draft`), mapped one to one; the app no longer maps `approved` to `scheduled`, so an approved post never lands in the "Published" card. Only an API `published` shows as published. Nothing posts to Facebook or Instagram: there is no Meta publishing integration. The demo keeps its local scheduled/published approval.
 - **Regenerate:** `apps/api` has no generator of post copy (the only LLM rewrite, `polish.ts`, rewrites owner chat messages). Live mode sets `canRegenerate: false` and the review screen hides the button instead of cloning the draft locally; the demo keeps it.
 - **Linked accounts:** `GET /v1/owner/linked-accounts` reads `id, platform, display_name, mode` through the owner's client (RLS and column grants, pinned by `supabase/tests/rls.test.sql`). Live `useLinkedAccounts` and the Content "Connected" line use it; each returned row shows as connected.
+
+## D30 — The live chat shows the sent quote, quotes without a suggestion, and the accept time (2026-11-01)
+
+- **Decision:** `private.send_quote` (migration `20261101200000_quote_message_and_accepted_at.sql`) also
+  writes an owner `messages` row linked by the new `messages.quote_id`. The row is stored as `sent`, so
+  `claim_outbox` never picks it up: the customer still receives the quote as Zukki's notice 13.
+  `owner_conversation_messages` returns the row's `quote` (`lines, total, arrivalFrom, arrivalTo, note,
+  technician`, `delivery` null) and leaves out Zukki's notice for a quote the thread already shows.
+  `owner_conversations` returns `acceptedAt` (the handoff's `resolved_at`).
+  - The live chats client maps `quote` to `Message.quote` (arrival as device clock times), so the D23
+    bubble draws it; `Conversation` gains optional `jobId` and `acceptedAt`.
+  - The chat offers "Send a quote" (the quote modal's title) whenever its job has no sent quote and
+    Zukki suggests nothing; the SuggestionRow still wins when there is a suggestion.
+  - The chat's "You accepted at" reads `acceptedAt`; the demo, which has none, keeps its first message.
+- **Why:** live quotes only showed in Jobs, a request without a suggested range could not be quoted
+  from the chat, and the accept time was the oldest loaded message
+  (`odd/tasks/owner-chat-live-fixes.md`, S1-S3).
+- **Consequences:** quotes sent before this migration have no owner quote message; their Zukki notice
+  still shows as a Zukki message. `supabase/tests/owner_chat_quote.test.sql` pins the outbox exclusion.
