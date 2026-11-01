@@ -1,8 +1,8 @@
 // Hook for OwPostReview screen: manages post draft state, targets, caption editing, and approval.
 import { useCallback, useEffect, useState } from "react";
-import type { ID, Job, PostDraft } from "../../../shared/data/types.ts";
+import type { ID, PostDraft } from "../../../shared/data/types.ts";
 import { contentCopys } from "../copys/contentCopys.ts";
-import { resolveJobPhotos } from "../lib/jobPhotos.ts";
+import { resolveJobPhotos, type JobPhotoSource } from "../lib/jobPhotos.ts";
 import type { ResolvedJobPhotos } from "../lib/jobPhotos.ts";
 import { canApprovePost } from "../lib/postApproval.ts";
 import { postWhenText } from "../lib/postWhenText.ts";
@@ -46,7 +46,7 @@ export function usePostReview(
   const clock = deps?.clock ?? defaultDeps.clock;
 
   const [draft, setDraft] = useState<PostDraft | null>(null);
-  const [job, setJob] = useState<Job | null>(null);
+  const [job, setJob] = useState<JobPhotoSource | null>(null);
   const [businessName, setBusinessName] = useState("");
   const [allDraftsCount, setAllDraftsCount] = useState(0);
   const [draftIndex, setDraftIndex] = useState(1);
@@ -71,7 +71,7 @@ export function usePostReview(
         return;
       }
 
-      let loadedJob: Job | null = null;
+      let loadedJob: JobPhotoSource | null = null;
       if (loadedDraft.sourceJobId) {
         loadedJob = await service.getJob(loadedDraft.sourceJobId);
       }

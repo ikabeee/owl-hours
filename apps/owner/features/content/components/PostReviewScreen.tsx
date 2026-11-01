@@ -14,7 +14,7 @@ import { Card } from '@astryxdesign/core/Card';
 import { Text } from '@astryxdesign/core/Text';
 import { Button } from '@astryxdesign/core/Button';
 import { contentCopys } from '../copys/contentCopys';
-import type { ResolvedJobPhotos } from '../lib/jobPhotos';
+import { photoSource, type ResolvedJobPhotos } from '../lib/jobPhotos';
 import type { PostDraft } from '../../../shared/data/types';
 import { contentImages } from './contentImages';
 import ContentTopBar from './ContentTopBar';
@@ -56,12 +56,8 @@ export default function PostReviewScreen(props: {
     canApprove,
   } = props;
 
-  const beforeSrc =
-    (jobPhotos?.photos.before && contentImages.photoMap[jobPhotos.photos.before]) ||
-    contentImages.bathLeak;
-  const afterSrc =
-    (jobPhotos?.photos.after && contentImages.photoMap[jobPhotos.photos.after]) ||
-    contentImages.bathFixed;
+  const beforeSrc = photoSource(jobPhotos?.photos.before, contentImages.photoMap, contentImages.bathLeak);
+  const afterSrc = photoSource(jobPhotos?.photos.after, contentImages.photoMap, contentImages.bathFixed);
 
   return (
     <Theme theme={neutralTheme}>
