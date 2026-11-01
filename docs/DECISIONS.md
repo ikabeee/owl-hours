@@ -482,3 +482,9 @@ it with a new one.
   UI or maintenance deletion still needs explicit confirmation. Original photo
   files and unverified backup retention are separate concerns. See
   `docs/STORY-PACK-FOLLOWUP.md` for the data-follow-up dependency and scope.
+
+## D28 — One job per accepted offer (2026-11-01)
+
+- **Decision:** `private.resolve_handoff` opens the job on accept (hosted migration `20261029101127`, ported from `fix/issue-14`). `private.open_job` (D24) returns the job the handoff already has and only inserts when there is none (`20261101100000_accept_opens_one_job.sql`).
+- **Why:** the hosted Supabase project already ran `20261029101127`; applying main's `20261031120000_accept_opens_job` on top would insert two jobs per accept, since `jobs.handoff_id` is not unique. Keeping the hosted versions byte-identical keeps the repo and hosted `schema_migrations` in step.
+- **Consequences:** the accepted job carries the business currency and the request ticket. `accept_handoff` locks the handoff row, so concurrent accepts cannot both open a job. `supabase/tests/accept_creates_job.test.sql` pins one job per accept.
