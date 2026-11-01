@@ -53,6 +53,7 @@ export const contentCopys = {
     source ? `Draft ${index} of ${total} · ${source}` : `Draft ${index} of ${total}`,
   jobDraftSubtitle: (firstName: string | number) =>
     `Made from last night's job · ${firstName} agreed to share`,
+  theCustomer: "The customer",
   photoConsentLine: (firstName: string | number) =>
     `Image made from your job photos. ${firstName} agreed to share them.`,
 

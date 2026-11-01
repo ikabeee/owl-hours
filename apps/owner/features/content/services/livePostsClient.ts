@@ -3,10 +3,12 @@ import {
   storyPackReviewSchema,
   storyPackSourceSchema,
   type StoryPackDraftDto,
+  type StoryPackSourceDto,
 } from "@owl-hours/shared";
 import type { OwnerApi } from "../../../shared/infra/ownerApi.ts";
 import type { ID, PostDraft } from "../../../shared/data/types.ts";
 import { localTimestamp } from "../../../shared/lib/localIsoString.ts";
+import type { JobPhotoSource } from "../lib/jobPhotos.ts";
 import type { PostsClient } from "./postsService.ts";
 
 // PostsClient over GET /content/drafts and POST /content/drafts/:id/review (S1-S3, S5).
@@ -28,16 +30,16 @@ export function createLivePostsClient(api: OwnerApi): PostsClient {
     return draftsById.get(id) ?? (await readDrafts()).find((draft) => draft.id === id) ?? null;
   }
 
-  async function approvalMedia(draft: StoryPackDraftDto): Promise<{ id: string; role: "before" | "after"; revision: string }[]> {
-    if (!draft.sourceJobId) throw new Error(`Post ${draft.id} has no source job to approve against.`);
+  async function findSource(jobId: ID): Promise<StoryPackSourceDto | null> {
     const rows = (await api.get("/content/sources")) as unknown[];
     if (!Array.isArray(rows)) throw new Error("The owner API answered sources without a list.");
-    const assets = new Map(
-      rows
-        .map((row) => storyPackSourceSchema.parse(row))
-        .find((source) => source.id === draft.sourceJobId)
-        ?.assets.map((asset) => [asset.id, asset]) ?? [],
-    );
+    return rows.map((row) => storyPackSourceSchema.parse(row)).find((source) => source.id === jobId) ?? null;
+  }
+
+  async function approvalMedia(draft: StoryPackDraftDto): Promise<{ id: string; role: "before" | "after"; revision: string }[]> {
+    if (!draft.sourceJobId) throw new Error(`Post ${draft.id} has no source job to approve against.`);
+    const source = await findSource(draft.sourceJobId);
+    const assets = new Map(source?.assets.map((asset) => [asset.id, asset]) ?? []);
     return draft.sourceMediaIds.map((id) => {
       const asset = assets.get(id);
       if (!asset) throw new Error(`Post ${draft.id} changed photos: reload it before approving.`);
@@ -72,8 +74,11 @@ export function createLivePostsClient(api: OwnerApi): PostsClient {
 
     savePost: (post) => saveReviewedPost(post),
 
-    // The jobs endpoint has no consent-gated photo pair the review screen needs; the screen renders without it.
-    findJob: async () => null,
+    // A content source is a finished, consented job: its signed before/after photos feed the review screen.
+    findJob: async (id) => {
+      const source = await findSource(id);
+      return source ? toJobPhotoSource(source) : null;
+    },
 
     getBusinessName: async () => {
       const me = (await api.get("/me")) as { businesses: { name: string }[] };
@@ -103,5 +108,17 @@ function toPostDraft(draft: StoryPackDraftDto): PostDraft {
     ...(draft.scheduledAt ? { scheduledFor: localTimestamp(draft.scheduledAt) } : {}),
     status: draft.status === "approved" ? "scheduled" : draft.status,
     ...(draft.publishedAt ? { publishedAt: localTimestamp(draft.publishedAt) } : {}),
+  };
+}
+
+// The sources list carries no customer name; the consent line then names the customer generically.
+function toJobPhotoSource(source: StoryPackSourceDto): JobPhotoSource {
+  const before = source.assets.find((asset) => asset.role === "before")?.imageUrl;
+  const after = source.assets.find((asset) => asset.role === "after")?.imageUrl;
+  return {
+    id: source.id,
+    customerName: "",
+    photos: { ...(before ? { before } : {}), ...(after ? { after } : {}), extra: [] },
+    shareConsent: source.shareConsent,
   };
 }

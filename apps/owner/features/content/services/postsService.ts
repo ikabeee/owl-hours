@@ -2,13 +2,14 @@
 // Service and fake client adapter for content drafts, published posts, and post approval.
 import { DEMO_NOW, accounts as mockAccounts, anaJob, business, drafts as mockDrafts } from "../../../shared/data/mock.ts";
 import type { ID, Job, PostDraft } from "../../../shared/data/types.ts";
+import type { JobPhotoSource } from "../lib/jobPhotos.ts";
 import { approvePost, regeneratePost } from "../lib/postApproval.ts";
 
 export type PostsClient = {
   findPost(id: ID): Promise<PostDraft | null>;
   savePost(post: PostDraft): Promise<void>;
   listPosts(): Promise<PostDraft[]>;
-  findJob(id: ID): Promise<Job | null>;
+  findJob(id: ID): Promise<JobPhotoSource | null>;
   getBusinessName?(): Promise<string>;
 };
 
@@ -22,7 +23,7 @@ export type PostsService = {
   getPost(id: ID): Promise<PostDraft | null>;
   getScheduled(): Promise<PostDraft[]>;
   getPublished(): Promise<PostDraft[]>;
-  getJob(id: ID): Promise<Job | null>;
+  getJob(id: ID): Promise<JobPhotoSource | null>;
   getBusinessName(): Promise<string>;
   approve(
     id: ID,

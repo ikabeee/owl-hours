@@ -173,12 +173,27 @@ describe("live posts client: S3 approves through the review endpoint", () => {
   });
 });
 
-describe("live posts client: S4 operations without an API equivalent stay null", () => {
-  it("answers null for job lookup without calling the API", async () => {
+describe("live posts client: S4 the job lookup returns the source's signed before/after photos", () => {
+  it("maps GET /content/sources onto the consented photo pair the review screen draws", async () => {
     const { client, calls } = fakeContentApi({ drafts: [draftRow()], sources: [sourceRow()] });
 
-    assert.equal(await client.findJob(JOB_ID), null);
-    assert.deepEqual(calls, []);
+    assert.deepEqual(await client.findJob(JOB_ID), {
+      id: JOB_ID,
+      customerName: "",
+      photos: {
+        before: `https://example.test/${BEFORE_ID}.png`,
+        after: `https://example.test/${AFTER_ID}.png`,
+        extra: [],
+      },
+      shareConsent: "yes",
+    });
+    assert.deepEqual(calls.map((call) => `${call.method} ${call.url}`), [`GET ${API}/v1/owner/content/sources`]);
+  });
+
+  it("answers null for a job that is not a content source", async () => {
+    const { client } = fakeContentApi({ drafts: [draftRow()], sources: [sourceRow()] });
+
+    assert.equal(await client.findJob("66666666-6666-4666-8666-666666666666"), null);
   });
 });
 

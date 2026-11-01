@@ -147,6 +147,8 @@ The job transitions to `customer_approved`.
 3. Open the job to advance the operational lifecycle: start the trip, arrive on site, and complete the job via **Finish job**.
 
 ### Step 7: Content tab draft review
+The local seed has no finished job with photos yet. Run `scripts/local/seed-content-demo.sh` once on the running stack: it uploads a before/after photo pair and adds one finished Northside job and one Story Pack draft to review (safe to run twice).
+
 1. Switch to the **Content** tab.
 2. Zukki automatically drafts social marketing posts from finished, consented jobs and pricing rules.
 3. Review the drafted before-and-after story/post, inspect generated copy, and approve or schedule publication.
