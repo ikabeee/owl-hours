@@ -121,6 +121,13 @@ export function textMessage(to: string, body: string): OutgoingMessage {
   return { to, type: "text", text: { preview_url: false, body } };
 }
 
+// Reading a built text message back: apps/api queues the content (the
+// outbox addresses the real recipient at send time), so copy and the
+// customer agent take the body from the builder instead of restating it.
+export function textBody(message: OutgoingMessage): string {
+  return (message.text as { body: string }).body;
+}
+
 // Reply buttons (payloads 04, 07, 12 and 13): body up to 1024 characters,
 // 1-3 buttons with titles up to 20, footer up to 60, and a text (up to 60)
 // or image header.

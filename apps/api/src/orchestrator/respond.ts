@@ -4,6 +4,7 @@
 // Messages are queued in the outbox, which sends them in order.
 import { textPart, type ContentPart } from "@owl-hours/meta-models";
 import { HOME_EMERGENCY_CATEGORIES, categoryFromListReply, type Category } from "@owl-hours/shared";
+import { nounFor } from "@owl-hours/whatsapp";
 import { errorText } from "../whatsapp/inbound.ts";
 import * as copy from "./copy.ts";
 import type { ConversationFacts, RespondDeps, Turn, TurnContext, Understanding, ZukkiMessage } from "./types.ts";
@@ -216,5 +217,5 @@ function stepNote(facts: ConversationFacts, category: Category): string {
         : !facts.hasLocation
           ? "Waiting for the customer to share their location with the Send location button. Remind them briefly."
           : "A business card was shown. The customer taps Connect me to send the request.";
-  return `Conversation state: the customer needs a ${copy.nounFor(category)}. ${step}`;
+  return `Conversation state: the customer needs a ${nounFor(category)}. ${step}`;
 }

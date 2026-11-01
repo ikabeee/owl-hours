@@ -6,6 +6,7 @@ export {
   createWhatsAppClient,
   listMessage,
   locationRequestMessage,
+  textBody,
   textMessage,
   type ListSection,
   type MediaInfo,
