@@ -5,6 +5,9 @@ import {
   locationRequest,
   nextBusiness,
   noNextBusiness,
+  ownerMessageAsWritten,
+  ownerMessagePolished,
+  quote,
   suggestBusiness,
 } from "../src/index.ts";
 
@@ -113,5 +116,45 @@ describe("producer variants without a JSON counterpart (S5)", () => {
         body: "Northside Plumbing can't take this one, and no other plumber is open near you right now. Message me anytime and I'll look again.",
       },
     });
+  });
+
+  it("11 without a sender name signs with the business only", () => {
+    assert.deepEqual(ownerMessageAsWritten({ to: TO, businessName: BUSINESS_NAME, senderFirstName: null, ownerText: "On my way." }), {
+      to: TO,
+      type: "text",
+      text: { preview_url: false, body: `*${BUSINESS_NAME}*\nOn my way.` },
+    });
+  });
+
+  it("12 without a short name approves with the full business name", () => {
+    const message = ownerMessagePolished({
+      to: TO,
+      businessName: BUSINESS_NAME,
+      senderFirstName: null,
+      polishedText: "On my way.",
+      businessShortName: null,
+    });
+    const interactive = (message as { interactive: { footer: { text: string }; body: { text: string } } }).interactive;
+    assert.equal(interactive.footer.text, "Written with Zukki, approved by Northside Plumbing");
+    assert.equal(interactive.body.text, `*${BUSINESS_NAME}*\nOn my way.`);
+  });
+
+  it("13 without a technician or arrival window pays the business", () => {
+    const message = quote({
+      to: TO,
+      quoteId: "90000000-0000-4000-8000-000000000001",
+      businessName: BUSINESS_NAME,
+      technician: null,
+      arrivalWindow: null,
+      lines: [{ label: "Visit", min: 45, max: 45 }],
+      totalMin: 45,
+      totalMax: 45,
+      currency: "USD",
+    });
+    const interactive = (message as { interactive: { body: { text: string } } }).interactive;
+    assert.equal(
+      interactive.body.text,
+      "Northside Plumbing\n\nVisit: $45\n*Estimated total: $45*\n\nYou pay Northside Plumbing after the repair.",
+    );
   });
 });

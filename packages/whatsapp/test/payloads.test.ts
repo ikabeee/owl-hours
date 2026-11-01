@@ -8,6 +8,9 @@ import {
   locationRequest,
   nextBusiness,
   offTopic,
+  ownerMessageAsWritten,
+  ownerMessagePolished,
+  quote,
   requestSent,
   safetyMarkedFrame,
   suggestBusiness,
@@ -26,6 +29,11 @@ const INCOMING_WAMID = "wamid.IN1";
 const MARKED_FRAME_URL = "https://example.supabase.co/marked.jpg";
 const NORTHSIDE_ID = "10000000-0000-4000-8000-000000000001";
 const BUSINESS_NAME = "Northside Plumbing";
+const SHORT_NAME = "Northside";
+const QUOTE_ID = "90000000-0000-4000-8000-000000000001";
+const AS_WRITTEN_TEXT = "ok mario there 12:55, bringing the valve. 45 visit + 25 night, repair 60-90";
+const POLISHED_TEXT =
+  "Hi Ana, Mario can be there at 12:55 AM and he's bringing a new fill valve. The visit is $45 plus a $25 night fee, and the repair should be $60–90.";
 
 const northsideMatch = {
   businessId: NORTHSIDE_ID,
@@ -41,6 +49,21 @@ const northsideMatch = {
   etaMinutes: 40,
   currency: "USD",
   takesNightJobs: true,
+};
+
+const demoQuote = {
+  quoteId: QUOTE_ID,
+  businessName: BUSINESS_NAME,
+  technician: "Mario R.",
+  arrivalWindow: "12:55–1:25 AM",
+  lines: [
+    { label: "Visit", min: 45, max: 45 },
+    { label: "Night fee", min: 25, max: 25 },
+    { label: "Fill valve repair", min: 60, max: 90 },
+  ],
+  totalMin: 130,
+  totalMax: 160,
+  currency: "USD",
 };
 
 describe("payload conformance with handoff-ui/whatsapp/payloads", () => {
@@ -110,6 +133,56 @@ describe("payload conformance with handoff-ui/whatsapp/payloads", () => {
     assert.deepEqual(
       accepted({ to: TO, businessName: BUSINESS_NAME }),
       await expected("10-accepted.json", { customer_wa_id: TO, business_name: BUSINESS_NAME }),
+    );
+  });
+
+  it("11 ownerMessageAsWritten matches 11-owner-message-as-written.json (S1, S3)", async () => {
+    assert.deepEqual(
+      ownerMessageAsWritten({ to: TO, businessName: BUSINESS_NAME, senderFirstName: "Mario", ownerText: AS_WRITTEN_TEXT }),
+      await expected("11-owner-message-as-written.json", {
+        customer_wa_id: TO,
+        business_name: BUSINESS_NAME,
+        sender_first_name: "Mario",
+        owner_text: AS_WRITTEN_TEXT,
+      }),
+    );
+  });
+
+  it("12 ownerMessagePolished matches 12-owner-message-polished.json (S1, S3)", async () => {
+    assert.deepEqual(
+      ownerMessagePolished({
+        to: TO,
+        businessName: BUSINESS_NAME,
+        senderFirstName: "Mario",
+        polishedText: POLISHED_TEXT,
+        businessShortName: SHORT_NAME,
+      }),
+      await expected("12-owner-message-polished.json", {
+        customer_wa_id: TO,
+        business_name: BUSINESS_NAME,
+        sender_first_name: "Mario",
+        polished_text: POLISHED_TEXT,
+        business_short_name: SHORT_NAME,
+      }),
+    );
+  });
+
+  it("13 quote matches 13-quote.json with the demo quote (S1, S3)", async () => {
+    assert.deepEqual(
+      quote({ to: TO, ...demoQuote }),
+      await expected("13-quote.json", {
+        customer_wa_id: TO,
+        business_name: BUSINESS_NAME,
+        technician: "Mario R.",
+        arrival_window: "12:55–1:25 AM",
+        visit_price: "$45",
+        night_fee: "$25",
+        repair_label: "Fill valve repair",
+        repair_range: "$60–90",
+        total_range: "$130–160",
+        technician_first_name: "Mario",
+        quote_id: QUOTE_ID,
+      }),
     );
   });
 
