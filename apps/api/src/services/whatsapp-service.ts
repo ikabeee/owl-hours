@@ -8,6 +8,7 @@ import { createSupabaseRepository } from "../db/repository.ts";
 import { HttpError } from "../http/respond.ts";
 import { unwrap } from "./db-result.ts";
 import { notifyOfferOwners } from "./owner-push.ts";
+import { suggestedQuote } from "./suggested-quote.ts";
 
 const uuid = z.string().uuid();
 
@@ -197,6 +198,19 @@ export async function findMatches(
       repairLabel: cheapest?.item ?? null,
     };
   });
+}
+
+// The range Zukki suggests on the offer, from the business's price rules at
+// its own local hour (suggested-quote.ts).
+export async function suggestedQuoteFor(db: SupabaseClient, businessId: string, now: Date) {
+  const tenant = z.object({ timezone: z.string() }).parse(
+    unwrap(await db.from("tenants").select("timezone").eq("id", businessId).single()),
+  );
+  const rules = z
+    .array(z.object({ item: z.string(), kind: z.string(), min_amount: z.number(), max_amount: z.number(), conditions: z.string().nullable() }))
+    .parse(unwrap(await db.from("price_rules").select("item, kind, min_amount, max_amount, conditions").eq("tenant_id", businessId)));
+  const localHour = Number(new Intl.DateTimeFormat("en-US", { hour: "numeric", hourCycle: "h23", timeZone: tenant.timezone }).format(now));
+  return suggestedQuote(rules, localHour);
 }
 
 // "Connect me": offers the request to the business and starts its timer.

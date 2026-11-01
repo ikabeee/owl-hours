@@ -4,9 +4,10 @@ import type { OwnerApi } from "../../../shared/infra/ownerApi.ts";
 import type { Conversation, ID, ISODate, Message, MoneyRange, PolishPreview, Sender } from "../../../shared/data/types.ts";
 import { chatsListCopys } from "../copys/chatsListCopys.ts";
 import type { ConversationsClient, QuoteSuggestion } from "./conversationsService.ts";
+import { localTimestamp } from "../../../shared/lib/localIsoString.ts";
 
 type ApiJobSummary = { id: ID; state: string; arrivalWindow: string | null };
-type ApiMessage = { id: ID; from: Sender; text: string | null; sentAt: ISODate; delivery?: Message["delivery"] | null };
+type ApiMessage = { id: ID; from: Sender; kind?: string; text: string | null; sentAt: ISODate; delivery?: Message["delivery"] | null };
 type ApiConversation = {
   id: ID;
   offerId: ID;
@@ -66,7 +67,7 @@ export function createLiveConversationsClient(api: OwnerApi): ConversationsClien
 
     listMessages: async (conversationId) => {
       const rows = (await api.get(`${conversationPath(conversationId)}/messages`)) as ApiMessage[];
-      return rows.map(toMessage);
+      return rows.filter(isShownInThread).map(toMessage);
     },
 
     saveMessage: async (conversationId, message) => {
@@ -93,7 +94,7 @@ function toConversation(row: ApiConversation): Conversation {
     jobTitle: row.title ?? "",
     statusLine: statusLineOf(row.job),
     // A chat always opens with Zukki's handoff message; the empty stand-in only keeps the row drawable.
-    lastMessage: row.lastMessage ? toMessage(row.lastMessage) : { id: `${row.id}:none`, from: "zukki", text: "", sentAt: row.lastMessageAt },
+    lastMessage: row.lastMessage ? toMessage(row.lastMessage) : { id: `${row.id}:none`, from: "zukki", text: "", sentAt: localTimestamp(row.lastMessageAt) },
     unread: row.unread,
   };
 }
@@ -109,7 +110,7 @@ function statusLineOf(job: ApiJobSummary | null): string {
 
 // Only owner messages carry how they were sent (option A or B).
 function toMessage(row: ApiMessage): Message {
-  const message: Message = { id: row.id, from: row.from, text: row.text ?? "", sentAt: row.sentAt };
+  const message: Message = { id: row.id, from: row.from, text: row.text ?? "", sentAt: localTimestamp(row.sentAt) };
   return row.from === "owner" && row.delivery ? { ...message, delivery: row.delivery } : message;
 }
 
@@ -132,4 +133,9 @@ function draftVersionOf(draft: ApiDraft, message: Message): boolean | null {
 
 function conversationPath(conversationId: ID): string {
   return `/conversations/${encodeURIComponent(conversationId)}`;
+}
+
+// A shared location has no text and the thread has no design for it.
+function isShownInThread(row: ApiMessage): boolean {
+  return !(row.kind === "location" && !row.text);
 }

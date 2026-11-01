@@ -14,14 +14,15 @@ export type LiveJobsClientDeps = { now: () => Date };
 export function createLiveJobsClient(api: OwnerApi, deps: Partial<LiveJobsClientDeps> = {}): JobsClient {
   const { now } = { now: () => new Date(), ...deps };
 
-  async function listJobs(): Promise<Job[]> {
+  async function allJobs(): Promise<Job[]> {
     // The API answers owner_jobs items; the app trusts its own API's contract here.
     const apiJobs = (await api.get("/jobs")) as ApiJob[];
     return apiJobs.map((apiJob) => jobFromApi(apiJob, now())).filter((job): job is Job => job !== null);
   }
 
   return {
-    listJobs,
+    // A job the owner accepted but has not quoted yet starts from the chat, not the Jobs list.
+    listJobs: async () => (await allJobs()).filter((job) => !isUnquoted(job)),
 
     findJob: async (id) => {
       const apiJob = await answerOrNullWhenNotFound(api.get(jobPath(id)));
@@ -29,7 +30,7 @@ export function createLiveJobsClient(api: OwnerApi, deps: Partial<LiveJobsClient
     },
 
     findJobByConversationId: async (conversationId) =>
-      (await listJobs()).find((job) => job.conversationId === conversationId) ?? null,
+      (await allJobs()).find((job) => job.conversationId === conversationId) ?? null,
 
     saveJob: async (job) => {
       await (job.status === "quoted" ? sendQuote(api, job, now()) : moveToStatus(api, job));
@@ -59,4 +60,9 @@ async function answerOrNullWhenNotFound(answer: Promise<unknown>): Promise<unkno
     if (error instanceof OwnerApiError && error.status === 404) return null;
     throw error;
   }
+}
+
+// Live, `quoted` is the API's `proposed`: accepted, no quote sent yet (a sent quote is owner_confirmed).
+function isUnquoted(job: Job): boolean {
+  return job.status === "quoted";
 }

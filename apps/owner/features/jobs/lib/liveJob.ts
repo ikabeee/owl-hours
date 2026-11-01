@@ -1,6 +1,7 @@
 import type { ISODate, Job, JobStatus, MoneyRange, Quote, QuoteLine, TimelineEvent } from "../../../shared/data/types.ts";
 import { jobsCopys } from "../copys/jobsCopys.ts";
-import { arrivalInstants, localClockText, localIsoString } from "./localTime.ts";
+import { localIsoString } from "../../../shared/lib/localIsoString.ts";
+import { arrivalInstants, localClockText } from "./localTime.ts";
 
 // One `owner_jobs` item (supabase/migrations/20261028121212_api_layer.sql), as GET /jobs answers it.
 export type ApiJobState =

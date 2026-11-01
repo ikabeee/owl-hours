@@ -1,3 +1,6 @@
+// The device zone is fixed so the mapped local timestamps are exact (Bogotá: UTC-5, no daylight saving).
+process.env.TZ = "America/Bogota";
+
 // Spec: odd/tasks/live-owner-core.md T2 (S2). The live offers client reads and answers
 // offers through the owner API: GET /offers?status=…, POST /offers/:id/accept and
 // POST /offers/:id/decline {reason}, with fetch injected through createOwnerApi.
@@ -114,8 +117,8 @@ describe("offersApiClient.listOffers", () => {
         customerQuote: "It keeps running",
         zukkiSummary: "Valve closed, no cables near the water.",
         suggestedQuote: { min: 130, max: 160 },
-        offeredAt: "2026-10-28T05:05:00.000Z",
-        expiresAt: "2026-10-28T05:10:00.000Z",
+        offeredAt: "2026-10-28T00:05:00-05:00",
+        expiresAt: "2026-10-28T00:10:00-05:00",
         status: "offered",
       },
       {
@@ -128,8 +131,8 @@ describe("offersApiClient.listOffers", () => {
         media: [],
         zukkiSummary: "Valve closed, no cables near the water.",
         suggestedQuote: null,
-        offeredAt: "2026-10-28T02:40:00.000Z",
-        expiresAt: "2026-10-28T05:10:00.000Z",
+        offeredAt: "2026-10-27T21:40:00-05:00",
+        expiresAt: "2026-10-28T00:10:00-05:00",
         status: "accepted",
       },
     ]);

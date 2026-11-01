@@ -93,7 +93,7 @@ describe("createConversationStore", () => {
       };
     });
     const facts = await createConversationStore(client).facts(CHAT);
-    assert.deepEqual(facts, { state: "with_zukki", category: "plumbing", urgency: "now", safety: "awaiting", locationAsked: false, hasLocation: false });
+    assert.deepEqual(facts, { state: "with_zukki", category: "plumbing", urgency: "now", safety: "awaiting", locationAsked: false, hasLocation: false, hasTitle: false });
   });
 
   it("sees an answered safety step, the location request and the shared location", async () => {

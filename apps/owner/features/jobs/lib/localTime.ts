@@ -1,15 +1,9 @@
 import type { ISODate, Quote } from "../../../shared/data/types.ts";
+import { localIsoString } from "../../../shared/lib/localIsoString.ts";
 import { wallClockTimeText } from "../../../shared/lib/wallClockTime.ts";
 
+const HALF_DAY_MS = 12 * 60 * 60 * 1000;
 const DISPLAY_TIME = /^(\d{1,2}):(\d{2})\s*(AM|PM)$/i;
-
-// The API stores instants (often in UTC); the app shows and segments wall-clock times. Writing an
-// instant in the device's own offset lets wallClockTimeText and the calendar-day rules read it locally.
-export function localIsoString(instant: Date): ISODate {
-  const date = `${instant.getFullYear()}-${twoDigits(instant.getMonth() + 1)}-${twoDigits(instant.getDate())}`;
-  const time = `${twoDigits(instant.getHours())}:${twoDigits(instant.getMinutes())}:${twoDigits(instant.getSeconds())}`;
-  return `${date}T${time}${utcOffset(instant)}`;
-}
 
 // "12:55 AM" for an API timestamp, on the device's clock; null when the timestamp is malformed.
 export function localClockText(isoTimestamp: string): string | null {
@@ -18,12 +12,18 @@ export function localClockText(isoTimestamp: string): string | null {
 }
 
 // The quote's display window ("11:50 PM"–"12:20 AM") as instants on `day` in the device zone; the end
-// rolls to the next day when it reads earlier than the start. Null when either end is not a display time.
+// rolls to the next day when it reads earlier than the start, and the whole window does when it starts
+// more than half a day before `day` (a window after midnight quoted before it). Null when either end is not a display time.
 export function arrivalInstants(arrival: Quote["arrival"], day: Date): { from: ISODate; to: ISODate } | null {
   const from = atDisplayTime(day, arrival.from);
   const to = atDisplayTime(day, arrival.to);
   if (!from || !to) return null;
 
+  // Sent at 11:40 PM, "12:15 AM" is tonight after midnight, not this morning.
+  if (day.getTime() - from.getTime() > HALF_DAY_MS) {
+    from.setDate(from.getDate() + 1);
+    to.setDate(to.getDate() + 1);
+  }
   if (to.getTime() < from.getTime()) to.setDate(to.getDate() + 1);
   return { from: localIsoString(from), to: localIsoString(to) };
 }
@@ -42,14 +42,3 @@ function hours24(hours12: number, period: string): number {
   return (hours12 % 12) + (isAfternoon ? 12 : 0);
 }
 
-// getTimezoneOffset is minutes behind UTC, so UTC-5 answers 300.
-function utcOffset(instant: Date): string {
-  const minutesAhead = -instant.getTimezoneOffset();
-  const sign = minutesAhead < 0 ? "-" : "+";
-  const absolute = Math.abs(minutesAhead);
-  return `${sign}${twoDigits(Math.floor(absolute / 60))}:${twoDigits(absolute % 60)}`;
-}
-
-function twoDigits(value: number): string {
-  return String(value).padStart(2, "0");
-}

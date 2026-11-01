@@ -44,6 +44,7 @@ const baseFacts: ConversationFacts = {
   safety: "none",
   locationAsked: false,
   hasLocation: false,
+  hasTitle: false,
 };
 
 type Queued = { message: ZukkiMessage; tenantId: string | null };
@@ -356,5 +357,33 @@ describe("respond: failures", () => {
     };
     await respond(deps, ctx(), { kind: "location" });
     assert.match(queued.at(-1)?.message.body ?? "", /something went wrong on my side/);
+  });
+});
+
+describe("respond: need picked from the category list", () => {
+  it("saves the title and summary from the description, keeping the chosen category and urgency", async () => {
+    const { deps, needs } = setup({
+      facts: { category: "plumbing", urgency: "now" },
+      understanding: { category: "plumbing", urgent: false, title: "Kitchen sink leaking", summary: "Leak under the cabinet, water on the floor." },
+    });
+    await respond(deps, ctx(), text("My kitchen sink is leaking under the cabinet"));
+    assert.deepEqual(needs, [
+      { category: "plumbing", urgency: "now", title: "Kitchen sink leaking", summary: "Leak under the cabinet, water on the floor." },
+    ]);
+  });
+
+  it("keeps the title the request already has when the customer writes again", async () => {
+    const { deps, needs } = setup({
+      facts: { category: "plumbing", urgency: "now", hasTitle: true },
+      understanding: { category: "plumbing", title: "How long will it take", summary: "Asks for an arrival time." },
+    });
+    await respond(deps, ctx(), text("how long?"));
+    assert.deepEqual(needs, []);
+  });
+
+  it("saves nothing when the description gives no title", async () => {
+    const { deps, needs } = setup({ facts: { category: "plumbing", urgency: "now" }, understanding: { category: "plumbing" } });
+    await respond(deps, ctx(), text("help"));
+    assert.deepEqual(needs, []);
   });
 });

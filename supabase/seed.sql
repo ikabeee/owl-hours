@@ -11,16 +11,19 @@
 --   runs only (handoff section 10).
 -- Owners sign in with an emailed 6-digit code; no passwords are seeded. Seeded
 -- owners already have an email, so code sign-in matches their auth user.
+-- Supabase Auth reads the token columns as strings: NULL makes /otp fail with
+-- "Database error finding user", so they are seeded empty.
 
 insert into auth.users (id, instance_id, aud, role, email, email_confirmed_at,
-                        raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
+                        raw_app_meta_data, raw_user_meta_data, created_at, updated_at,
+                        confirmation_token, recovery_token, email_change_token_new, email_change)
 values
   ('20000000-0000-4000-8000-000000000001', '00000000-0000-0000-0000-000000000000', 'authenticated',
    'authenticated', 'mario@northside.example', now(), '{"provider":"email","providers":["email"]}',
-   '{}', now(), now()),
+   '{}', now(), now(), '', '', '', ''),
   ('20000000-0000-4000-8000-000000000002', '00000000-0000-0000-0000-000000000000', 'authenticated',
    'authenticated', 'owner@eastside.example', now(), '{"provider":"email","providers":["email"]}',
-   '{}', now(), now());
+   '{}', now(), now(), '', '', '', '');
 
 -- Northside "can arrive in about 40 min" (ZkWaMatch); Eastside's 55 is a placeholder.
 insert into public.tenants (id, slug, name, short_name, category, timezone, location, rating, review_count,

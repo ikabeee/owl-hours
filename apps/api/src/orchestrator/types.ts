@@ -45,6 +45,7 @@ export type ConversationFacts = {
   safety: SafetyStep;
   locationAsked: boolean;
   hasLocation: boolean;
+  hasTitle: boolean;
 };
 
 export type HistoryEntry = { from: "customer" | "zukki" | "owner"; text: string };
