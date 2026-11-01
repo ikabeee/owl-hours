@@ -15,6 +15,14 @@ say() { echo "== $*"; }
 sql() { psql "$DB_URL" -At -c "$1"; }
 maestro_run() { local log="$out/maestro-$(basename "${@: -1}").log"; (cd "$repo/apps/owner/.maestro" && maestro test --test-output-dir "$out" "$@" >"$log" 2>&1) || { tail -20 "$log"; exit 1; }; }
 
+# Whatever happens to the new owner, the demo owner signs back in, so the other e2e scripts still run.
+# The throwaway owner's account and business stay in the local database (they only ever exist locally).
+sign_demo_owner_back_in() {
+  say "demo owner signs back in"
+  maestro_run -e OWNER_EMAIL=mario@northside.example -e MAILPIT_URL="$MAILPIT_URL" live/sign-out-and-in.yaml
+}
+trap sign_demo_owner_back_in EXIT
+
 say "new owner $email signs up and onboards"
 maestro_run -e NEW_EMAIL="$email" -e BUSINESS_NAME="$business" -e CATEGORY="Plomería" -e MAILPIT_URL="$MAILPIT_URL" live/new-owner-onboarding.yaml
 
@@ -22,8 +30,5 @@ row=$(sql "select t.category || '|' || tu.role || '|' || (select count(*) from s
            from tenants t join tenant_users tu on tu.tenant_id = t.id join auth.users u on u.id = tu.user_id
            where u.email = '$email'")
 say "database: category|role|service areas = $row"
-
-say "demo owner signs back in"
-maestro_run -e OWNER_EMAIL=mario@northside.example -e MAILPIT_URL="$MAILPIT_URL" live/sign-out-and-in.yaml
 
 [ "$row" = "plomeria|owner|1" ] && say "PASS ($out)" || { say "FAIL: expected plomeria|owner|1"; exit 1; }

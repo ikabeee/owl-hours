@@ -23,7 +23,9 @@ name=$(sql "select name from tenants where id='$NORTHSIDE'")
 price=$(sql "select item from price_rules where tenant_id='$NORTHSIDE' and kind='repair_range' order by item limit 1")
 title=$(sql "select title from content_drafts where id='$DRAFT'")
 taking=$(sql "select accepts_now from tenants where id='$NORTHSIDE'")
+# Each value is restored on its own, so one failed statement never leaves the others mutated.
 restore() {
+  set +e
   sql_set "$name" "update tenants set name = :'value' where id = '$NORTHSIDE';"
   sql_set "$taking" "update tenants set accepts_now = :'value'::boolean where id = '$NORTHSIDE';"
   sql_set "$price" "update price_rules set item = :'value' where tenant_id = '$NORTHSIDE' and item = 'Leak $marker';"
@@ -45,7 +47,12 @@ shows content "Story $marker" live-content-from-api
 
 say "Taking requests writes PATCH /business"
 maestro_run live/toggle-taking-requests.yaml
-now=$(sql "select accepts_now from tenants where id='$NORTHSIDE'")
+# The tap returns before PATCH /business commits: wait up to 15 s for the stored value to change.
+for _ in $(seq 1 15); do
+  now=$(sql "select accepts_now from tenants where id='$NORTHSIDE'")
+  [ "$now" != "$taking" ] && break
+  sleep 1
+done
 [ "$now" != "$taking" ] && say "PASS taking requests: accepts_now $taking -> $now" || { say "FAIL: accepts_now stayed $now"; exit 1; }
 
 say "PASS ($out)"

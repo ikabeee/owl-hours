@@ -30,9 +30,10 @@ export default function SettingsRoute() {
       onToggleSetting={view.toggleSetting}
       onOpenAccounts={async () => router.push('/content/accounts')} // owned by the content slice
       // Live: the session ends and the auth gate opens sign-up; the demo has no session and goes to the intro.
+      // A failed sign-out keeps the owner here, still signed in; the controller holds the error.
       onSignOut={async () => {
-        await auth.signOut();
-        router.replace('/onboarding/intro');
+        await auth.signOut().catch(() => {});
+        if (!auth.configured) router.replace('/onboarding/intro');
       }}
       dom={domHost}
     />
