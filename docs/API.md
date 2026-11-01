@@ -31,6 +31,11 @@ The WhatsApp code can also skip HTTP and call the same functions in-process from
 | Method and path | Body / query | Returns |
 |---|---|---|
 | `GET /me` | | `{ userId, businesses: [{ id, name, shortName, category, takingRequests, role, displayName }] }` |
+| `GET /business` | | The caller's business (the first one `GET /me` lists): `id, name, shortName, category, logoUrl, website, rating {value, count}, technicians, prices [{id, label, amount, from}], fees [{id, label, amount (number\|"at_cost"), window?}], hours [{weekday (0 = Sunday), opens, closes}], nightJobs, area {lat, lng, radiusKm} (null without one), takingRequests, acceptWindowMin {urgent, other}, linkedAccounts [{kind, name}]`. `404 not_found` without a business. |
+| `PATCH /business` | `{ name?, shortName?, website? ("" clears it), takingRequests?, nightJobs? }` (at least one) | The business, as `GET /business`. Only an owner writes (`403 forbidden` for staff); the business always comes from the session, never from the body. |
+| `PUT /business/prices` | `{ prices: [{ id?, label, amount }] }` (whole positive amounts) | Replaces the price list: a listed id is updated (a "from" range keeps its width), anything else is added as a fixed price, an unlisted price is removed. Extra fees stay. Returns the business. |
+| `PUT /business/hours` | `{ hours: [{ weekday: 0-6, opens: "HH:MM", closes: "HH:MM" }] }` | Replaces the opening hours (`closes` before `opens` runs past midnight). Returns the business. |
+| `PUT /business/area` | `{ lat, lng, radiusKm (≤ 200) }` | Replaces the service area with one circle. Returns the business. |
 | `GET /offers` | `?status=offered\|accepted\|declined\|expired\|closed&limit=` | Requests: `id, conversationId, status, urgent, title, customerName, approxLocation, distanceKm, zukkiSummary, customerQuote, suggestedQuote {min,max}, media [{kind, url, thumbUrl, durationMs}], offeredAt, expiresAt`. Media links expire after 10 minutes. |
 | `POST /offers/:id/accept` | | `{ id, status, expiresAt }`. `409 offer_expired` if the window closed. |
 | `POST /offers/:id/decline` | `{ reason: busy\|too_far\|not_offered\|other, note? }` | `{ id, status, declineReason }` |
