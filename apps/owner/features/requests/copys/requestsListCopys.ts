@@ -17,4 +17,7 @@ export const requestsListCopys = {
   notTakingBody: "Zukki won't suggest you until you turn this on.",
   noRequestsTitle: "No requests yet",
   noRequestsBody: "We'll notify you when someone nearby needs you.",
+  somethingWentWrong: "Something went wrong.",
+  tryAgain: "Try again",
+  refreshFailedNotice: "Couldn't refresh. Showing saved requests.",
 } as const;

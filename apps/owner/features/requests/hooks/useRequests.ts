@@ -3,7 +3,9 @@ import { business } from "../../../shared/data/mock.ts";
 import type { ISODate } from "../../../shared/data/types.ts";
 import { requestsListView } from "../lib/requestsList.ts";
 import type { RequestsListView } from "../lib/requestsList.ts";
-import type { Offer, OffersService } from "../services/offersService.ts";
+import { initialRequestsLoadState, requestsLoadReducer } from "../lib/requestsLoadState.ts";
+import type { RequestsLoadState } from "../lib/requestsLoadState.ts";
+import type { OffersService } from "../services/offersService.ts";
 import { createRequestsRuntime } from "./requestsRuntime.ts";
 
 const TICK_MS = 1000;
@@ -14,8 +16,16 @@ export type RequestsDeps = {
   isTakingRequests: boolean; // display-only until the switch writes to the business
 };
 
-// The list is null while it loads. `reload` refetches without clearing the current view.
-export type RequestsListResult = { requests: RequestsListView | null; reload: () => void };
+// "loading" draws nothing; "failed" draws the error state and retries the load;
+// "ready" draws the rows, with refreshFailed marking a stale reload that kept them.
+export type RequestsList =
+  | { status: "loading" }
+  | { status: "failed"; retry: () => Promise<void> }
+  | { status: "ready"; view: RequestsListView; refreshFailed: boolean; retry: () => Promise<void> };
+
+// `reload` refetches without clearing the rows shown; a failed reload keeps the
+// rows and only marks refreshFailed so the screen shows a small notice.
+export type RequestsListResult = { requests: RequestsList; reload: () => void };
 
 // Pass stable deps (module constants or memoized): changing them reloads the list.
 export function useRequests(deps?: Partial<RequestsDeps>): RequestsListResult {
@@ -24,7 +34,7 @@ export function useRequests(deps?: Partial<RequestsDeps>): RequestsListResult {
   const clock = deps?.clock ?? defaults.clock;
   const isTakingRequests = deps?.isTakingRequests ?? defaults.isTakingRequests;
 
-  const [offers, setOffers] = useState<Offer[] | null>(null);
+  const [loaded, setLoaded] = useState<RequestsLoadState>(initialRequestsLoadState);
   const [now, setNow] = useState(clock);
   const [reloadToken, setReloadToken] = useState(0);
   const reload = useCallback(() => setReloadToken((token) => token + 1), []);
@@ -33,11 +43,11 @@ export function useRequests(deps?: Partial<RequestsDeps>): RequestsListResult {
     let isCurrent = true;
     service
       .listOffers()
-      .then((loaded) => {
-        if (isCurrent) setOffers(loaded);
+      .then((offers) => {
+        if (isCurrent) setLoaded((shown) => requestsLoadReducer(shown, { kind: "loaded", offers }));
       })
       .catch(() => {
-        if (isCurrent) setOffers([]);
+        if (isCurrent) setLoaded((shown) => requestsLoadReducer(shown, { kind: "failed" }));
       });
     return () => {
       isCurrent = false;
@@ -49,9 +59,23 @@ export function useRequests(deps?: Partial<RequestsDeps>): RequestsListResult {
     return () => clearInterval(timer);
   }, [clock]);
 
-  if (!offers) return { requests: null, reload };
+  return { requests: toRequestsList(loaded, now, isTakingRequests, reload), reload };
+}
 
-  return { requests: requestsListView(offers, now, isTakingRequests), reload };
+function toRequestsList(
+  loaded: RequestsLoadState,
+  now: ISODate,
+  isTakingRequests: boolean,
+  reload: () => void,
+): RequestsList {
+  if (loaded.status === "loading") return { status: "loading" };
+  if (loaded.status === "failed") return { status: "failed", retry: async () => reload() };
+  return {
+    status: "ready",
+    view: requestsListView(loaded.offers, now, isTakingRequests),
+    refreshFailed: loaded.refreshFailed,
+    retry: async () => reload(),
+  };
 }
 
 function createDefaultDeps(): RequestsDeps {
