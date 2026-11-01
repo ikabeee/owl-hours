@@ -20,6 +20,7 @@ export type PostReviewView = {
   scheduledWhenText: string | null;
   jobPhotos: ResolvedJobPhotos | null;
   canApprove: boolean;
+  canRegenerate: boolean;
   onSetCaption: (caption: string) => Promise<void>;
   onToggleTarget: (target: "facebook" | "instagram") => Promise<void>;
   onToggleEditCaption: () => Promise<void>;
@@ -126,6 +127,7 @@ export function usePostReview(
     scheduledWhenText,
     jobPhotos,
     canApprove,
+    canRegenerate: service.canRegenerate,
     onSetCaption: async (newCaption: string) => {
       setCaption(newCaption);
     },

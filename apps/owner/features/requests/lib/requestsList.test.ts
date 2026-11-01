@@ -55,6 +55,19 @@ describe("requestsListView", () => {
     assert.equal(view.waiting[0]?.thumbUrl, null);
   });
 
+  // Spec: odd/tasks/owner-requests-data.md S2.
+  it("shows no distance on a waiting card when the distance is unknown", () => {
+    const view = requestsListView([{ ...ana, distanceKm: null }], DEMO_NOW, true);
+
+    assert.equal(view.waiting[0]?.distanceText, null);
+  });
+
+  it("leaves the distance out of an earlier row when it is unknown", () => {
+    const view = requestsListView([{ ...carlos, distanceKm: null }], DEMO_NOW, true);
+
+    assert.equal(view.earlier[0]?.subtitle, "Carlos M.");
+  });
+
   it("shows the no-requests empty state when there is nothing to list", () => {
     assert.equal(requestsListView([], DEMO_NOW, true).emptyState, "no-requests");
   });

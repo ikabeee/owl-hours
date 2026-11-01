@@ -13,7 +13,7 @@ import type { PostsClient } from "./postsService.ts";
 
 // PostsClient over GET /content/drafts and POST /content/drafts/:id/review (S1-S3, S5).
 // Reads come from the drafts list (the API has no single-draft route); saving an approved post
-// calls the review endpoint with the API's approval snapshot, and the next list shows its status.
+// calls the review endpoint with the API's approval snapshot and answers the status the API returns.
 export function createLivePostsClient(api: OwnerApi): PostsClient {
   const draftsById = new Map<ID, StoryPackDraftDto>();
 
@@ -47,21 +47,18 @@ export function createLivePostsClient(api: OwnerApi): PostsClient {
     });
   }
 
-  async function saveReviewedPost(post: PostDraft): Promise<void> {
+  async function saveReviewedPost(post: PostDraft): Promise<PostDraft> {
     if (post.status === "draft") throw new Error(`Post ${post.id} is still a draft: the live API only reviews approvals.`);
     const draft = await rememberedDraft(post.id);
     if (!draft) throw new Error(`Post ${post.id} is not in the owner's drafts.`);
-    if (post.status === "rejected") {
-      await api.post(reviewPath(post.id), storyPackReviewSchema.parse({ approve: false }));
-      return;
-    }
-    const reviewed = storyPackReviewSchema.parse({
-      approve: true,
-      expectedUpdatedAt: draft.updatedAt,
-      expectedMedia: await approvalMedia(draft),
-    });
-    const updated = storyPackDraftSchema.parse(await api.post(reviewPath(post.id), reviewed));
+    const review = post.status === "rejected" ? { approve: false } : await approval(draft);
+    const updated = storyPackDraftSchema.parse(await api.post(reviewPath(post.id), storyPackReviewSchema.parse(review)));
     draftsById.set(updated.id, updated);
+    return toPostDraft(updated);
+  }
+
+  async function approval(draft: StoryPackDraftDto) {
+    return { approve: true, expectedUpdatedAt: draft.updatedAt, expectedMedia: await approvalMedia(draft) };
   }
 
   return {
@@ -93,7 +90,7 @@ function reviewPath(id: ID): string {
   return `/content/drafts/${encodeURIComponent(id)}/review`;
 }
 
-// A story pack is the API's job-based post; an approved one is scheduled, not yet published.
+// A story pack is the API's job-based post. Its status is the API's: approved is not published.
 function toPostDraft(draft: StoryPackDraftDto): PostDraft {
   return {
     id: draft.id,
@@ -106,7 +103,7 @@ function toPostDraft(draft: StoryPackDraftDto): PostDraft {
       instagram: draft.platforms.includes("instagram"),
     },
     ...(draft.scheduledAt ? { scheduledFor: localTimestamp(draft.scheduledAt) } : {}),
-    status: draft.status === "approved" ? "scheduled" : draft.status,
+    status: draft.status,
     ...(draft.publishedAt ? { publishedAt: localTimestamp(draft.publishedAt) } : {}),
   };
 }

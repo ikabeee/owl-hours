@@ -34,6 +34,7 @@ export default function PostReviewRoute() {
       scheduledWhenText={view.scheduledWhenText}
       jobPhotos={view.jobPhotos}
       canApprove={view.canApprove}
+      canRegenerate={view.canRegenerate}
       insets={safeInsets}
       onBack={async () => {
         router.back();

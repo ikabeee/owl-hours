@@ -188,6 +188,35 @@ describe("/v1/owner chat", () => {
     assert.equal(body.data.status, "queued");
   });
 
+  it("lists chats with the accept time and a page of messages with the sent quote, as the owner", async () => {
+    const quote = {
+      id: "a0000000-0000-4000-8000-000000000001",
+      lines: [{ label: "Valve repair", min: 130, max: 160 }],
+      total: { min: 130, max: 160 },
+      arrivalFrom: "2026-11-03T05:55:00Z",
+      arrivalTo: "2026-11-03T06:25:00Z",
+      note: null,
+      technician: "Mario",
+    };
+    const chat = { id: ANA_CHAT, offerId: ANA_OFFER, acceptedAt: "2026-11-03T05:05:28Z", job: { id: ANA_JOB, state: "owner_confirmed" } };
+    const quoteMessage = {
+      id: "70000000-0000-4000-8000-000000000099", from: "owner", kind: "interactive", text: "Estimated total: $130–160",
+      payload: { variant: "quote" }, sentAt: "2026-11-03T05:10:00Z", status: "sent", delivery: null, media: null, quote,
+    };
+    const { call, calls } = setup((c) => {
+      if (c.path.endsWith("/rpc/owner_conversations")) return { body: [chat] };
+      if (c.path.endsWith("/rpc/owner_conversation_messages")) return { body: [quoteMessage] };
+      return { status: 500, body: {} };
+    });
+
+    const chats = await call("/conversations");
+    const messages = await call(`/conversations/${ANA_CHAT}/messages`);
+
+    assert.deepEqual(await chats.json(), { success: true, data: [chat] });
+    assert.deepEqual(await messages.json(), { success: true, data: [{ ...quoteMessage, media: null }] });
+    assert.deepEqual(calls.map((c) => c.path), ["/rest/v1/rpc/owner_conversations", "/rest/v1/rpc/owner_conversation_messages"]);
+  });
+
   it("refuses to write in a chat the business has not accepted", async () => {
     const { call, calls } = setup(() => ({ body: [] }));
     const res = await call(`/conversations/${ANA_CHAT}/messages`, post({ text: "hello" }));

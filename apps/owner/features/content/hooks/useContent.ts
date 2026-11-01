@@ -6,10 +6,6 @@ import { contentCopys } from "../copys/contentCopys.ts";
 import { resolveJobPhotos } from "../lib/jobPhotos.ts";
 import { postWhenText } from "../lib/postWhenText.ts";
 import { sourceLine } from "../lib/sourceLine.ts";
-import {
-  createAccountsService,
-  createFakeAccountsClient,
-} from "../services/accountsService.ts";
 import type { AccountsService } from "../services/accountsService.ts";
 import type { PostsService } from "../services/postsService.ts";
 import { contentRuntime } from "./contentRuntime.ts";
@@ -155,7 +151,7 @@ function createDefaultDeps(): ContentDeps {
   const root = contentRuntime();
   return {
     postsService: root.postsService,
-    accountsService: createAccountsService(createFakeAccountsClient()),
+    accountsService: root.accountsService,
     clock: root.now,
   };
 }
