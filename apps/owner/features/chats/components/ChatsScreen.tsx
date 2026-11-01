@@ -84,7 +84,7 @@ function ChatRow(props: { row: ChatRowView; onOpen: () => void }) {
         <VStack gap={0.5}>
           <HStack gap={2} justify="between" align="center">
             <Text type="body" weight={isUnread ? 'bold' : 'normal'} maxLines={1}>{row.preview}</Text>
-            {isUnread && <Badge variant="info" label={String(row.unread)} />}
+            {isUnread && <span style={badgeSlotStyle}><Badge variant="info" label={String(row.unread)} /></span>}
           </HStack>
           <Text type="supporting">{row.jobLine}</Text>
         </VStack>
@@ -92,3 +92,6 @@ function ChatRow(props: { row: ChatRowView; onOpen: () => void }) {
     />
   );
 }
+
+// A long preview is cut with an ellipsis; without this the row squeezed the count to an empty dot.
+const badgeSlotStyle = { flexShrink: 0 } as const;
