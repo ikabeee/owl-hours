@@ -110,7 +110,8 @@ export type Job = {
 };
 
 // ---------- content ----------
-export type PostStatus = "draft" | "scheduled" | "published" | "rejected";
+// "approved": the owner approved it on the live API; nothing has been posted yet.
+export type PostStatus = "draft" | "approved" | "scheduled" | "published" | "rejected";
 export type PostDraft = {
   id: ID;
   title: string;                    // internal label: "Fixed in 91 minutes"

@@ -488,3 +488,9 @@ it with a new one.
 - **Decision:** `private.resolve_handoff` opens the job on accept (hosted migration `20261029101127`, ported from `fix/issue-14`). `private.open_job` (D24) returns the job the handoff already has and only inserts when there is none (`20261101100000_accept_opens_one_job.sql`).
 - **Why:** the hosted Supabase project already ran `20261029101127`; applying main's `20261031120000_accept_opens_job` on top would insert two jobs per accept, since `jobs.handoff_id` is not unique. Keeping the hosted versions byte-identical keeps the repo and hosted `schema_migrations` in step.
 - **Consequences:** the accepted job carries the business currency and the request ticket. `accept_handoff` locks the handoff row, so concurrent accepts cannot both open a job. `supabase/tests/accept_creates_job.test.sql` pins one job per accept.
+
+## D29 — Live Content shows the API's truth (2026-11-01)
+
+- **Approve:** `PostsClient.savePost` returns the post as the store holds it, and `postsService.approve` answers that. In live mode the status is the API's (`approved` after `review_content_draft`), mapped one to one; the app no longer maps `approved` to `scheduled`, so an approved post never lands in the "Published" card. Only an API `published` shows as published. Nothing posts to Facebook or Instagram: there is no Meta publishing integration. The demo keeps its local scheduled/published approval.
+- **Regenerate:** `apps/api` has no generator of post copy (the only LLM rewrite, `polish.ts`, rewrites owner chat messages). Live mode sets `canRegenerate: false` and the review screen hides the button instead of cloning the draft locally; the demo keeps it.
+- **Linked accounts:** `GET /v1/owner/linked-accounts` reads `id, platform, display_name, mode` through the owner's client (RLS and column grants, pinned by `supabase/tests/rls.test.sql`). Live `useLinkedAccounts` and the Content "Connected" line use it; each returned row shows as connected.

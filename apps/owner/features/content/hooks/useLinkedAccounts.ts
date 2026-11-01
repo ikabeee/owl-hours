@@ -1,11 +1,8 @@
 // Hook for OwAccounts screen: loads linked social accounts.
 import { useCallback, useEffect, useState } from "react";
 import type { LinkedAccount } from "../../../shared/data/types.ts";
-import {
-  createAccountsService,
-  createFakeAccountsClient,
-} from "../services/accountsService.ts";
 import type { AccountsService } from "../services/accountsService.ts";
+import { contentRuntime } from "./contentRuntime.ts";
 
 export type LinkedAccountsView = {
   accounts: LinkedAccount[];
@@ -50,7 +47,5 @@ export function useLinkedAccounts(
 }
 
 function createDefaultDeps(): LinkedAccountsDeps {
-  return {
-    service: createAccountsService(createFakeAccountsClient()),
-  };
+  return { service: contentRuntime().accountsService };
 }
