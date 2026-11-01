@@ -4,26 +4,29 @@
 import assert from 'node:assert/strict';
 import { it } from 'node:test';
 import { createSupabaseOwnerSession } from '../../../shared/infra/ownerSessionClient.ts';
-import { createOwnerAuthController } from './ownerAuthController.ts';
+import { createOwnerAuthController, type OwnerAuthControllerState } from './ownerAuthController.ts';
 import { ownerAuthRedirect } from './ownerAuthGate.ts';
 
 it('a verified code leaves the gate open for the business step the verify route pushes next', async () => {
   const controller = createOwnerAuthController(supabaseRuntimeThatVerifies());
   controller.start();
   await controller.restore();
+  assert.equal(businessStepRedirect(controller.getState()), '/onboarding/sign-up');
 
   assert.equal(await controller.verifyCode('daniel@northside-plumbing.example', '482910'), true);
 
-  const { session, loading } = controller.getState();
-  assert.equal(session?.access_token, 'email-session');
-  const redirect = ownerAuthRedirect({
+  assert.equal(controller.getState().session?.access_token, 'email-session');
+  assert.equal(businessStepRedirect(controller.getState()), null);
+});
+
+function businessStepRedirect({ session, loading }: OwnerAuthControllerState): string | null {
+  return ownerAuthRedirect({
     configured: true,
     loading,
     signedIn: session !== null,
     pathname: '/onboarding/business',
   });
-  assert.equal(redirect, null);
-});
+}
 
 function supabaseRuntimeThatVerifies() {
   const values = new Map<string, string>();
