@@ -131,12 +131,13 @@ function WaitingCard(props: { card: WaitingRequestCard; onReview: () => Promise<
 }
 
 function OfferUrgency(props: { card: WaitingRequestCard }) {
-  if (!props.card.isUrgent) return <Text type="supporting">{props.card.distanceText}</Text>;
+  const { distanceText } = props.card;
+  if (!props.card.isUrgent) return distanceText ? <Text type="supporting">{distanceText}</Text> : null;
 
   return (
     <HStack gap={1} align="center">
       <StatusDot variant="error" label={requestsListCopys.urgent} />
-      <Text type="supporting">{`${requestsListCopys.urgent} · ${props.card.distanceText}`}</Text>
+      <Text type="supporting">{distanceText ? `${requestsListCopys.urgent} · ${distanceText}` : requestsListCopys.urgent}</Text>
     </HStack>
   );
 }

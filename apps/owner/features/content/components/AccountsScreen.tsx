@@ -63,7 +63,7 @@ export default function AccountsScreen(props: {
 
                 return (
                   <div
-                    key={account.kind}
+                    key={`${account.kind}:${account.name}`}
                     style={{
                       display: 'flex',
                       alignItems: 'center',

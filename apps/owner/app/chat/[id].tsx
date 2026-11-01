@@ -34,6 +34,7 @@ export default function ChatRoute() {
       sendFailed={view.sendFailed}
       hasJob={view.jobId !== null}
       suggestedQuoteText={view.suggestedQuoteText}
+      canSendQuote={view.canSendQuote}
       insets={safeInsets}
       onSend={view.send}
       onSendChoice={view.sendChoice}

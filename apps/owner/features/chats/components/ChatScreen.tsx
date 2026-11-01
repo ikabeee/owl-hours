@@ -51,6 +51,7 @@ export default function ChatScreen(props: {
   sendFailed: boolean;
   hasJob: boolean; // "View job and evidence" opens the conversation's job, so it shows only when there is one
   suggestedQuoteText: string | null; // "$130–160" for the SuggestionRow; null when Zukki suggests nothing
+  canSendQuote: boolean; // the job still takes a quote: without a suggestion, "Send a quote" opens the quote modal
   insets: { top: number; bottom: number };
   onSend: (text: string) => Promise<SendOutcome>;
   onSendChoice: (choice: PolishChoice) => Promise<void>;
@@ -205,6 +206,7 @@ type FooterProps = Pick<
   | 'polishFailed'
   | 'sendFailed'
   | 'suggestedQuoteText'
+  | 'canSendQuote'
   | 'onSend'
   | 'onSendChoice'
   | 'onSetPolishEnabled'
@@ -218,12 +220,18 @@ function Footer(props: FooterProps) {
 
   return (
     <VStack gap={2} padding={3}>
-      {props.suggestedQuoteText && props.step !== 'comparing' && (
-        <SuggestionRow quoteText={props.suggestedQuoteText} onReview={props.onReviewQuote} />
-      )}
+      {props.step !== 'comparing' && <QuoteEntry {...props} />}
       <FooterBody {...props} draft={draft} onDraftChange={setDraft} />
     </VStack>
   );
+}
+
+// Zukki's suggestion when there is one; otherwise a plain way to the quote modal while the job takes a quote.
+function QuoteEntry(props: Pick<FooterProps, 'suggestedQuoteText' | 'canSendQuote' | 'onReviewQuote'>) {
+  if (props.suggestedQuoteText) return <SuggestionRow quoteText={props.suggestedQuoteText} onReview={props.onReviewQuote} />;
+  if (!props.canSendQuote) return null;
+
+  return <Button label={chatsCopys.sendAQuote} variant="ghost" size="lg" onClick={() => props.onReviewQuote()} />;
 }
 
 function FooterBody(props: FooterProps & DraftProps) {
