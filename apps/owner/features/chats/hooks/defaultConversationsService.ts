@@ -1,7 +1,7 @@
-import { DEMO_NOW } from "../../../shared/data/mock.ts";
 import type { ISODate } from "../../../shared/data/types.ts";
 import { getOwnerLiveApi } from "../../../shared/infra/ownerApiRuntime.ts";
 import type { ConversationsService } from "../services/conversationsService.ts";
+import { chatsNowFor } from "../lib/chatsNow.ts";
 import { conversationsServiceFor } from "./conversationsServiceFor.ts";
 
 // Composition root of the chat hooks: one service for the app's lifetime, so the Chats list and an open
@@ -10,9 +10,8 @@ export function defaultConversationsService(): ConversationsService {
   return defaultRoot().service;
 }
 
-// The list's "now": the wall clock live; the demo's night otherwise, so the timestamps match the design.
 export function defaultChatsNow(): ISODate {
-  return defaultRoot().isLive ? new Date().toISOString() : DEMO_NOW;
+  return chatsNowFor(defaultRoot().isLive, new Date());
 }
 
 type Root = { service: ConversationsService; isLive: boolean };
