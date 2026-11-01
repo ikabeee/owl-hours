@@ -139,6 +139,40 @@ describe("offersApiClient.listOffers", () => {
   });
 });
 
+// Spec: odd/tasks/owner-requests-data.md S1, S2. A request picked from the category list has
+// no title yet, and a customer who never shared a location has no distance.
+describe("offersApiClient fills what the API leaves out", () => {
+  async function onlyOffer(row: Record<string, unknown>) {
+    const { service } = fakeApi((call) => (new URL(call.url).searchParams.get("status") === "offered" ? ok([row]) : ok([])));
+    const [offer] = await service.listOffers();
+    return offer;
+  }
+
+  it("names a request without a title by its category", async () => {
+    const offer = await onlyOffer({ ...anaOffer, title: null, category: "plumbing" });
+
+    assert.equal(offer?.title, "Plumbing request");
+  });
+
+  it("names a request with neither title nor category a service request", async () => {
+    const offer = await onlyOffer({ ...anaOffer, title: null, category: null });
+
+    assert.equal(offer?.title, "Service request");
+  });
+
+  it("keeps the title the customer's description gave", async () => {
+    const offer = await onlyOffer({ ...anaOffer, category: "plumbing" });
+
+    assert.equal(offer?.title, "Leaking toilet, water reaching the hallway");
+  });
+
+  it("keeps an unknown distance unknown instead of 0", async () => {
+    const offer = await onlyOffer({ ...anaOffer, distanceKm: null });
+
+    assert.equal(offer?.distanceKm, null);
+  });
+});
+
 describe("offersApiClient answers", () => {
   it("accept posts POST /offers/:id/accept and returns the accepted offer", async () => {
     const { calls, service } = fakeApi(offeredThen(() => ok({ id: "off_ana", status: "accepted" })));
