@@ -153,6 +153,15 @@ describe("POST /v1/owner/business", () => {
     assert.deepEqual(calls[0]?.body, { p_name: "Eastside Heat", p_category: "water_heaters" });
   });
 
+  it("stores a website typed with a capitalized scheme in its lowercase form", async () => {
+    const { call, calls } = setup(answersWithBusiness);
+
+    const res = await call("POST", "/business", { name: "Sur", category: "plumbing", website: "Http://Sur.example" });
+
+    assert.equal(res.status, 200);
+    assert.equal((calls[0]?.body as { p_website: string }).p_website, "http://Sur.example");
+  });
+
   it("stores an accented or punctuated category in its key form, as owners type it", async () => {
     for (const [typed, key] of [["Plomería", "plomeria"], ["Heating & Cooling", "heating_cooling"], ["A/C - Repair", "a_c_repair"]]) {
       const { call, calls } = setup(answersWithBusiness);

@@ -34,9 +34,9 @@ begin
     raise exception 'only the business owner can change it' using errcode = '42501';
   end if;
   -- Same rule as owner_update_business: null keeps the website, empty clears it.
+  -- The category is set once: owners have no grant on it, and customers search by it.
   update public.tenants set
     name = p_name,
-    category = p_category,
     website = case when p_website is null then website else nullif(p_website, '') end
   where id = v_id;
 end

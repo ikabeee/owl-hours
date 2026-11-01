@@ -47,6 +47,7 @@ export default function ProfileScreen(props: {
       onBack={() => props.onBack()}
       footerLabel={onboardingCopys.continueButton}
       onFooter={() => props.onSave({ name, category, website })}
+      isFooterDisabled={name.trim() === "" || category.trim() === ""}
     >
       <SetupStepHeader step={1} />
       <Heading level={1}>{onboardingCopys.profileTitle}</Heading>
@@ -129,9 +130,10 @@ function CheckIcon() {
   );
 }
 
-// The profile stores the raw category ("plumbing"); the field shows it capitalized ("Plumbing").
+// The profile stores the category key ("water_heaters"); the field shows it as words ("Water heaters").
 function displayCategory(category: string): string {
-  return category.charAt(0).toUpperCase() + category.slice(1);
+  const words = category.replaceAll("_", " ");
+  return words.charAt(0).toUpperCase() + words.slice(1);
 }
 
 const logoStyle = { borderRadius: "var(--radius-container)" } as const;

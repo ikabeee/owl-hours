@@ -62,7 +62,15 @@ const pushTokenBody = z
   .strict();
 const businessName = z.string().trim().min(1).max(120);
 // An empty website clears it.
-const website = z.union([z.literal(""), z.string().trim().url().max(200).regex(/^https?:\/\//, "must start with http(s)://")]);
+// "Http://" is still http: the scheme is stored lowercase, as the tenants check expects.
+const website = z.union([
+  z.literal(""),
+  z
+    .string()
+    .trim()
+    .transform((typed) => typed.replace(/^https?:\/\//i, (scheme) => scheme.toLowerCase()))
+    .pipe(z.string().url().max(200).regex(/^https?:\/\//, "must start with http(s)://")),
+]);
 // The owner types "Water Heaters" or "Plomería"; the business stores its key, water_heaters or plomeria.
 const category = z
   .string()

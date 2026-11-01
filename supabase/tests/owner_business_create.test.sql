@@ -82,6 +82,17 @@ do $$ begin
 end $$;
 rollback;
 
+\echo '# an existing owner keeps the category customers search by'
+begin;
+set local role authenticated;
+set local request.jwt.claims to :'mario';
+do $$
+declare b jsonb := public.owner_create_business('Northside Plumbing', 'locksmith');
+begin
+  assert b ->> 'category' = 'plumbing', 'owners cannot change the category, as the column grant says';
+end $$;
+rollback;
+
 \echo '# another owner neither sees nor changes the new business'
 begin;
 insert into auth.users (id, email) values
