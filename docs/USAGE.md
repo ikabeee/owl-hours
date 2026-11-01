@@ -206,6 +206,8 @@ Limit: remote push notifications do not work in Expo Go on Android.
 1. `npm install -g eas-cli`, then `eas login` with the team's Expo account.
 2. From `apps/owner`, run `eas init` once. It writes `extra.eas.projectId` into `app.json`, which push notifications also need.
 3. `eas build -p android --profile preview` builds an installable `.apk` (profile `preview` sets `"buildType": "apk"`) and prints a download link and QR code.
+   The APK reads its `EXPO_PUBLIC_*` values from the EAS `preview` environment, not from `.env.local` (`eas env:list preview`). For a phone on the same Wi-Fi they point at the laptop's LAN IP, and only the `preview` profile allows plain HTTP (`app.config.ts`). Start the API so the photo links it signs use that IP too: `SUPABASE_URL=http://<laptop-ip>:54321 npm run dev:api:local`.
+   Docs: [EAS environment variables](https://docs.expo.dev/eas/environment-variables/), [expo-build-properties](https://docs.expo.dev/versions/latest/sdk/build-properties/).
 Docs: [Build APKs](https://docs.expo.dev/build-reference/apk/), [eas.json](https://docs.expo.dev/build/eas-json/).
 
 ### Option C: iOS
