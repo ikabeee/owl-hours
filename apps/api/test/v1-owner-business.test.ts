@@ -189,7 +189,18 @@ describe("PUT /v1/owner/business/prices", () => {
     assert.deepEqual(calls[0]?.body, { p_prices: prices });
   });
 
-  for (const amount of [0, -5, 4.5]) {
+  it("refuses the same price id twice, so one save cannot write a price two ways", async () => {
+    const { call, calls } = setup(answersWithBusiness);
+
+    const res = await call("PUT", "/business/prices", {
+      prices: [{ id: VISIT, label: "Visit", amount: 45 }, { id: VISIT, label: "Visit", amount: 50 }],
+    });
+
+    assert.equal(res.status, 400);
+    assert.equal(calls.length, 0);
+  });
+
+  for (const amount of [0, -5, 4.5, 2_147_483_648]) {
     it(`refuses a price of ${amount}`, async () => {
       const { call, calls } = setup(answersWithBusiness);
 

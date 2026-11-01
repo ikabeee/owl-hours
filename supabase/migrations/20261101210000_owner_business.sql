@@ -149,8 +149,9 @@ as $$
 declare
   v_id uuid := private.caller_owned_business_id();
 begin
+  -- The visit (callout) is the fee the suggested quote starts from: it is edited, never removed.
   delete from public.price_rules p
-  where p.tenant_id = v_id and p.kind in ('callout', 'repair_range')
+  where p.tenant_id = v_id and p.kind = 'repair_range'
     and not exists (select 1 from jsonb_array_elements(p_prices) e where e ->> 'id' = p.id::text);
 
   update public.price_rules p

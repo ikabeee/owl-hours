@@ -49,15 +49,21 @@ export function useRequests(deps?: Partial<RequestsDeps>): RequestsListResult {
 
   useEffect(() => {
     let isCurrent = true;
-    Promise.all([service.listOffers(), takingRequests.load()])
-      .then(([offers, isTaking]) => {
-        if (!isCurrent) return;
-        setIsTakingRequests(isTaking);
-        setLoaded((shown) => requestsLoadReducer(shown, { kind: "loaded", offers }));
+    service
+      .listOffers()
+      .then((offers) => {
+        if (isCurrent) setLoaded((shown) => requestsLoadReducer(shown, { kind: "loaded", offers }));
       })
       .catch(() => {
         if (isCurrent) setLoaded((shown) => requestsLoadReducer(shown, { kind: "failed" }));
       });
+    // The switch loads on its own: a failed read keeps the last value and never hides the requests.
+    takingRequests
+      .load()
+      .then((isTaking) => {
+        if (isCurrent) setIsTakingRequests(isTaking);
+      })
+      .catch(() => {});
     return () => {
       isCurrent = false;
     };
