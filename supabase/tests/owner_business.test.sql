@@ -118,6 +118,10 @@ begin
 
   b := public.owner_save_prices(jsonb_build_array(jsonb_build_object('id', visit, 'label', 'Visit', 'amount', 50)));
   assert jsonb_array_length(b -> 'prices') = 1, 'missing prices are removed';
+
+  b := public.owner_save_prices('[]'::jsonb);
+  assert (select count(*) from public.price_rules where tenant_id = '10000000-0000-4000-8000-000000000001'
+          and kind = 'callout') = 1, 'the visit fee the suggested quote reads is never removed';
 end $$;
 reset role;
 do $$ begin

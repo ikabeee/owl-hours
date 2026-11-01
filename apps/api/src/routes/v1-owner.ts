@@ -71,15 +71,22 @@ const businessBody = z
   })
   .strict()
   .refine((changes) => Object.keys(changes).length > 0, "nothing to change");
+// Prices are whole currency units stored in an integer column; this keeps them far below its limit.
+const MAX_PRICE = 1_000_000;
 const pricesBody = z
   .object({
     prices: z
       .array(
         z
-          .object({ id: z.string().min(1).max(64).optional(), label: z.string().trim().min(1).max(80), amount: z.number().int().positive() })
+          .object({
+            id: z.string().min(1).max(64).optional(),
+            label: z.string().trim().min(1).max(80),
+            amount: z.number().int().positive().max(MAX_PRICE),
+          })
           .strict(),
       )
-      .max(50),
+      .max(50)
+      .refine(hasDistinctIds, "each price id appears once"),
   })
   .strict();
 const clockTime = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "must be HH:MM");
@@ -217,4 +224,9 @@ export function ownerRoutes(deps: V1Deps): Hono<OwnerEnv> {
   });
 
   return app;
+}
+
+function hasDistinctIds(prices: { id?: string | undefined }[]): boolean {
+  const ids = prices.flatMap((price) => (price.id ? [price.id] : []));
+  return new Set(ids).size === ids.length;
 }
