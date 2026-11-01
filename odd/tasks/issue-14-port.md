@@ -1,5 +1,5 @@
 ---
-status: in-progress
+status: done
 ---
 
 # Issue #14 port onto main
@@ -22,11 +22,12 @@ Port the still-needed parts of `fix/issue-14` onto main without the double job o
 |---|---|---|---|---|
 | T1 | S1, S2 | inline | done (`92ea6c2`, `63de58c`) | RED `accept_creates_job.test.sql` "one job per accepted handoff" → GREEN `npm run test:db` |
 | T2 | S3, S5 | inline | done | `0d007c5`, `1d9800a`; api 294/294, meta-models 15/15 |
-| T3 | S4 | inline | pending | |
-| T4 | S6 | inline | pending | |
+| T3 | S4 | inline | done | `c1c8aca`, `4fc2c13`, `364fa52`; api 300/300, DB outbox retry test |
+| T4 | S6 | inline | done | api 302/302, `npm run test:db` |
 
 ## Log
 
 - L1 (user, 2026-11-01): "Checa esta rama https://github.com/ikabeee/owl-hours/tree/fix/issue-14 Despues de checar esa rama haremos un PR y encontraremos una solucion para poder deployear una db en railway"
 - L2: mapping (explorer, spot-checked): keep 779e323 edge table, d46c807, 1ef783e, 5401d74, 3f7b4f6, parts of 6a4f1a3; drop 2e02e3b, a707785 and the `resolve_handoff` job insert (with main's `open_job` it inserts two jobs per accept; `jobs.handoff_id` has no unique index).
 - L3 (user, 2026-11-01): hosted `schema_migrations` = main's first 13 + `20261029101127/101147/101214`; missing `20261031120000_accept_opens_job` and `20261101000000_story_pack_job_delete`.
+- L4: all four units GREEN. The three hosted migrations are byte-identical to `fix/issue-14` under `20261029101127/101147/101214`; `20261101100000_accept_opens_one_job` makes `open_job` return the job `resolve_handoff` opened (D28). Root `npm test` and `npm run typecheck` 5/5, `npm run test:db` passed. Applying main to the hosted project now adds `20261031120000`, `20261101000000` and `20261101100000`. Next: the Railway deploy (API on Railway; the database question decides where Postgres lives).

@@ -19,7 +19,8 @@ const offerQuery = z.object({
   limit,
 });
 const declineBody = z
-  .object({ reason: z.enum(["busy", "too_far", "not_offered", "other"]), note: z.string().trim().max(500).optional() })
+  // The app's decline button sends no reason; the sheet sends one.
+  .object({ reason: z.enum(["busy", "too_far", "not_offered", "other"]).default("other"), note: z.string().trim().max(500).optional() })
   .strict();
 const messagesQuery = z.object({ before: isoTime.optional(), limit: z.coerce.number().int().min(1).max(200).optional() });
 const quoteBody = z
@@ -75,6 +76,7 @@ export function ownerRoutes(deps: V1Deps): Hono<OwnerEnv> {
     const query = readQuery(c, offerQuery);
     return ok(c, await owner.listOffers(c.get("session"), query.status, query.limit));
   });
+  app.get("/offers/:id", async (c) => ok(c, await owner.getOffer(c.get("session"), readId(c))));
   app.post("/offers/:id/accept", async (c) => ok(c, await owner.acceptOffer(c.get("session"), readId(c))));
   app.post("/offers/:id/decline", async (c) => {
     const id = readId(c);
