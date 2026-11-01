@@ -21,7 +21,7 @@ Zukki is an AI assistant on WhatsApp that finds an open, nearby local business
 | Concern | Read this | Notes |
 |---|---|---|
 | UI scope, rules, build order | `handoff-ui/HANDOFF-UI.md` | Current (Oct 27 decisions) |
-| Customer messages | `handoff-ui/whatsapp/MESSAGES.md` + `payloads/*.json` | Only what the Cloud API can send; 15 ready-to-send bodies |
+| Customer messages | `handoff-ui/whatsapp/MESSAGES.md` + `packages/whatsapp/src/payloads/` | Only what the Cloud API can send; 15 builders, one per message |
 | Owner screens | `handoff-ui/owner-app/HANDOFF-RN-UI.md` + `design/html/*.html` | HTML is truth for copy/layout; Astryx is truth for control look |
 | Verified starter | `handoff-ui/owner-app/starter/` | Expo 58 + Astryx 0.7.4 shell that type-checks and bundles |
 | Demo path | `handoff-ui/demo/` | 10 screens, build and rehearse first |
