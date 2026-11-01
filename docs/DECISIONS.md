@@ -456,3 +456,14 @@ it with a new one.
 - **Why:** live offers had no `suggestedQuote`, so the owner chat hid "Zukki suggests sending the quote"
   and the quote had no starting range.
 - **Consequences:** the accepted job inherits the range (D24), so the quote draft opens with it.
+
+## D26 — Story Pack source-job deletion (2026-10-31)
+
+- Following Crystal's explicit retention choice, a new forward migration deletes
+  only linked Story Pack rows when the source job is deleted, including approved
+  packs. Preserve the existing legacy FK semantics and historical tombstone guards.
+- No deletion UI/API is added. A future surface or maintenance operation must
+  show affected counts and obtain confirmation. Original photo records and Storage
+  objects are retained by job deletion; broader conversation purges, Storage GC,
+  backup erasure and recall of downloaded exports are outside this change.
+- See `docs/STORY-PACK-DATA.md` for preflight and exact preservation boundaries.
