@@ -21,7 +21,7 @@ Branch: `feat/whatsapp-payloads` (worktree `../owl-hours-worktrees/whatsapp-payl
 
 | ID | Specs | Route | Status | Evidence |
 |---|---|---|---|---|
-| T1 | S1, S2, S3 (builders + conformance, JSONs still present) | Muse (coder), Opus review | done | RED 14/16 → GREEN 44/44; apps/api 190/190 unchanged |
+| T1 | S1, S2, S3 (builders + conformance, JSONs still present) | Muse (coder), Opus review | in review, slice 1 of 3 | this slice: 01–06, 14, 15 (10 modules), `packages/whatsapp` 25/25; 07–10 and 11–13 follow (L7) |
 | T2 | S4, S5, S3 retirement (API wiring, delete JSONs) | Muse (coder), Opus review; Risk item 1 guarded by S5 | pending | |
 | T3 | S6 | Muse (coder), Opus review | pending | |
 
@@ -33,3 +33,4 @@ Branch: `feat/whatsapp-payloads` (worktree `../owl-hours-worktrees/whatsapp-payl
 - **L4 (2026-10-30, user):** for the three replies chose "Pasar al chat del negocio (Recomendado)": "El toque llega al dueño como mensaje del cliente en su chat ("Sounds good" / "I have a question"). En las dos de pregunta, Zukki además le dice al cliente: escribe tu pregunta y se la paso a <negocio>. El dueño contesta desde la app como siempre."
 - **L5 (RED, Muse):** `packages/whatsapp/test/payloads.test.ts` (15 conformance tests) + `payload-limits.test.ts` (6, S2), both added to `scripts.test`. `npm test`: 16 tests, 14 pass (pre-existing), 2 fail on missing exports. Operator decisions: A1 builders return `OutgoingMessage` without the envelope (`send()` adds it; test strips `messaging_product`/`recipient_type`), except 03 which `markRead` posts as is; A2 domain-structured inputs (needed for S4); A3/A4 only static titles pinned; A5 the 12 footer is clipped to 60 (S2). JSON-vs-API differences are all variants with no JSON counterpart (null-value lines, other categories, fallbacks): the builders keep today's API behavior for them, guarded by the existing apps/api tests (S5).
 - **L6 (T1 GREEN, Muse):** 17 modules in `packages/whatsapp/src/payloads/`, `markRead` delegates to `typingIndicator`, new `test/payload-variants.test.ts` pins 9 variants with no JSON counterpart. Locked-test checksums unchanged. `packages/whatsapp npm test` 44/44, typecheck clean, `apps/api npm test` 190/190 untouched. Review: one readability fix in `markRead` (single call instead of a ternary over two calls). Next: T2 (API delegates to the builders, JSONs retired).
+- **L7 (2026-10-31):** the T1 commit was split into three review slices to keep each PR under 500 lines: 01–06, 14, 15 (#77), 07–10 (#73), 11–13 (#74). The L6 counts describe all of T1, which is done when the third slice lands.
