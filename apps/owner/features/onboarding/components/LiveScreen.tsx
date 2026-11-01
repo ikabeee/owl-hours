@@ -78,7 +78,9 @@ export default function LiveScreen(props: {
   );
 }
 
-const pageStyle = { display: "flex", flexDirection: "column", width: "100%", minHeight: "100dvh" } as const;
+// One viewport tall and scrolling, so "Link accounts" stays reachable on short windows:
+// Expo web sets `overflow: hidden` on <body>.
+const pageStyle = { display: "flex", flexDirection: "column", width: "100%", height: "100dvh", overflowY: "auto" } as const;
 
 const bodyStyle = { flex: 1, padding: "8px 24px 16px", display: "flex", flexDirection: "column", gap: 24 } as const;
 
