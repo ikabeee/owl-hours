@@ -432,3 +432,16 @@ it with a new one.
   - `13-quote.json` stays: it retires only when `packages/whatsapp` sends the message.
   - Out of T5.2: the real WhatsApp send, the customer pressing a button, the chat list preview line, an
     error state for a rejected load (L37 gap).
+
+## D24 — Accepting an offer opens the job (2026-10-31)
+
+- **Decision:** `private.accept_handoff` (migration `20261031120000_accept_opens_job.sql`) calls the new
+  `private.open_job(handoff)` after an in-time accept. It inserts one job for the handoff's business and
+  conversation in state `proposed`, titled from the conversation (fallback "Service request"), with the
+  offer's suggested range, and logs a `job_events` row (`null → proposed`, actor `owner`). An expired
+  accept and a decline open no job. The public `accept_handoff` wrapper and the API are unchanged.
+- **Why:** no function created jobs, so `send_quote`, which needs a `proposed` or `owner_confirmed` job,
+  only worked on the seeded one; a live request could be accepted but never quoted.
+- **Consequences:** `proposed` matches the seeded demo job, so the quote and approve-visit paths run
+  unchanged. Jobs keep the table's default currency (businesses have no currency column).
+  Tests: `supabase/tests/accept_creates_job.test.sql`.
