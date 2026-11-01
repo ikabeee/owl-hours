@@ -186,3 +186,31 @@ Current architectural and deployment limits to keep in mind:
 - **Hosted Deployment**: Full production cloud hosting is not pre-configured; local execution relies on the containerized Supabase stack.
 - **Hosted Supabase Email Auth**: When deploying to a hosted Supabase project, you must enable the **Email** provider in *Authentication → Providers → Email* with "Confirm email" toggled on. Crucially, the **Magic Link** and **Confirm sign up** email templates must both include `{{ .Token }}` so Supabase emits the 6-digit numerical code rather than only an HTTP magic link.
 - **Push Notifications on Real Devices**: Remote push notification registration in `apps/owner` requires adding `extra.eas.projectId` into `apps/owner/app.json` and generating a custom Expo development build (`eas build`). In standard Expo Go or Expo web without an EAS project ID, push tokens are omitted.
+
+---
+
+## 8. Run the Owner App on a Phone (Android APK, iOS)
+
+App identifiers: `com.owlhours.zukki.owner` on both platforms (`apps/owner/app.json`). Build profiles live in `apps/owner/eas.json`.
+
+A phone cannot reach `localhost`. Before any of the options below, point the app at an API and Supabase the phone can reach: either your laptop's LAN IP on the same Wi-Fi (edit `EXPO_PUBLIC_API_URL` and `EXPO_PUBLIC_SUPABASE_URL` in `apps/owner/.env.local`, replacing `localhost`/`127.0.0.1`), or a deployed API and hosted Supabase.
+
+### Option A: Expo Go (fastest, no build)
+1. Install Expo Go on the phone ([docs](https://docs.expo.dev/get-started/expo-go/)).
+2. From `apps/owner`, run `npx expo start` and scan the QR code.
+Limit: remote push notifications do not work in Expo Go on Android.
+
+### Option B: Android APK with EAS Build (cloud)
+1. `npm install -g eas-cli`, then `eas login` with the team's Expo account.
+2. From `apps/owner`, run `eas init` once. It writes `extra.eas.projectId` into `app.json`, which push notifications also need.
+3. `eas build -p android --profile preview` builds an installable `.apk` (profile `preview` sets `"buildType": "apk"`) and prints a download link and QR code.
+Docs: [Build APKs](https://docs.expo.dev/build-reference/apk/), [eas.json](https://docs.expo.dev/build/eas-json/).
+
+### Option C: iOS
+- Simulator, no Apple account: from `apps/owner`, `npx expo run:ios` (needs Xcode).
+- Your own iPhone, free signing: `npx expo run:ios --device` with the iPhone connected; the install expires after 7 days.
+- Other people's iPhones or TestFlight: needs the Apple Developer Program. Then `eas build -p ios --profile preview` (internal distribution, registered devices) or `--profile production` plus `eas submit -p ios`.
+Docs: [Local app development](https://docs.expo.dev/guides/local-app-development/), [Internal distribution](https://docs.expo.dev/build/internal-distribution/).
+
+### Development builds
+The `development` profile builds a dev client with push support. It requires the `expo-dev-client` package (`npx expo install expo-dev-client` from `apps/owner`), which is not installed yet.
