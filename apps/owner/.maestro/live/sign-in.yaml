@@ -11,9 +11,12 @@ env:
     visible: "Create your account"
     timeout: 120000
 - runScript: clear-mailpit.js
+# The form keeps the last owner's name and email: clear each field before typing.
 - tapOn: "Your name"
+- eraseText: 80
 - inputText: "Mario"
 - tapOn: "Email"
+- eraseText: 80
 - inputText: ${OWNER_EMAIL}
 - tapOn: "Let's set up your account. It takes about 3 minutes."
 - tapOn: "I accept the terms and the privacy policy."
