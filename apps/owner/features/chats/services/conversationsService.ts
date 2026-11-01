@@ -6,12 +6,13 @@ import { buildAsWrittenMessage, buildChosenMessage } from "../lib/ownerDelivery.
 import type { MessageStamp, PolishChoice } from "../lib/ownerDelivery.ts";
 
 export type ConversationsClient = {
+  listConversations(): Promise<Conversation[]>; // newest first
   findConversation(id: ID): Promise<Conversation | null>;
   findQuoteSuggestion(conversationId: ID): Promise<QuoteSuggestion | null>;
   findBusinessName(): Promise<string>;
   listMessages(conversationId: ID): Promise<Message[]>;
   saveMessage(conversationId: ID, message: Message): Promise<void>;
-  polish(text: string): Promise<PolishPreview>;
+  polish(text: string, conversationId: ID): Promise<PolishPreview>; // the live API drafts per conversation
 };
 
 // Zukki's suggestion for a conversation that has a job: which job, and the quote it proposes.
@@ -26,6 +27,7 @@ export type ConversationsDeps = {
 export type SendResult = { sent: Message } | PolishPreview;
 
 export type ConversationsService = {
+  getConversations(): Promise<Conversation[]>; // the Chats list
   getConversation(id: ID): Promise<Conversation | null>;
   getQuoteSuggestion(conversationId: ID): Promise<QuoteSuggestion | null>;
   getBusinessName(): Promise<string>; // the name in the quote bubble's header
@@ -52,6 +54,8 @@ export function createConversationsService(
   }
 
   return {
+    getConversations: () => client.listConversations(),
+
     getConversation: (id) => client.findConversation(id),
 
     getQuoteSuggestion: (conversationId) => client.findQuoteSuggestion(conversationId),
@@ -63,7 +67,7 @@ export function createConversationsService(
 
     sendMessage: async (conversationId, text, { polish }) => {
       if (!(await hasConversation(conversationId))) return null;
-      if (polish) return client.polish(text);
+      if (polish) return client.polish(text, conversationId);
 
       return { sent: await append(conversationId, buildAsWrittenMessage(nextStamp(), text)) };
     },
@@ -85,6 +89,7 @@ export function createFakeConversationsClient(deps: Partial<FakeConversationsCli
   const conversationsById = new Map(structuredClone(seedConversations).map((conversation) => [conversation.id, conversation]));
 
   return {
+    listConversations: async () => structuredClone([...conversationsById.values()]),
     findConversation: async (id) => structuredClone(conversationsById.get(id) ?? null),
     listMessages: async (conversationId) => threads.messages(conversationId),
     findQuoteSuggestion: async (conversationId) => findDemoQuoteSuggestion(conversationsById.get(conversationId)),
