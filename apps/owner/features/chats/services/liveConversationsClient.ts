@@ -22,8 +22,8 @@ type ApiDraft = { draftId: ID; original: string; polished: string | null; langua
 type ApiOffer = { id: ID; suggestedQuote: MoneyRange | null };
 type ApiMe = { businesses: { name: string }[] };
 
+const WAITING_STATES = ["requested", "triaged", "proposed"];
 const VISIT_STATES = ["customer_approved", "en_route", "on_site"];
-const CLOSED_STATES = ["declined", "cancelled"];
 
 export function createLiveConversationsClient(api: OwnerApi): ConversationsClient {
   // The draft Zukki polished, per conversation, until the owner sends one of its two versions.
@@ -78,6 +78,10 @@ export function createLiveConversationsClient(api: OwnerApi): ConversationsClien
       await api.post(`${conversationPath(conversationId)}/messages`, { text: message.text });
     },
 
+    discardDraft: (conversationId) => {
+      pendingDrafts.delete(conversationId);
+    },
+
     polish: async (text, conversationId) => {
       const draft = (await api.post(`${conversationPath(conversationId)}/drafts`, { text })) as ApiDraft;
       pendingDrafts.set(conversationId, draft);
@@ -99,13 +103,14 @@ function toConversation(row: ApiConversation): Conversation {
   };
 }
 
-// The status after the job title: waiting for the owner's quote, quote sent, the visit window, or done.
+// The status after the job title: waiting for the owner's quote, quote sent, the visit (and its window), or done.
+// A state the app does not know shows nothing rather than a wrong status.
 function statusLineOf(job: ApiJobSummary | null): string {
-  if (job?.state === "done") return chatsListCopys.done;
-  if (job?.state === "owner_confirmed") return chatsListCopys.quoteSent;
-  if (job && VISIT_STATES.includes(job.state) && job.arrivalWindow) return `${chatsListCopys.visit} ${job.arrivalWindow}`;
-  if (job && CLOSED_STATES.includes(job.state)) return "";
-  return chatsListCopys.waitingForYou;
+  if (!job || WAITING_STATES.includes(job.state)) return chatsListCopys.waitingForYou;
+  if (job.state === "done") return chatsListCopys.done;
+  if (job.state === "owner_confirmed") return chatsListCopys.quoteSent;
+  if (VISIT_STATES.includes(job.state)) return [chatsListCopys.visit, job.arrivalWindow].filter(Boolean).join(" ");
+  return "";
 }
 
 // Only owner messages carry how they were sent (option A or B).

@@ -13,6 +13,8 @@ export type ConversationsClient = {
   listMessages(conversationId: ID): Promise<Message[]>;
   saveMessage(conversationId: ID, message: Message): Promise<void>;
   polish(text: string, conversationId: ID): Promise<PolishPreview>; // the live API drafts per conversation
+  // Forgets a polish draft the owner left unsent; only a client that keeps drafts needs it.
+  discardDraft?(conversationId: ID): void;
 };
 
 // Zukki's suggestion for a conversation that has a job: which job, and the quote it proposes.
@@ -69,6 +71,7 @@ export function createConversationsService(
       if (!(await hasConversation(conversationId))) return null;
       if (polish) return client.polish(text, conversationId);
 
+      client.discardDraft?.(conversationId);
       return { sent: await append(conversationId, buildAsWrittenMessage(nextStamp(), text)) };
     },
 
