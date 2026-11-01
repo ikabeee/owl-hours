@@ -47,7 +47,7 @@ export type RequestOffer = {
   customerName: string;             // first name + initial only: "Ana L."
   title: string;                    // "Leaking toilet, water reaching the hallway"
   urgent: boolean;
-  distanceKm: number;
+  distanceKm: number | null;        // null when the customer has not shared a location
   approxLocation: string;           // exact address only after the customer approves a quote
   media: Media[];
   customerQuote?: string;           // transcript of the voice note

@@ -3,6 +3,7 @@ import type { OwnerApi } from "../../../shared/infra/ownerApi.ts";
 import type { DeclineReason, ID, Media, MoneyRange, OfferStatus } from "../../../shared/data/types.ts";
 import type { Offer, OffersClient } from "./offersService.ts";
 import { localTimestamp } from "../../../shared/lib/localIsoString.ts";
+import { requestsCopys } from "../copys/requestsCopys.ts";
 
 // One offer as GET /offers returns it (supabase owner_offers, media links signed by the API).
 type ApiOffer = {
@@ -16,6 +17,7 @@ type ApiOffer = {
   expiresAt: string;
   declineReason: DeclineReason | null;
   title: string | null;
+  category: string | null;
   zukkiSummary: string | null;
   customerName: string | null;
   approxLocation: string | null;
@@ -90,9 +92,9 @@ function toOffer(row: ApiOffer & { status: OfferStatus }): Offer {
   const offer: Offer = {
     id: row.id,
     customerName: row.customerName ?? "",
-    title: row.title ?? "",
+    title: row.title ?? untitledRequestTitle(row.category),
     urgent: row.urgent,
-    distanceKm: row.distanceKm ?? 0,
+    distanceKm: row.distanceKm,
     approxLocation: row.approxLocation ?? "",
     media: row.media.flatMap(toMedia),
     zukkiSummary: row.zukkiSummary ?? "",
@@ -104,6 +106,13 @@ function toOffer(row: ApiOffer & { status: OfferStatus }): Offer {
   if (row.customerQuote) offer.customerQuote = row.customerQuote;
   if (row.declineReason) offer.declineReason = row.declineReason;
   return offer;
+}
+
+// A request picked from the category list has no title until the customer describes it.
+function untitledRequestTitle(category: string | null): string {
+  if (!category) return requestsCopys.serviceRequest;
+  const categoryName = category.charAt(0).toUpperCase() + category.slice(1);
+  return `${categoryName} ${requestsCopys.requestWord}`;
 }
 
 // Only video and image evidence reach the owner; a photo without its own thumbnail shows itself.
