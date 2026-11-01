@@ -13,6 +13,7 @@ import {
   ownerMessagePolished,
   textMessage,
   whatAreYouLookingFor,
+  WhatsAppApiError,
   type OutgoingMessage,
   type WhatsAppClient,
 } from "@owl-hours/whatsapp";
@@ -102,20 +103,34 @@ export async function drainOutbox(deps: OutboxDeps, limit = 20): Promise<{ sent:
   for (const row of rows) {
     const message = renderOutbound(row, names.get(row.id) ?? null);
     let waMessageId: string | null = null;
+    let retry = false;
     if (!message) {
       deps.log.warn(`whatsapp: outbox message ${row.id} (${row.sender} ${row.kind}) has no WhatsApp format yet`);
     } else {
       try {
         waMessageId = await deps.client.send(message);
       } catch (error) {
-        deps.log.error(`whatsapp: send of outbox message ${row.id} failed: ${errorText(error)}`);
+        retry = mayPass(error);
+        deps.log.error(`whatsapp: send of outbox message ${row.id} failed${retry ? " (will retry)" : ""}: ${errorText(error)}`);
       }
     }
-    await whatsapp.recordOutboundResult(deps.db, row.id, waMessageId);
+    await whatsapp.recordOutboundResult(deps.db, row.id, waMessageId, retry);
     if (waMessageId) sent += 1;
     else failed += 1;
   }
   return { sent, failed };
+}
+
+// Failures worth another try: rate limits, Meta outages, timeouts and
+// network errors. A 4xx (bad number, 24 h window closed) will not pass.
+export function mayPass(error: unknown): boolean {
+  if (error instanceof WhatsAppApiError) {
+    return error.status === 429 || error.status >= 500;
+  }
+  if (error instanceof Error) {
+    return error.name === "TimeoutError" || error.name === "AbortError" || error instanceof TypeError;
+  }
+  return false;
 }
 
 // Owner messages are signed with the author's first name (payload 11/12).

@@ -670,6 +670,59 @@ begin
 end $$;
 rollback;
 
+\echo '# outbox: passing failures are retried with backoff, then marked failed'
+begin;
+set local role authenticated;
+set local request.jwt.claims to :'mario';
+insert into public.messages (conversation_id, tenant_id, sender, author_user_id, body)
+values ('40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000001', 'owner',
+        '20000000-0000-4000-8000-000000000001', 'On my way');
+reset role;
+set local role service_role;
+do $$
+declare claimed jsonb; m public.messages; msg_id uuid; i integer;
+begin
+  claimed := public.claim_outbox(10);
+  msg_id := (claimed -> 0 ->> 'id')::uuid;
+  assert (claimed -> 0 ->> 'attempt')::int = 1, 'first attempt';
+  m := public.record_outbound_result(msg_id, null, true);
+  assert m.delivery = 'queued' and m.next_send_at > now(), 'queued again with a delay';
+  assert jsonb_array_length(public.claim_outbox(10)) = 0, 'not before the delay';
+  for i in 2..5 loop
+    update public.messages set next_send_at = now() - interval '1 second' where id = msg_id;
+    claimed := public.claim_outbox(10);
+    assert (claimed -> 0 ->> 'attempt')::int = i, 'attempt ' || i;
+    m := public.record_outbound_result(msg_id, null, true);
+  end loop;
+  assert m.delivery = 'failed' and m.next_send_at is null, 'gives up after 5 tries';
+end $$;
+rollback;
+
+\echo '# outbox: a final failure is not retried, a stuck send is claimed again'
+begin;
+set local role authenticated;
+set local request.jwt.claims to :'mario';
+insert into public.messages (conversation_id, tenant_id, sender, author_user_id, body)
+values ('40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000001', 'owner',
+        '20000000-0000-4000-8000-000000000001', 'Bad number'),
+       ('40000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000001', 'owner',
+        '20000000-0000-4000-8000-000000000001', 'Lost mid-send');
+reset role;
+set local role service_role;
+do $$
+declare claimed jsonb; bad uuid; lost uuid;
+begin
+  claimed := public.claim_outbox(10);
+  bad := (select (e ->> 'id')::uuid from jsonb_array_elements(claimed) e where e ->> 'body' = 'Bad number');
+  lost := (select (e ->> 'id')::uuid from jsonb_array_elements(claimed) e where e ->> 'body' = 'Lost mid-send');
+  assert (public.record_outbound_result(bad, null)).delivery = 'failed', 'no retry for a final error';
+  assert jsonb_array_length(public.claim_outbox(10)) = 0, 'the lost send is not reclaimed at once';
+  update public.messages set claimed_at = now() - interval '6 minutes' where id = lost;
+  claimed := public.claim_outbox(10);
+  assert jsonb_array_length(claimed) = 1 and (claimed -> 0 ->> 'id')::uuid = lost, 'stuck send claimed again';
+end $$;
+rollback;
+
 \echo '# owner screens read through row-level security'
 begin;
 set local role authenticated;
