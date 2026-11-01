@@ -14,5 +14,11 @@
   "plugins": [
     "expo-secure-store",
     "expo-notifications"
-  ]
+  ],
+  "extra": {
+    "eas": {
+      "projectId": "751b79b6-63f8-4e74-a817-b2887933a68a"
+    }
+  },
+  "owner": "carlglzm"
 }
