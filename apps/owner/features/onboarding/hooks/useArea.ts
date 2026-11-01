@@ -17,6 +17,7 @@ export type AreaView = {
   nightUrgent: boolean;
   hoursSummary: string;
   location: LocationState;
+  isLocating: boolean; // a device fix and its save are in flight: Finish waits for them
   finish: (radiusKm: number, nightUrgent: boolean) => Promise<void>;
   saveDeviceLocation: (radiusKm: number) => Promise<void>;
 };
@@ -37,6 +38,7 @@ export function useArea(locate: LocateDevice, deps?: Partial<AreaDeps>): Area {
   } | null>(null);
   const [location, setLocation] = useState<LocationState | null>(null);
   const [failed, setFailed] = useState(false);
+  const [isLocating, setIsLocating] = useState(false);
   const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
@@ -72,14 +74,21 @@ export function useArea(locate: LocateDevice, deps?: Partial<AreaDeps>): Area {
       nightUrgent: saved.nightUrgent,
       hoursSummary: saved.hoursSummary,
       location,
+      isLocating,
       finish: (radiusKm, nightUrgent) => finishArea(service, radiusKm, nightUrgent),
       saveDeviceLocation: (radiusKm) => saveDeviceLocation(location.status, radiusKm),
     },
   };
 
   async function saveDeviceLocation(current: LocationStatus, radiusKm: number): Promise<void> {
-    const fix = await locate();
-    setLocation(await settleLocation(current, fix, (point) => service.saveLocation(point, clampRadiusKm(radiusKm))));
+    if (isLocating) return;
+    setIsLocating(true);
+    try {
+      const fix = await locate();
+      setLocation(await settleLocation(current, fix, (point) => service.saveLocation(point, clampRadiusKm(radiusKm))));
+    } finally {
+      setIsLocating(false);
+    }
   }
 
   async function relaunch(): Promise<void> {

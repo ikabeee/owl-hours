@@ -56,3 +56,32 @@ do $$ begin
          = current_setting('test.eastside_location'), 'Eastside location untouched';
 end $$;
 rollback;
+
+\echo '# a radius-only save at the placeholder never overwrites a real location'
+begin;
+set local role authenticated;
+set local request.jwt.claims to :'mario';
+do $$ begin
+  perform public.owner_save_area(0, 0, 9);
+  assert (public.owner_business() ->> 'hasLocation')::boolean, 'Northside keeps its real location';
+end $$;
+reset role;
+do $$ begin
+  assert (select not extensions.st_equals(location::extensions.geometry, private.geo_point(0, 0)::extensions.geometry)
+          from public.tenants where id = '10000000-0000-4000-8000-000000000001'), 'location is not the placeholder';
+end $$;
+rollback;
+
+\echo '# the stored location is rounded to about 110 m, not the exact device fix'
+begin;
+set local role authenticated;
+set local request.jwt.claims to :'mario';
+do $$ begin perform public.owner_save_area(21.161987, -86.851543, 5); end $$;
+reset role;
+do $$ begin
+  assert (select extensions.st_equals(location::extensions.geometry, private.geo_point(21.162, -86.852)::extensions.geometry)
+          from public.tenants where id = '10000000-0000-4000-8000-000000000001'), 'location rounded to 3 decimals';
+  assert (select extensions.st_equals(center::extensions.geometry, private.geo_point(21.162, -86.852)::extensions.geometry)
+          from public.service_areas where tenant_id = '10000000-0000-4000-8000-000000000001'), 'area centre rounded too';
+end $$;
+rollback;

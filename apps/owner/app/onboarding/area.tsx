@@ -33,7 +33,7 @@ export default function AreaRoute() {
       hoursSummary={view.hoursSummary}
       offersLocation={offersLocationAction(view.location.status)}
       locationMessage={locationMessage(view.location)}
-      isFinishDisabled={!canFinishArea(view.location.status)}
+      isFinishDisabled={view.isLocating || !canFinishArea(view.location.status)}
       onUseLocation={view.saveDeviceLocation}
       insets={safeInsets}
       onFinish={async (radiusKm, nightUrgent) => {

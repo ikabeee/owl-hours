@@ -64,6 +64,8 @@ as $$
 $$;
 
 -- Replaces the service area with one circle and moves the business to its centre.
+-- The point is rounded to 3 decimals (about 110 m): a home-based owner's exact device fix
+-- is never stored. The (0, 0) placeholder never overwrites a real business location.
 create or replace function public.owner_save_area(p_lat double precision, p_lng double precision, p_radius_km numeric)
 returns jsonb
 language plpgsql security invoker
@@ -71,11 +73,13 @@ set search_path = ''
 as $$
 declare
   v_id uuid := private.caller_owned_business_id();
+  v_center extensions.geography := private.geo_point(round(p_lat::numeric, 3), round(p_lng::numeric, 3));
 begin
   delete from public.service_areas where tenant_id = v_id;
-  insert into public.service_areas (tenant_id, center, radius_km)
-  values (v_id, private.geo_point(p_lat, p_lng), p_radius_km);
-  update public.tenants set location = private.geo_point(p_lat, p_lng) where id = v_id;
+  insert into public.service_areas (tenant_id, center, radius_km) values (v_id, v_center, p_radius_km);
+  if (p_lat, p_lng) <> (0, 0) then
+    update public.tenants set location = v_center where id = v_id;
+  end if;
   return public.owner_business();
 end
 $$;

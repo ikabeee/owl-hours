@@ -77,6 +77,12 @@ describe("locateDevice", () => {
 
     assert.deepEqual(await locateDevice(device), { kind: "unavailable" });
   });
+
+  it("S3 a position that never arrives stops waiting and is unavailable", async () => {
+    const { device } = port({ granted: true, position: () => new Promise(() => {}) });
+
+    assert.deepEqual(await locateDevice(device, 10), { kind: "unavailable" });
+  });
 });
 
 describe("settleLocation", () => {

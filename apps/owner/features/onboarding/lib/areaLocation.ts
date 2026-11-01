@@ -24,10 +24,13 @@ export function offersLocationAction(status: LocationStatus): boolean {
   return status !== "preset";
 }
 
-export async function locateDevice(port: LocationPort): Promise<DeviceFix> {
+// A device indoors or with location off may never answer; the owner gets a message instead.
+const POSITION_TIMEOUT_MS = 15_000;
+
+export async function locateDevice(port: LocationPort, timeoutMs = POSITION_TIMEOUT_MS): Promise<DeviceFix> {
   try {
     if (!(await port.requestPermission()).granted) return { kind: "denied" };
-    const { coords } = await port.currentPosition();
+    const { coords } = await withinTime(port.currentPosition(), timeoutMs);
     return { kind: "found", point: { lat: coords.latitude, lng: coords.longitude } };
   } catch {
     return { kind: "unavailable" };
@@ -60,3 +63,11 @@ const STATUS_MESSAGES: Record<LocationStatus, string | null> = {
   saved: onboardingCopys.locationSaved,
   preset: null,
 };
+
+function withinTime<T>(work: Promise<T>, timeoutMs: number): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error("location timed out")), timeoutMs);
+  });
+  return Promise.race([work, timeout]).finally(() => clearTimeout(timer));
+}
