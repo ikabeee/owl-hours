@@ -457,9 +457,7 @@ it with a new one.
   and the quote had no starting range.
 - **Consequences:** the accepted job inherits the range (D24), so the quote draft opens with it.
 
-## Story Pack follow-up: versioned edits and source-job deletion (2026-10-31)
-
-## Story Pack follow-up: source-job deletion (2026-10-31)
+## D26 — Story Pack source-job deletion (2026-10-31)
 
 - Following Crystal's explicit retention choice, a new forward migration deletes
   only linked Story Pack rows when the source job is deleted, including approved
