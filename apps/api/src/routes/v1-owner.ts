@@ -60,12 +60,30 @@ const pushTokenBody = z
     platform: z.enum(["ios", "android", "web"]),
   })
   .strict();
+const businessName = z.string().trim().min(1).max(120);
+// An empty website clears it.
+// "Http://" is still http: the scheme is stored lowercase, as the tenants check expects.
+const website = z.union([
+  z.literal(""),
+  z
+    .string()
+    .trim()
+    .transform((typed) => typed.replace(/^https?:\/\//i, (scheme) => scheme.toLowerCase()))
+    .pipe(z.string().url().max(200).regex(/^https?:\/\//, "must start with http(s)://")),
+]);
+// The owner types "Water Heaters" or "Plomería"; the business stores its key, water_heaters or plomeria.
+const category = z
+  .string()
+  .transform(categoryKey)
+  .pipe(z.string().regex(/^[a-z_]{2,32}$/, "must be 2-32 letters"));
+const newBusinessBody = z
+  .object({ name: businessName, category, website: website.optional(), ownerName: z.string().trim().min(1).max(80).optional() })
+  .strict();
 const businessBody = z
   .object({
-    name: z.string().trim().min(1).max(120).optional(),
+    name: businessName.optional(),
     shortName: z.string().trim().min(1).max(28).optional(),
-    // An empty website clears it.
-    website: z.union([z.literal(""), z.string().trim().url().max(200).regex(/^https?:\/\//, "must start with http(s)://")]).optional(),
+    website: website.optional(),
     takingRequests: z.boolean().optional(),
     nightJobs: z.boolean().optional(),
   })
@@ -118,6 +136,11 @@ export function ownerRoutes(deps: V1Deps): Hono<OwnerEnv> {
   app.get("/me", async (c) => ok(c, await owner.getMe(c.get("session"))));
 
   app.get("/business", async (c) => ok(c, await owner.getBusiness(c.get("session"))));
+  // Onboarding's business step: creates the caller's business once, then updates it.
+  app.post("/business", async (c) => {
+    const body = await readJson(c, newBusinessBody);
+    return ok(c, await owner.createBusiness(c.get("session"), body));
+  });
   app.patch("/business", async (c) => {
     const body = await readJson(c, businessBody);
     return ok(c, await owner.updateBusiness(c.get("session"), body));
@@ -231,4 +254,15 @@ export function ownerRoutes(deps: V1Deps): Hono<OwnerEnv> {
 function hasDistinctIds(prices: { id?: string | undefined }[]): boolean {
   const ids = prices.flatMap((price) => (price.id ? [price.id] : []));
   return new Set(ids).size === ids.length;
+}
+
+// Accents dropped, every run of other characters one underscore, no underscore at either end.
+function categoryKey(typed: string): string {
+  return typed
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLowerCase()
+    .replace(/[^a-z]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 32);
 }

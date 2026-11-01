@@ -513,3 +513,11 @@ it with a new one.
   (`odd/tasks/owner-chat-live-fixes.md`, S1-S3).
 - **Consequences:** quotes sent before this migration have no owner quote message; their Zukki notice
   still shows as a Zukki message. `supabase/tests/owner_chat_quote.test.sql` pins the outbox exclusion.
+
+## D31 — Onboarding creates the business and saves through the owner API (2026-11-01)
+
+- **Decision:** `POST /v1/owner/business` runs `public.owner_create_business` (`20261101240000_owner_create_business.sql`): a security-invoker entry point over a private definer that creates the tenant and the caller's owner membership in one transaction, or updates the business the caller already owns. The live onboarding client saves the profile there and the later steps through `PUT /business/prices` and `PUT /business/area` and `PATCH /business` (night jobs); fees and the hours summary read `GET /business`.
+- **Why:** no migration created a business, so a newly signed-up owner had no tenant and every owner business route answered `404`. Owners have no insert grant or policy on `tenants`/`tenant_users`, so the insert needs definer rights; keeping it in `private` behind an invoker wrapper keeps `rls.test.sql`'s "no public definer" rule. An advisory lock per user makes two simultaneous first calls create one business; staff and anonymous callers are refused.
+- **Derived columns:** `slug` is the name in slug form plus a 6-character random suffix; `short_name` is the first word of the name (the rule `20261028113954` used); `timezone` stays `UTC`; the membership `display_name` is the sign-up name, or the short name when the app no longer has it.
+- **Location:** onboarding never asks for one, so a new business stores the placeholder point (0, 0) and starts with no service area. The area step saves the radius around the business's stored area centre, or (0, 0) when it has none; matching (`find_businesses`) needs the customer within reach of both `tenants.location` and the area, so such a business is matched with no real customer until a location step sets a real point (open follow-up). It also starts not taking requests.
+- **Website import:** `apps/api` has no importer, so live mode imports nothing (`{ services: 0, prices: [] }`) and the prices step starts from the business's own prices; the demo keeps its imported prices.

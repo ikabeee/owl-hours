@@ -153,12 +153,24 @@ export type BusinessChanges = {
   takingRequests?: boolean | undefined;
   nightJobs?: boolean | undefined;
 };
+export type NewBusiness = { name: string; category: string; website?: string | undefined; ownerName?: string | undefined };
 export type PriceInput = { id?: string | undefined; label: string; amount: number };
 export type HoursInput = { weekday: number; opens: string; closes: string };
 export type AreaInput = { lat: number; lng: number; radiusKm: number };
 
 export async function getBusiness(s: OwnerSession) {
   return businessOrNotFound(unwrap(await s.db.rpc("owner_business")));
+}
+
+// Idempotent: a caller who already has a business gets it updated, never a second one.
+export async function createBusiness(s: OwnerSession, business: NewBusiness) {
+  const args = {
+    p_name: business.name,
+    p_category: business.category,
+    p_website: business.website,
+    p_owner_name: business.ownerName,
+  };
+  return businessOrNotFound(unwrap(await s.db.rpc("owner_create_business", withoutUndefined(args))));
 }
 
 export async function updateBusiness(s: OwnerSession, changes: BusinessChanges) {
