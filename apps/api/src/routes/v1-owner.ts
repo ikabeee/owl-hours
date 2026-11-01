@@ -60,6 +60,51 @@ const pushTokenBody = z
     platform: z.enum(["ios", "android", "web"]),
   })
   .strict();
+const businessBody = z
+  .object({
+    name: z.string().trim().min(1).max(120).optional(),
+    shortName: z.string().trim().min(1).max(28).optional(),
+    // An empty website clears it.
+    website: z.union([z.literal(""), z.string().trim().url().max(200).regex(/^https?:\/\//, "must start with http(s)://")]).optional(),
+    takingRequests: z.boolean().optional(),
+    nightJobs: z.boolean().optional(),
+  })
+  .strict()
+  .refine((changes) => Object.keys(changes).length > 0, "nothing to change");
+// Prices are whole currency units stored in an integer column; this keeps them far below its limit.
+const MAX_PRICE = 1_000_000;
+const pricesBody = z
+  .object({
+    prices: z
+      .array(
+        z
+          .object({
+            id: z.string().min(1).max(64).optional(),
+            label: z.string().trim().min(1).max(80),
+            amount: z.number().int().positive().max(MAX_PRICE),
+          })
+          .strict(),
+      )
+      .max(50)
+      .refine(hasDistinctIds, "each price id appears once"),
+  })
+  .strict();
+const clockTime = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "must be HH:MM");
+const hoursBody = z
+  .object({
+    hours: z
+      .array(
+        z
+          .object({ weekday: z.number().int().min(0).max(6), opens: clockTime, closes: clockTime })
+          .strict()
+          .refine((day) => day.opens !== day.closes, "opens and closes must differ"),
+      )
+      .max(21),
+  })
+  .strict();
+const areaBody = z
+  .object({ lat: z.number().min(-90).max(90), lng: z.number().min(-180).max(180), radiusKm: z.number().positive().max(200) })
+  .strict();
 const pushTokenDeleteBody = z.object({ expoToken: pushTokenBody.shape.expoToken }).strict();
 
 export function ownerRoutes(deps: V1Deps): Hono<OwnerEnv> {
@@ -71,6 +116,24 @@ export function ownerRoutes(deps: V1Deps): Hono<OwnerEnv> {
   app.route("/content/photo-jobs", ownerContentPhotoRoutes());
 
   app.get("/me", async (c) => ok(c, await owner.getMe(c.get("session"))));
+
+  app.get("/business", async (c) => ok(c, await owner.getBusiness(c.get("session"))));
+  app.patch("/business", async (c) => {
+    const body = await readJson(c, businessBody);
+    return ok(c, await owner.updateBusiness(c.get("session"), body));
+  });
+  app.put("/business/prices", async (c) => {
+    const body = await readJson(c, pricesBody);
+    return ok(c, await owner.savePrices(c.get("session"), body.prices));
+  });
+  app.put("/business/hours", async (c) => {
+    const body = await readJson(c, hoursBody);
+    return ok(c, await owner.saveHours(c.get("session"), body.hours));
+  });
+  app.put("/business/area", async (c) => {
+    const body = await readJson(c, areaBody);
+    return ok(c, await owner.saveArea(c.get("session"), body));
+  });
 
   app.get("/offers", async (c) => {
     const query = readQuery(c, offerQuery);
@@ -163,4 +226,9 @@ export function ownerRoutes(deps: V1Deps): Hono<OwnerEnv> {
   });
 
   return app;
+}
+
+function hasDistinctIds(prices: { id?: string | undefined }[]): boolean {
+  const ids = prices.flatMap((price) => (price.id ? [price.id] : []));
+  return new Set(ids).size === ids.length;
 }

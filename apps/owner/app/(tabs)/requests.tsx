@@ -21,6 +21,7 @@ export default function RequestsRoute() {
       requests={requests.view}
       insets={safeInsets}
       onOpenRequest={async (id) => router.push(`/request/${id}`)}
+      onToggleTakingRequests={requests.setTakingRequests}
       refreshFailed={requests.refreshFailed}
       onRetry={requests.retry}
       dom={domHost}

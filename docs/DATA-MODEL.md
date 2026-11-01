@@ -270,6 +270,7 @@ draft media without consent or from another business's job.
 | `save_customer_location` | API only | Stores coordinates in `customer_locations` and a referencing message, once. |
 | `claim_outbox`, `record_outbound_result`, `record_delivery_status` | API only | Owner and Zukki messages to send, claimed with `SKIP LOCKED`; receipts only move forward. |
 | `owner_offers`, `owner_conversations`, `owner_conversation_messages`, `owner_jobs` | Owner | One read per screen, SECURITY INVOKER so RLS applies. |
+| `owner_business`, `owner_update_business`, `owner_save_prices`, `owner_save_hours`, `owner_save_area` | Owner | The caller's first business (oldest membership): profile, prices, fees, hours, area, accept windows, linked accounts. SECURITY INVOKER; writes raise `42501` for staff and `P0002` without a business. |
 | `mark_conversation_read` | Owner | Read marker for unread counts. |
 
 HTTP endpoints over these: `docs/API.md`.

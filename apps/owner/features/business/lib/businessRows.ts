@@ -2,14 +2,15 @@ import type { Business, ExtraFee, PriceItem } from "../../../shared/data/types.t
 import { businessCopys } from "../copys/businessCopys.ts";
 import { priceAmountText } from "./priceFields.ts";
 
-// Feature-local demo values. The service area label and the imported-services
-// count are not in shared/data/mock.ts, so the fake client seeds them here
-// (operator decision, odd/tasks/owner-business.md L2).
-export type BusinessDemo = { areaLabel: string; importedServices: number };
+// Row values the Business type does not carry. The demo values are not in
+// shared/data/mock.ts, so the fake client seeds them here (operator decision,
+// odd/tasks/owner-business.md L2). Live has no imported-services count yet
+// (no column), so it passes null and the website row shows the site alone.
+export type BusinessRowExtras = { areaLabel: string; importedServices: number | null };
 
-export const BUSINESS_DEMO: BusinessDemo = { areaLabel: "Northside", importedServices: 12 };
+export const BUSINESS_DEMO: BusinessRowExtras = { areaLabel: "Northside", importedServices: 12 };
 
-// Every value the OwBusiness rows show, derived from the demo business.
+// Every value the OwBusiness rows show, derived from the business.
 // Copy: handoff-ui/owner-app/design/html/OwBusiness.dc.html; the hours suffix
 // and the "from"/"at cost" words are that file's own wording. The glue words
 // live in copys/businessCopys.ts (pattern:
@@ -24,14 +25,14 @@ export type BusinessRowValues = {
   website: string;
 };
 
-export function businessRows(business: Business, demo: BusinessDemo = BUSINESS_DEMO): BusinessRowValues {
+export function businessRows(business: Business, extras: BusinessRowExtras = BUSINESS_DEMO): BusinessRowValues {
   return {
     profile: profileText(business),
     prices: business.prices.slice(0, 3).map(priceText).join(" · "),
     extraFees: business.fees.map(feeText).join(" · "),
     hours: hoursText(business),
-    serviceArea: `${business.area.radiusKm} ${businessCopys.areaAround} ${demo.areaLabel}`,
-    website: websiteText(business, demo.importedServices),
+    serviceArea: `${business.area.radiusKm} ${businessCopys.areaAround} ${extras.areaLabel}`,
+    website: websiteText(business, extras.importedServices),
   };
 }
 
@@ -61,7 +62,7 @@ function hoursText(business: Business): string {
   return `${business.hours.summary} · ${businessCopys.nightUrgent}`;
 }
 
-function websiteText(business: Business, importedServices: number): string {
-  const imported = `${importedServices} ${businessCopys.servicesImported}`;
-  return business.website ? `${business.website} · ${imported}` : imported;
+function websiteText(business: Business, importedServices: number | null): string {
+  const parts = [business.website, importedServices === null ? undefined : `${importedServices} ${businessCopys.servicesImported}`];
+  return parts.filter((part) => part !== undefined && part !== "").join(" · ");
 }

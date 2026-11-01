@@ -4,9 +4,12 @@ import { getOwnerLiveApi } from "../../../shared/infra/ownerApiRuntime";
 import { createOffersApiClient } from "../services/offersApiClient.ts";
 import { createFakeOffersClient, createOffersService } from "../services/offersService.ts";
 import type { OffersService } from "../services/offersService.ts";
+import { createDemoTakingRequestsClient, createLiveTakingRequestsClient } from "../services/takingRequestsService.ts";
+import type { TakingRequestsClient } from "../services/takingRequestsService.ts";
+import { demoBusinessService } from "../../business/services/businessService.ts";
 
 // What the requests hooks run on by default.
-export type RequestsRuntime = { service: OffersService; clock: () => ISODate };
+export type RequestsRuntime = { service: OffersService; clock: () => ISODate; takingRequests: TakingRequestsClient };
 
 let liveRuntime: RequestsRuntime | null = null;
 let demoRuntime: RequestsRuntime | null = null;
@@ -19,7 +22,11 @@ export function createRequestsRuntime(): RequestsRuntime {
 }
 
 function getDemoRuntime(): RequestsRuntime {
-  demoRuntime ??= { service: createOffersService(createFakeOffersClient()), clock: createDemoClock() };
+  demoRuntime ??= {
+    service: createOffersService(createFakeOffersClient()),
+    clock: createDemoClock(),
+    takingRequests: createDemoTakingRequestsClient(demoBusinessService),
+  };
   return demoRuntime;
 }
 
@@ -28,7 +35,11 @@ function getLiveRuntime(): RequestsRuntime | null {
 
   const api = getOwnerLiveApi();
   if (!api) return null;
-  liveRuntime = { service: createOffersService(createOffersApiClient(api)), clock: () => new Date().toISOString() };
+  liveRuntime = {
+    service: createOffersService(createOffersApiClient(api)),
+    clock: () => new Date().toISOString(),
+    takingRequests: createLiveTakingRequestsClient(api),
+  };
   return liveRuntime;
 }
 

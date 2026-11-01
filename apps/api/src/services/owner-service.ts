@@ -105,7 +105,15 @@ const tenantRows = z.array(
 
 export async function getMe(s: OwnerSession) {
   const memberships = membershipRows.parse(
-    unwrap(await s.db.from("tenant_users").select("tenant_id, role, display_name").eq("user_id", s.userId)),
+    unwrap(
+      await s.db
+        .from("tenant_users")
+        .select("tenant_id, role, display_name")
+        .eq("user_id", s.userId)
+        // The business routes edit the first membership in this same order.
+        .order("created_at")
+        .order("tenant_id"),
+    ),
   );
   const ids = memberships.map((m) => m.tenant_id);
   const tenants =
@@ -132,6 +140,63 @@ export async function getMe(s: OwnerSession) {
         : [];
     }),
   };
+}
+
+// Business ------------------------------------------------------------------
+
+// The database functions pick the caller's own business (the first one GET /me
+// lists) and only its owner may write it, so no route takes a business id.
+export type BusinessChanges = {
+  name?: string | undefined;
+  shortName?: string | undefined;
+  website?: string | undefined;
+  takingRequests?: boolean | undefined;
+  nightJobs?: boolean | undefined;
+};
+export type PriceInput = { id?: string | undefined; label: string; amount: number };
+export type HoursInput = { weekday: number; opens: string; closes: string };
+export type AreaInput = { lat: number; lng: number; radiusKm: number };
+
+export async function getBusiness(s: OwnerSession) {
+  return businessOrNotFound(unwrap(await s.db.rpc("owner_business")));
+}
+
+export async function updateBusiness(s: OwnerSession, changes: BusinessChanges) {
+  const args = {
+    p_name: changes.name,
+    p_short_name: changes.shortName,
+    p_website: changes.website,
+    p_taking_requests: changes.takingRequests,
+    p_night_jobs: changes.nightJobs,
+  };
+  return businessOrNotFound(unwrap(await s.db.rpc("owner_update_business", withoutUndefined(args))));
+}
+
+export async function savePrices(s: OwnerSession, prices: PriceInput[]) {
+  return businessOrNotFound(unwrap(await s.db.rpc("owner_save_prices", { p_prices: prices })));
+}
+
+export async function saveHours(s: OwnerSession, hours: HoursInput[]) {
+  return businessOrNotFound(unwrap(await s.db.rpc("owner_save_hours", { p_hours: hours })));
+}
+
+export async function saveArea(s: OwnerSession, area: AreaInput) {
+  return businessOrNotFound(
+    unwrap(await s.db.rpc("owner_save_area", { p_lat: area.lat, p_lng: area.lng, p_radius_km: area.radiusKm })),
+  );
+}
+
+function businessOrNotFound(row: unknown) {
+  const business = z.record(z.unknown()).nullable().parse(row);
+  if (!business) {
+    throw new HttpError(404, "not_found", "No business on this account.");
+  }
+  return business;
+}
+
+// An absent argument keeps the database default, which keeps the stored value.
+function withoutUndefined(args: Record<string, unknown>): Record<string, unknown> {
+  return Object.fromEntries(Object.entries(args).filter(([, value]) => value !== undefined));
 }
 
 // Requests (offers) ---------------------------------------------------------
