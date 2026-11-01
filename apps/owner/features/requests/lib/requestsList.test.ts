@@ -59,6 +59,13 @@ describe("requestsListView", () => {
     assert.equal(requestsListView([], DEMO_NOW, true).emptyState, "no-requests");
   });
 
+  it("shows no switch value and no 'not taking' state until the business setting has loaded", () => {
+    const view = requestsListView([], DEMO_NOW, null);
+
+    assert.equal(view.isTakingRequests, null);
+    assert.equal(view.emptyState, "no-requests");
+  });
+
   it("shows the not-taking empty state when the owner switched requests off", () => {
     assert.equal(requestsListView([carlos, grace, tom], DEMO_NOW, false).emptyState, "not-taking");
   });

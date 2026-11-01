@@ -26,7 +26,7 @@ export type RequestsEmptyState = "not-taking" | "no-requests";
 
 // Serializable by design: it crosses into the DOM component as props.
 export type RequestsListView = {
-  isTakingRequests: boolean;
+  isTakingRequests: boolean | null; // null until the business setting has loaded
   waiting: WaitingRequestCard[];
   earlier: EarlierRequestRow[];
   emptyState: RequestsEmptyState | null;
@@ -34,7 +34,7 @@ export type RequestsListView = {
 
 // An offered request whose time ran out leaves the cards and shows as Missed, as the
 // design asks for an offer that expires while the screen is open.
-export function requestsListView(offers: ListedOffer[], now: ISODate, isTakingRequests: boolean): RequestsListView {
+export function requestsListView(offers: ListedOffer[], now: ISODate, isTakingRequests: boolean | null): RequestsListView {
   const waitingOffers = offers.filter((offer) => isWaiting(offer, now));
   const earlierOffers = offers.filter((offer) => !isWaiting(offer, now));
   return {
@@ -88,7 +88,7 @@ function distanceText(distanceKm: number): string {
   return `${distanceKm.toFixed(1)} km`;
 }
 
-function emptyStateOf(isTakingRequests: boolean, offerCount: number): RequestsEmptyState | null {
-  if (!isTakingRequests) return "not-taking";
+function emptyStateOf(isTakingRequests: boolean | null, offerCount: number): RequestsEmptyState | null {
+  if (isTakingRequests === false) return "not-taking";
   return offerCount === 0 ? "no-requests" : null;
 }

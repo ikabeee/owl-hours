@@ -47,11 +47,13 @@ export default function RequestsScreen(props: {
         <VStack gap={3} padding={4}>
           <HStack justify="between" align="center">
             <Heading level={1}>{requestsListCopys.title}</Heading>
-            <Switch
-              label={requestsListCopys.takingRequests}
-              value={requests.isTakingRequests}
-              changeAction={(checked) => props.onToggleTakingRequests(checked)}
-            />
+            {requests.isTakingRequests !== null && (
+              <Switch
+                label={requestsListCopys.takingRequests}
+                value={requests.isTakingRequests}
+                changeAction={(checked) => props.onToggleTakingRequests(checked)}
+              />
+            )}
           </HStack>
           {props.refreshFailed && <RefreshNotice onRetry={props.onRetry} />}
           {requests.emptyState ? (

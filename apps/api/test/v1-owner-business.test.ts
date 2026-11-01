@@ -153,11 +153,21 @@ describe("POST /v1/owner/business", () => {
     assert.deepEqual(calls[0]?.body, { p_name: "Eastside Heat", p_category: "water_heaters" });
   });
 
+  it("stores an accented or punctuated category in its key form, as owners type it", async () => {
+    for (const [typed, key] of [["Plomería", "plomeria"], ["Heating & Cooling", "heating_cooling"], ["A/C - Repair", "a_c_repair"]]) {
+      const { call, calls } = setup(answersWithBusiness);
+
+      await call("POST", "/business", { name: "Sur", category: typed });
+
+      assert.equal((calls[0]?.body as { p_category: string }).p_category, key);
+    }
+  });
+
   it("refuses a tenant id, a category outside a-z and a website that is not http(s)", async () => {
     const { call, calls } = setup(answersWithBusiness);
 
     assert.equal((await call("POST", "/business", { name: "Eastside", category: "plumbing", businessId: EASTSIDE })).status, 400);
-    assert.equal((await call("POST", "/business", { name: "Plomería Sur", category: "plomería" })).status, 400);
+    assert.equal((await call("POST", "/business", { name: "Plomería Sur", category: "& 1" })).status, 400);
     assert.equal((await call("POST", "/business", { name: "Eastside", category: "plumbing", website: "ftp://e.example" })).status, 400);
     assert.equal((await call("POST", "/business", { category: "plumbing" })).status, 400);
     assert.equal(calls.length, 0);

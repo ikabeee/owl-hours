@@ -63,12 +63,10 @@ const pushTokenBody = z
 const businessName = z.string().trim().min(1).max(120);
 // An empty website clears it.
 const website = z.union([z.literal(""), z.string().trim().url().max(200).regex(/^https?:\/\//, "must start with http(s)://")]);
-// The owner types "Water Heaters"; the business stores its key, water_heaters.
+// The owner types "Water Heaters" or "Plomería"; the business stores its key, water_heaters or plomeria.
 const category = z
   .string()
-  .trim()
-  .toLowerCase()
-  .transform((typed) => typed.replace(/\s+/g, "_"))
+  .transform(categoryKey)
   .pipe(z.string().regex(/^[a-z_]{2,32}$/, "must be 2-32 letters"));
 const newBusinessBody = z
   .object({ name: businessName, category, website: website.optional(), ownerName: z.string().trim().min(1).max(80).optional() })
@@ -246,4 +244,15 @@ export function ownerRoutes(deps: V1Deps): Hono<OwnerEnv> {
 function hasDistinctIds(prices: { id?: string | undefined }[]): boolean {
   const ids = prices.flatMap((price) => (price.id ? [price.id] : []));
   return new Set(ids).size === ids.length;
+}
+
+// Accents dropped, every run of other characters one underscore, no underscore at either end.
+function categoryKey(typed: string): string {
+  return typed
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLowerCase()
+    .replace(/[^a-z]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 32);
 }

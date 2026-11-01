@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { ISODate } from "../../../shared/data/types.ts";
 import { requestsListView } from "../lib/requestsList.ts";
 import type { RequestsListView } from "../lib/requestsList.ts";
@@ -42,7 +42,9 @@ export function useRequests(deps?: Partial<RequestsDeps>): RequestsListResult {
   const takingRequests = deps?.takingRequests ?? defaults.takingRequests;
 
   const [loaded, setLoaded] = useState<RequestsLoadState>(initialRequestsLoadState);
-  const [isTakingRequests, setIsTakingRequests] = useState(false);
+  const [isTakingRequests, setIsTakingRequests] = useState<boolean | null>(null);
+  // Counts the owner's saves: a read that started before the latest save is stale and is dropped.
+  const saves = useRef(0);
   const [now, setNow] = useState(clock);
   const [reloadToken, setReloadToken] = useState(0);
   const reload = useCallback(() => setReloadToken((token) => token + 1), []);
@@ -58,10 +60,11 @@ export function useRequests(deps?: Partial<RequestsDeps>): RequestsListResult {
         if (isCurrent) setLoaded((shown) => requestsLoadReducer(shown, { kind: "failed" }));
       });
     // The switch loads on its own: a failed read keeps the last value and never hides the requests.
+    const savesBeforeRead = saves.current;
     takingRequests
       .load()
       .then((isTaking) => {
-        if (isCurrent) setIsTakingRequests(isTaking);
+        if (isCurrent && saves.current === savesBeforeRead) setIsTakingRequests(isTaking);
       })
       .catch(() => {});
     return () => {
@@ -76,6 +79,7 @@ export function useRequests(deps?: Partial<RequestsDeps>): RequestsListResult {
 
   // The switch moves at once; a refused save puts it back where the business still is.
   async function setTakingRequests(next: boolean): Promise<void> {
+    saves.current += 1;
     setIsTakingRequests(next);
     const saved = await takingRequests.store(next).catch(() => !next);
     setIsTakingRequests(saved);
@@ -87,7 +91,7 @@ export function useRequests(deps?: Partial<RequestsDeps>): RequestsListResult {
 function toRequestsList(
   loaded: RequestsLoadState,
   now: ISODate,
-  isTakingRequests: boolean,
+  isTakingRequests: boolean | null,
   reload: () => void,
   setTakingRequests: (takingRequests: boolean) => Promise<void>,
 ): RequestsList {
