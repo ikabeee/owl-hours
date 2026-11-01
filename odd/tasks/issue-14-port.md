@@ -20,8 +20,8 @@ Port the still-needed parts of `fix/issue-14` onto main without the double job o
 
 | ID | Specs | Route | Status | Commit |
 |---|---|---|---|---|
-| T1 | S1, S2 | inline | done | RED `accept_creates_job.test.sql` "one job per accepted handoff" → GREEN `npm run test:db` |
-| T2 | S3, S5 | inline | pending | |
+| T1 | S1, S2 | inline | done (`92ea6c2`, `63de58c`) | RED `accept_creates_job.test.sql` "one job per accepted handoff" → GREEN `npm run test:db` |
+| T2 | S3, S5 | inline | done | `0d007c5`, `1d9800a`; api 294/294, meta-models 15/15 |
 | T3 | S4 | inline | pending | |
 | T4 | S6 | inline | pending | |
 

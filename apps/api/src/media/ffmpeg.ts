@@ -15,11 +15,27 @@ export function toWavArgs(input: string, output: string): string[] {
   return ["-y", "-i", input, "-ac", "1", "-ar", "24000", "-c:a", "pcm_s16le", "-map_metadata", "-1", output];
 }
 
+// One frame or a short voice note takes well under a second; a file that
+// makes ffmpeg hang must not hold up the customer's conversation.
+export const FFMPEG_TIMEOUT_MS = 30_000;
+
 export async function runFfmpeg(args: string[], bin = process.env.FFMPEG_PATH ?? "ffmpeg"): Promise<void> {
   try {
-    await execFileAsync(bin, ["-hide_banner", "-loglevel", "error", ...args], { windowsHide: true });
+    await runProcess(bin, ["-hide_banner", "-loglevel", "error", ...args], FFMPEG_TIMEOUT_MS);
   } catch (error) {
-    const stderr = (error as { stderr?: string }).stderr?.trim().slice(-500) ?? "";
-    throw new Error(`ffmpeg failed (${args.at(-1) ?? "no output"}): ${stderr || String(error)}`);
+    throw new Error(`ffmpeg failed (${args.at(-1) ?? "no output"}): ${(error as Error).message}`);
+  }
+}
+
+// Runs a program and kills it after timeoutMs.
+export async function runProcess(bin: string, args: string[], timeoutMs: number): Promise<void> {
+  try {
+    await execFileAsync(bin, args, { windowsHide: true, timeout: timeoutMs, killSignal: "SIGKILL" });
+  } catch (error) {
+    const failure = error as { killed?: boolean; stderr?: string };
+    if (failure.killed) {
+      throw new Error(`timed out after ${timeoutMs} ms`);
+    }
+    throw new Error(failure.stderr?.trim().slice(-500) || String(error));
   }
 }

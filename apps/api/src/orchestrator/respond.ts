@@ -164,18 +164,23 @@ async function onMessage(deps: RespondDeps, ctx: TurnContext, turn: Extract<Turn
     await queue(copy.offTopic());
     return;
   }
-  const category = facts.category ?? understanding.category;
+  // While Zukki still has the chat, a customer who asks for something else gets the new category.
+  const switched =
+    facts.state === "with_zukki" && facts.category !== null && understanding.category !== null && understanding.category !== facts.category;
+  const known = switched ? null : facts.category;
+  const category = known ?? understanding.category;
   if (!category) {
     await queue(copy.categoryList());
     return;
   }
-  const urgent = facts.category ? facts.urgency === "now" : understanding.urgent;
+  const urgent = known ? facts.urgency === "now" : understanding.urgent;
   // A category picked from the list is saved without a title; the description
   // that follows names the request the business sees on the offer, once.
-  if (!facts.category || (understanding.title && !facts.hasTitle)) {
+  if (!known || (understanding.title && !facts.hasTitle)) {
     await deps.store.saveNeed(ctx.conversationId, {
       category,
-      urgency: facts.urgency ?? (urgent ? "now" : "today"),
+      // A switched request takes the new urgency; a known one keeps what was saved.
+      urgency: (known ? facts.urgency : null) ?? (urgent ? "now" : "today"),
       title: understanding.title,
       summary: understanding.summary,
     });

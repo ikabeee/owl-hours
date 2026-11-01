@@ -154,6 +154,28 @@ describe("respond: first contact", () => {
   });
 });
 
+describe("respond: the customer changes what they need", () => {
+  it("switches to the new category and saves it while Zukki still has the chat", async () => {
+    const { deps, needs, asked } = setup({
+      facts: { category: "plumbing", urgency: "now", locationAsked: true },
+      understanding: { category: "beauty", urgent: false, title: "Haircut", summary: "Needs a salon." },
+    });
+    await respond(deps, ctx(), text("I need a salonist"));
+    assert.deepEqual(needs, [{ category: "beauty", urgency: "today", title: "Haircut", summary: "Needs a salon." }]);
+    assert.match(asked.note ?? "", /needs a salon/);
+  });
+
+  it("keeps the category once a business has the request", async () => {
+    const { deps, needs, asked } = setup({
+      facts: { state: "offered", category: "plumbing", urgency: "now", locationAsked: true, hasLocation: true },
+      understanding: { category: "beauty" },
+    });
+    await respond(deps, ctx(), text("also do you know a salon"));
+    assert.deepEqual(needs, []);
+    assert.match(asked.note ?? "", /needs a plumber/);
+  });
+});
+
 describe("respond: urgent leak", () => {
   it("saves the need and sends the marked valve frame with safety buttons (04)", async () => {
     const { deps, queued, needs, asked } = setup({
