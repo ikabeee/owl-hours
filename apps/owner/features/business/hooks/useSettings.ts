@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { acceptWindowValueText, linkedAccountsValueText } from "../lib/settingsText.ts";
+import { acceptWindowDetailText, acceptWindowValueText, linkedAccountsValueText } from "../lib/settingsText.ts";
 import { businessRuntime } from "./businessRuntime.ts";
 import type { BusinessService, BusinessSettings } from "../services/businessService.ts";
 import { useLoad } from "./useLoad.ts";
@@ -14,6 +14,7 @@ export type SettingKey = keyof BusinessSettings;
 export type SettingsView = {
   settings: BusinessSettings;
   acceptWindowValue: string;
+  acceptWindowDetail: string;
   linkedAccountsValue: string;
   toggleSetting: (key: SettingKey, checked: boolean) => Promise<void>;
 };
@@ -26,6 +27,7 @@ export type SettingsState =
 type LoadedSettings = {
   settings: BusinessSettings;
   acceptWindowValue: string;
+  acceptWindowDetail: string;
   linkedAccountsValue: string;
 };
 
@@ -61,6 +63,7 @@ export function useSettings(deps?: Partial<SettingsDeps>): SettingsState {
     view: {
       settings: ready.settings,
       acceptWindowValue: ready.acceptWindowValue,
+      acceptWindowDetail: ready.acceptWindowDetail,
       linkedAccountsValue: ready.linkedAccountsValue,
       toggleSetting,
     },
@@ -78,6 +81,7 @@ async function loadSettings(service: BusinessService): Promise<LoadedSettings | 
     return {
       settings,
       acceptWindowValue: acceptWindowValueText(business.acceptWindowMin),
+      acceptWindowDetail: acceptWindowDetailText(business.acceptWindowMin),
       linkedAccountsValue: linkedAccountsValueText(accounts),
     };
   } catch {

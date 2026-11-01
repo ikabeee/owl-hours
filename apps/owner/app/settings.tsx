@@ -21,6 +21,7 @@ export default function SettingsRoute() {
     <SettingsScreen
       settings={view.settings}
       acceptWindowValue={view.acceptWindowValue}
+      acceptWindowDetail={view.acceptWindowDetail}
       linkedAccountsValue={view.linkedAccountsValue}
       insets={safeInsets}
       onBack={async () => router.back()}

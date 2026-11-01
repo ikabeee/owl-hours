@@ -27,6 +27,7 @@ import { RowChevron } from './RowChevron';
 export default function SettingsScreen(props: {
   settings: BusinessSettings;
   acceptWindowValue: string;
+  acceptWindowDetail: string;
   linkedAccountsValue: string;
   insets: { top: number; bottom: number };
   onBack: () => Promise<void>;
@@ -57,7 +58,7 @@ export default function SettingsScreen(props: {
               <HStack gap={3} align="center">
                 <VStack gap={0} className="zukki-grow">
                   <Text type="label">{settingsCopys.timeToAccept}</Text>
-                  <Text type="supporting">{settingsCopys.timeToAcceptDetail}</Text>
+                  <Text type="supporting">{props.acceptWindowDetail}</Text>
                 </VStack>
                 <Text type="body" className="zukki-setting-value">{props.acceptWindowValue}</Text>
               </HStack>
