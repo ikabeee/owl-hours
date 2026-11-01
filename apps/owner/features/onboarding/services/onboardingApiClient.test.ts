@@ -37,12 +37,13 @@ const eastside = {
   hours: [1, 2, 3, 4, 5].map((weekday) => ({ weekday, opens: "09:00", closes: "17:00" })),
   nightJobs: false,
   area: { lat: 21.16, lng: -86.85, radiusKm: 12 },
+  hasLocation: true,
   takingRequests: false,
   acceptWindowMin: { urgent: 5, other: 30 },
   linkedAccounts: [],
 };
 
-const newBusiness = { ...eastside, prices: [], fees: [], hours: [], area: null };
+const newBusiness = { ...eastside, prices: [], fees: [], hours: [], area: null, hasLocation: false };
 
 function ok(data: unknown): Reply {
   return { status: 200, body: { success: true, data } };
@@ -180,6 +181,36 @@ describe("live onboarding area step", () => {
   });
 });
 
+// Spec: odd/tasks/owner-device-location.md, T2, S3-S4. GET /business says whether the
+// business still sits at the (0, 0) placeholder; the device point is saved as the area centre.
+describe("live onboarding business location", () => {
+  it("S3 a new business at the placeholder point still needs its location", async () => {
+    const { service } = liveOnboarding(() => ok(newBusiness));
+
+    assert.equal(await service.getLocationStatus(), "missing");
+  });
+
+  it("S3 an account without a business still needs its location", async () => {
+    const { service } = liveOnboarding(() => NO_BUSINESS);
+
+    assert.equal(await service.getLocationStatus(), "missing");
+  });
+
+  it("S4 a business with a real location has it saved", async () => {
+    const { service } = liveOnboarding();
+
+    assert.equal(await service.getLocationStatus(), "saved");
+  });
+
+  it("S3 saves the device point as the area centre with the chosen radius", async () => {
+    const { service, calls } = liveOnboarding(() => ok(newBusiness));
+
+    await service.saveLocation({ lat: 20.97, lng: -89.62 }, 9);
+
+    assert.deepEqual(writes(calls), [{ method: "PUT", url: `${BUSINESS_URL}/area`, body: { lat: 20.97, lng: -89.62, radiusKm: 9 } }]);
+  });
+});
+
 describe("onboardingServiceFor with the live owner API", () => {
   it("runs the steps on the API, so live shows the saved business name and radius", async () => {
     const codeAuth: CodeAuth = { sendCode: async () => true, verifyCode: async () => true };
@@ -200,5 +231,9 @@ describe("demo onboarding stays on the demo business", () => {
     });
     assert.deepEqual(await demoOnboardingService.getFees(), structuredClone(mockBusiness.fees));
     assert.equal(await demoOnboardingService.getHoursSummary(), mockBusiness.hours.summary);
+  });
+
+  it("S3 keeps the demo business's preset location, so the area step never asks", async () => {
+    assert.equal(await demoOnboardingService.getLocationStatus(), "preset");
   });
 });

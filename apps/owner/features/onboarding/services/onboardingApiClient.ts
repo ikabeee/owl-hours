@@ -1,12 +1,14 @@
 // The live onboarding steps on the owner API (docs/API.md): the business step creates
 // or updates the caller's business (POST /business), prices and area replace the
 // business's own (PUT /business/prices, PUT /business/area), the night switch is
-// PATCH /business, and fees and the hours summary are read from GET /business.
+// PATCH /business, and fees, the hours summary and whether the business has a real
+// location are read from GET /business. The device location is saved as the area centre.
 // The owner name and the emailed address stay in the given drafts.
 import type { Business } from "../../../shared/data/types.ts";
 import { OwnerApiError } from "../../../shared/infra/ownerApi.ts";
 import type { OwnerEditApi } from "../../../shared/infra/ownerApi.ts";
-import { createBusinessApiClient } from "../../business/services/businessApiClient.ts";
+import { createBusinessApiClient, readHasLocation } from "../../business/services/businessApiClient.ts";
+import type { GeoPoint, LocationStatus } from "../lib/areaLocation.ts";
 import { DEFAULT_RADIUS_KM } from "../lib/areaRadius.ts";
 import type { OnboardingClient, OnboardingProfile } from "./onboardingService.ts";
 
@@ -20,13 +22,16 @@ const NOTHING_IMPORTED = { services: 0, prices: [] };
 export function createApiOnboardingClient(api: OwnerEditApi, drafts: OnboardingClient): OnboardingClient {
   const business = createBusinessApiClient(api);
 
-  async function findBusiness(): Promise<Business | null> {
-    try {
-      return await business.loadBusiness();
-    } catch (error) {
-      if (error instanceof OwnerApiError && error.status === 404) return null;
-      throw error;
-    }
+  function findBusiness(): Promise<Business | null> {
+    return nullWithoutBusiness(business.loadBusiness());
+  }
+
+  async function findLocationStatus(): Promise<LocationStatus> {
+    return (await nullWithoutBusiness(readHasLocation(api))) ? "saved" : "missing";
+  }
+
+  async function saveLocation(point: GeoPoint, radiusKm: number): Promise<void> {
+    await api.put("/business/area", { ...point, radiusKm });
   }
 
   async function saveProfile(profile: OnboardingProfile): Promise<void> {
@@ -56,9 +61,21 @@ export function createApiOnboardingClient(api: OwnerEditApi, drafts: OnboardingC
     },
     findArea: async () => toStepArea(await findBusiness()),
     saveArea,
+    findLocationStatus,
+    saveLocation,
     findFees: async () => (await findBusiness())?.fees ?? [],
     findHoursSummary: async () => (await findBusiness())?.hours.summary ?? "",
   };
+}
+
+// GET /business answers 404 until the business step has created the business.
+async function nullWithoutBusiness<T>(read: Promise<T>): Promise<T | null> {
+  try {
+    return await read;
+  } catch (error) {
+    if (error instanceof OwnerApiError && error.status === 404) return null;
+    throw error;
+  }
 }
 
 function toProfile(business: Business | null): OnboardingProfile {

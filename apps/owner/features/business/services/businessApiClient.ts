@@ -19,6 +19,7 @@ type ApiBusiness = {
   hours: OpeningHours[];
   nightJobs: boolean;
   area: { lat: number; lng: number; radiusKm: number } | null;
+  hasLocation: boolean;
   takingRequests: boolean;
   acceptWindowMin: { urgent: number; other: number };
   linkedAccounts: { kind: LinkedAccount["kind"]; name: string }[];
@@ -50,6 +51,11 @@ export function createBusinessApiClient(api: OwnerEditApi): BusinessClient {
     // The service area has no name of its own; it is drawn around the business.
     loadRowExtras: async () => ({ areaLabel: (await readBusiness()).shortName, importedServices: null }),
   };
+}
+
+// False while the business is still at the (0, 0) placeholder a new business starts at.
+export async function readHasLocation(api: OwnerEditApi): Promise<boolean> {
+  return ((await api.get("/business")) as ApiBusiness).hasLocation;
 }
 
 function toBusiness(row: ApiBusiness): Business {

@@ -64,6 +64,11 @@ export const onboardingCopys = {
   nightRequestsWindow: "10 PM–7 AM, with your night fee",
   finishButton: "Finish",
   mapAlt: "Map of the service area",
+  useLocation: "Use my current location",
+  locationNeeded: "Add your location so customers nearby can find you.",
+  locationSaved: "Location saved.",
+  locationDenied: "Location access was denied.",
+  locationUnavailable: "Couldn't get your location. Try again.",
   // live
   liveTitle: "Northside is live on Zukki",
   liveTitleTail: "is live on Zukki",

@@ -10,6 +10,7 @@ import './areaScreen.css';
 import { useState } from 'react';
 import type { DOMProps } from 'expo/dom';
 import { HStack, VStack } from '@astryxdesign/core/Layout';
+import { Button } from '@astryxdesign/core/Button';
 import { Card } from '@astryxdesign/core/Card';
 import { Heading, Text } from '@astryxdesign/core/Text';
 import { Slider } from '@astryxdesign/core/Slider';
@@ -22,11 +23,16 @@ import OnboardingFrame from './OnboardingFrame';
 import SetupStepHeader from './SetupStepHeader';
 
 // Setup step 3: the map card with the radius slider, regular hours, and the night
-// switch. Both controls stay DOM-local; Finish persists them.
+// switch. Both controls stay DOM-local; Finish persists them. In live mode the card
+// also offers the device location, which the native route reads and saves.
 export default function AreaScreen(props: {
   radiusKm: number;
   nightUrgent: boolean;
   hoursSummary: string;
+  offersLocation: boolean;
+  locationMessage: string | null;
+  isFinishDisabled: boolean;
+  onUseLocation: (radiusKm: number) => Promise<void>;
   insets: { top: number; bottom: number };
   onFinish: (radiusKm: number, nightUrgent: boolean) => Promise<void>;
   onBack: () => Promise<void>;
@@ -42,6 +48,7 @@ export default function AreaScreen(props: {
       onBack={() => props.onBack()}
       footerLabel={onboardingCopys.finishButton}
       onFooter={() => props.onFinish(radius, night)}
+      isFooterDisabled={props.isFinishDisabled}
     >
       <SetupStepHeader step={3} />
       <Heading level={1}>{onboardingCopys.areaTitle}</Heading>
@@ -52,6 +59,20 @@ export default function AreaScreen(props: {
             <span className="onk-map-circle" aria-hidden="true" />
             <span className="onk-map-dot" aria-hidden="true" />
           </div>
+          {props.offersLocation && (
+            <VStack gap={2}>
+              <Button
+                label={onboardingCopys.useLocation}
+                variant="secondary"
+                size="lg"
+                width="100%"
+                clickAction={() => props.onUseLocation(radius)}
+              />
+              <div aria-live="polite">
+                {props.locationMessage && <Text type="supporting">{props.locationMessage}</Text>}
+              </div>
+            </VStack>
+          )}
           <VStack gap={2}>
             <HStack justify="between" align="center">
               <Text type="label">{onboardingCopys.radiusLabel}</Text>

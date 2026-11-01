@@ -57,6 +57,10 @@ appId: host.exp.Exponent
 - extendedWaitUntil:
     visible: "Hours and area"
     timeout: 30000
+- tapOn: "Use my current location"
+- extendedWaitUntil:
+    visible: "Location saved."
+    timeout: 30000
 - takeScreenshot: live-onboarding-area
 - tapOn: "Finish"
 - extendedWaitUntil:
