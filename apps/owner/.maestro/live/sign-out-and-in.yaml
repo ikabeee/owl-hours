@@ -1,0 +1,10 @@
+# Signs the current owner out from Settings, then signs OWNER_EMAIL in and taps through onboarding.
+appId: host.exp.Exponent
+---
+- openLink: "exp://127.0.0.1:8081/--/settings"
+- scrollUntilVisible:
+    element: "Sign out"
+    timeout: 30000
+- tapOn: "Sign out"
+- runFlow: sign-in.yaml
+- runFlow: finish-onboarding.yaml
