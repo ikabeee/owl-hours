@@ -10,6 +10,7 @@ import { jobsCopys } from "./jobsCopys.ts";
 const expectedCopys = {
   // shared
   backLabel: "Back",
+  tryAgain: "Try again",
   // quote modal
   sendAQuote: "Send a quote",
   filledInByZukki: "Filled in by Zukki from your prices. Change anything.",

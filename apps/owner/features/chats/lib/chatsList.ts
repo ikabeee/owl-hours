@@ -1,9 +1,11 @@
 import type { Conversation, ISODate } from "../../../shared/data/types.ts";
+import { afterFailedLoad } from "../../../shared/lib/loadState.ts";
+import type { LoadState } from "../../../shared/lib/loadState.ts";
 import { chatRowOf } from "./chatRow.ts";
 import type { ChatRowView } from "./chatRow.ts";
 
 // What the Chats tab has loaded: nothing yet, a failed first load, or the conversations.
-export type LoadedChats = Conversation[] | "loading" | "failed";
+export type LoadedChats = LoadState<Conversation[]>;
 
 // "loading" draws nothing; "failed" draws the error state and retries the load.
 export type ChatsList =
@@ -19,5 +21,5 @@ export function chatsListOf(loaded: LoadedChats, now: ISODate, reload: () => voi
 
 // A failed reload keeps the rows already shown; only a failed first load fails the list.
 export function loadedAfterFailure(shown: LoadedChats): LoadedChats {
-  return Array.isArray(shown) ? shown : "failed";
+  return afterFailedLoad(shown);
 }
