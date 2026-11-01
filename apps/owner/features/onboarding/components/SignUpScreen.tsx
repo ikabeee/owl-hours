@@ -23,13 +23,14 @@ import { isSendCodeEnabled } from '../lib/signUpForm';
 import ZukkiSays from './ZukkiSays';
 
 // ZukkiSays + name, email, terms and "Send code", disabled until the form is valid.
-// "Continue with Facebook" skips verify; the fields stay DOM-local, only the send persists.
+// "Continue with Facebook" skips verify, so it shows only when the route passes onFacebook
+// (demo mode: live mode has no Facebook sign-in). The fields stay DOM-local, only the send persists.
 export default function SignUpScreen(props: {
   defaultName: string;
   defaultEmail: string;
   insets: { top: number; bottom: number };
   onSendCode: (name: string, email: string) => Promise<void>;
-  onFacebook: () => Promise<void>;
+  onFacebook?: (() => Promise<void>) | undefined;
   onBack: () => Promise<void>;
   dom?: DOMProps;
 }) {
@@ -54,15 +55,7 @@ export default function SignUpScreen(props: {
             <Text type="supporting">{onboardingCopys.emailHelp}</Text>
           </VStack>
           <CheckboxInput label={onboardingCopys.termsLabel} value={termsAccepted} onChange={setTermsAccepted} />
-          <Divider label={onboardingCopys.orDivider} />
-          <Button
-            label={onboardingCopys.continueWithFacebook}
-            variant="secondary"
-            size="lg"
-            width="100%"
-            icon={<FacebookIcon />}
-            onClick={() => props.onFacebook()}
-          />
+          {props.onFacebook && <FacebookSignIn onFacebook={props.onFacebook} />}
         </div>
         <div style={footerStyle}>
           <Button
@@ -76,6 +69,22 @@ export default function SignUpScreen(props: {
         </div>
       </div>
     </Theme>
+  );
+}
+
+function FacebookSignIn(props: { onFacebook: () => Promise<void> }) {
+  return (
+    <>
+      <Divider label={onboardingCopys.orDivider} />
+      <Button
+        label={onboardingCopys.continueWithFacebook}
+        variant="secondary"
+        size="lg"
+        width="100%"
+        icon={<FacebookIcon />}
+        onClick={() => props.onFacebook()}
+      />
+    </>
   );
 }
 
