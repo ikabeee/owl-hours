@@ -23,12 +23,20 @@ sign_demo_owner_back_in() {
 }
 trap sign_demo_owner_back_in EXIT
 
+# The simulator reports a fixed position and Expo Go already has location permission, so the
+# area step's "Use my current location" saves this point without a system prompt.
+DEVICE=${DEVICE:-booted}
+xcrun simctl location "$DEVICE" set 21.1619,-86.8515
+xcrun simctl privacy "$DEVICE" grant location host.exp.Exponent
+
 say "new owner $email signs up and onboards"
 maestro_run -e NEW_EMAIL="$email" -e BUSINESS_NAME="$business" -e CATEGORY="Plomería" -e MAILPIT_URL="$MAILPIT_URL" live/new-owner-onboarding.yaml
 
 row=$(sql "select t.category || '|' || tu.role || '|' || (select count(*) from service_areas a where a.tenant_id = t.id)
+           || '|' || round(st_y(t.location::geometry)::numeric, 3) || ',' || round(st_x(t.location::geometry)::numeric, 3)
            from tenants t join tenant_users tu on tu.tenant_id = t.id join auth.users u on u.id = tu.user_id
            where u.email = '$email'")
-say "database: category|role|service areas = $row"
+say "database: category|role|service areas|location = $row"
 
-[ "$row" = "plomeria|owner|1" ] && say "PASS ($out)" || { say "FAIL: expected plomeria|owner|1"; exit 1; }
+expected="plomeria|owner|1|21.162,-86.852"
+[ "$row" = "$expected" ] && say "PASS ($out)" || { say "FAIL: expected $expected"; exit 1; }
