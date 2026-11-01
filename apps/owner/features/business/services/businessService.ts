@@ -1,25 +1,28 @@
 import { accounts as seedAccounts, business as seedBusiness } from "../../../shared/data/mock.ts";
 import type { Business, LinkedAccount, PriceItem } from "../../../shared/data/types.ts";
-import type { BusinessDemo } from "../lib/businessRows.ts";
+import type { BusinessRowExtras } from "../lib/businessRows.ts";
 import { BUSINESS_DEMO } from "../lib/businessRows.ts";
 import { isValidPrice } from "../lib/priceValidation.ts";
 
 // The settings switches of OwSettings. Field names are the coder's;
 // the fake client seeds them on, on, on, off (the HTML aria-checked).
+// Only takingRequests has a database column (tenants.accepts_now); the
+// others exist in the demo only, so the live client leaves them out and the
+// screen hides a switch it has no value for.
 export type BusinessSettings = {
   takingRequests: boolean;
-  urgentRequests: boolean;
-  ringOnSilentAtNight: boolean;
-  polishByDefault: boolean;
+  urgentRequests?: boolean;
+  ringOnSilentAtNight?: boolean;
+  polishByDefault?: boolean;
 };
 
 export type BusinessClient = {
   loadBusiness: () => Promise<Business>;
-  storeBusiness: (business: Business) => Promise<void>;
+  storePrices: (prices: PriceItem[]) => Promise<Business>;
   loadSettings: () => Promise<BusinessSettings>;
-  storeSettings: (settings: BusinessSettings) => Promise<void>;
+  storeSettings: (settings: BusinessSettings) => Promise<BusinessSettings>;
   loadAccounts: () => Promise<LinkedAccount[]>;
-  loadDemoValues: () => Promise<BusinessDemo>;
+  loadRowExtras: () => Promise<BusinessRowExtras>;
 };
 
 export type BusinessService = {
@@ -28,7 +31,7 @@ export type BusinessService = {
   getSettings: () => Promise<BusinessSettings>;
   saveSettings: (settings: BusinessSettings) => Promise<BusinessSettings>;
   getAccounts: () => Promise<LinkedAccount[]>;
-  getDemoValues: () => Promise<BusinessDemo>;
+  getRowExtras: () => Promise<BusinessRowExtras>;
 };
 
 export function createBusinessService(client: BusinessClient): BusinessService {
@@ -36,9 +39,9 @@ export function createBusinessService(client: BusinessClient): BusinessService {
     getBusiness: () => client.loadBusiness(),
     savePrices: (prices) => saveValidPrices(client, prices),
     getSettings: () => client.loadSettings(),
-    saveSettings: (settings) => storeSettings(client, settings),
+    saveSettings: (settings) => client.storeSettings({ ...settings }),
     getAccounts: () => client.loadAccounts(),
-    getDemoValues: () => client.loadDemoValues(),
+    getRowExtras: () => client.loadRowExtras(),
   };
 }
 
@@ -46,15 +49,7 @@ export function createBusinessService(client: BusinessClient): BusinessService {
 async function saveValidPrices(client: BusinessClient, prices: PriceItem[]): Promise<Business | null> {
   if (!prices.every((price) => isValidPrice(price.amount))) return null;
 
-  const updated = { ...(await client.loadBusiness()), prices: structuredClone(prices) };
-  await client.storeBusiness(updated);
-  return updated;
-}
-
-async function storeSettings(client: BusinessClient, settings: BusinessSettings): Promise<BusinessSettings> {
-  const saved = { ...settings };
-  await client.storeSettings(saved);
-  return saved;
+  return client.storePrices(structuredClone(prices));
 }
 
 // Module-level demo service shared by the default deps of useBusiness,
@@ -78,14 +73,16 @@ export function createFakeBusinessClient(): BusinessClient {
 
   return {
     loadBusiness: async () => structuredClone(business),
-    storeBusiness: async (next) => {
-      business = structuredClone(next);
+    storePrices: async (prices) => {
+      business = { ...business, prices: structuredClone(prices) };
+      return structuredClone(business);
     },
     loadSettings: async () => ({ ...settings }),
     storeSettings: async (next) => {
       settings = { ...next };
+      return { ...settings };
     },
     loadAccounts: async () => structuredClone(accounts),
-    loadDemoValues: async () => ({ ...demo }),
+    loadRowExtras: async () => ({ ...demo }),
   };
 }

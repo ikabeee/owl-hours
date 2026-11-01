@@ -16,6 +16,12 @@ export type OwnerApi = {
   post(path: string, body?: unknown): Promise<unknown>;
 };
 
+// The resource edits (PATCH a record, PUT a whole list) beside reads and actions.
+export type OwnerEditApi = OwnerApi & {
+  patch(path: string, body: unknown): Promise<unknown>;
+  put(path: string, body: unknown): Promise<unknown>;
+};
+
 export class OwnerApiError extends Error {
   readonly status: number;
   readonly code: string;
@@ -37,11 +43,11 @@ export function resolveOwnerApiConfig(input: { apiUrl?: string | undefined; supa
   return { mode: 'live', apiUrl: withoutTrailingSlash(apiUrl), supabaseUrl: withoutTrailingSlash(supabaseUrl), anonKey };
 }
 
-export function createOwnerApi(options: OwnerApiOptions): OwnerApi {
+export function createOwnerApi(options: OwnerApiOptions): OwnerEditApi {
   const send = options.fetch ?? fetch;
   const baseUrl = `${withoutTrailingSlash(options.apiUrl)}/v1/owner`;
 
-  async function request(method: 'GET' | 'POST', path: string, body?: unknown): Promise<unknown> {
+  async function request(method: 'GET' | 'POST' | 'PATCH' | 'PUT', path: string, body?: unknown): Promise<unknown> {
     const headers: Record<string, string> = { Authorization: `Bearer ${await options.getAccessToken()}` };
     if (body !== undefined) headers['Content-Type'] = 'application/json';
     const response = await send(`${baseUrl}${path}`, {
@@ -55,6 +61,8 @@ export function createOwnerApi(options: OwnerApiOptions): OwnerApi {
   return {
     get: path => request('GET', path),
     post: (path, body) => request('POST', path, body),
+    patch: (path, body) => request('PATCH', path, body),
+    put: (path, body) => request('PUT', path, body),
   };
 }
 

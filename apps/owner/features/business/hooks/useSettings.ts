@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { acceptWindowValueText, linkedAccountsValueText } from "../lib/settingsText.ts";
-import { demoBusinessService } from "../services/businessService.ts";
+import { businessRuntime } from "./businessRuntime.ts";
 import type { BusinessService, BusinessSettings } from "../services/businessService.ts";
 import { useLoad } from "./useLoad.ts";
 
@@ -30,7 +30,7 @@ type LoadedSettings = {
 };
 
 export function useSettings(deps?: Partial<SettingsDeps>): SettingsState {
-  const service = deps?.service ?? demoBusinessService;
+  const service = deps?.service ?? businessRuntime().service;
   const { state, reload, replace } = useLoad(() => loadSettings(service), [service]);
 
   // Each toggle builds on the latest settings, so two fast toggles never

@@ -1,5 +1,5 @@
 import type { ExtraFee, PriceItem } from "../../../shared/data/types.ts";
-import { demoBusinessService } from "../services/businessService.ts";
+import { businessRuntime } from "./businessRuntime.ts";
 import type { BusinessService } from "../services/businessService.ts";
 import { useLoad } from "./useLoad.ts";
 
@@ -20,7 +20,7 @@ export type PricesState =
   | { status: "ready"; view: PricesView; reload: () => Promise<void> };
 
 export function usePrices(deps?: Partial<PricesDeps>): PricesState {
-  const service = deps?.service ?? demoBusinessService;
+  const service = deps?.service ?? businessRuntime().service;
   const { state, reload, replace } = useLoad(() => loadPrices(service), [service]);
 
   if (state.status === "loading") return { status: "loading", reload };

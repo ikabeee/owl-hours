@@ -12,7 +12,7 @@ export default function BusinessRoute() {
   const insets = useSafeAreaInsets();
   const business = useBusiness();
   const reload = business.reload;
-  // The three business screens share one demo service: re-read it on every
+  // The three business screens share one business service: re-read it on every
   // focus so prices saved in OwPrices show here when coming back.
   useFocusEffect(useCallback(() => {
     void reload();

@@ -63,33 +63,45 @@ export default function SettingsScreen(props: {
               </HStack>
             </VStack>
           </Card>
-          <Text type="label">{settingsCopys.notificationsSection}</Text>
-          <Card padding={4}>
-            <VStack gap={2}>
-              <Switch
-                label={businessCopys.urgentRequests}
-                description={settingsCopys.urgentRequestsDesc}
-                value={settings.urgentRequests}
-                changeAction={(checked) => props.onToggleSetting("urgentRequests", checked)}
-              />
-              <Divider />
-              <Switch
-                label={businessCopys.ringOnSilentAtNight}
-                description={settingsCopys.ringOnSilentDesc}
-                value={settings.ringOnSilentAtNight}
-                changeAction={(checked) => props.onToggleSetting("ringOnSilentAtNight", checked)}
-              />
-            </VStack>
-          </Card>
-          <Text type="label">{settingsCopys.messagesSection}</Text>
-          <Card padding={4}>
-            <Switch
-              label={businessCopys.polishByDefault}
-              description={settingsCopys.polishDesc}
-              value={settings.polishByDefault}
-              changeAction={(checked) => props.onToggleSetting("polishByDefault", checked)}
-            />
-          </Card>
+          {hasNotificationSwitches(settings) && (
+            <>
+              <Text type="label">{settingsCopys.notificationsSection}</Text>
+              <Card padding={4}>
+                <VStack gap={2}>
+                  {settings.urgentRequests !== undefined && (
+                    <Switch
+                      label={businessCopys.urgentRequests}
+                      description={settingsCopys.urgentRequestsDesc}
+                      value={settings.urgentRequests}
+                      changeAction={(checked) => props.onToggleSetting("urgentRequests", checked)}
+                    />
+                  )}
+                  {settings.urgentRequests !== undefined && settings.ringOnSilentAtNight !== undefined && <Divider />}
+                  {settings.ringOnSilentAtNight !== undefined && (
+                    <Switch
+                      label={businessCopys.ringOnSilentAtNight}
+                      description={settingsCopys.ringOnSilentDesc}
+                      value={settings.ringOnSilentAtNight}
+                      changeAction={(checked) => props.onToggleSetting("ringOnSilentAtNight", checked)}
+                    />
+                  )}
+                </VStack>
+              </Card>
+            </>
+          )}
+          {settings.polishByDefault !== undefined && (
+            <>
+              <Text type="label">{settingsCopys.messagesSection}</Text>
+              <Card padding={4}>
+                <Switch
+                  label={businessCopys.polishByDefault}
+                  description={settingsCopys.polishDesc}
+                  value={settings.polishByDefault}
+                  changeAction={(checked) => props.onToggleSetting("polishByDefault", checked)}
+                />
+              </Card>
+            </>
+          )}
           <Card padding={4}>
             <List hasDividers edge="flush">
               <ListItem
@@ -112,4 +124,9 @@ export default function SettingsScreen(props: {
       </div>
     </Theme>
   );
+}
+
+// Live mode has no stored value for the notification switches, so their section is hidden.
+function hasNotificationSwitches(settings: BusinessSettings): boolean {
+  return settings.urgentRequests !== undefined || settings.ringOnSilentAtNight !== undefined;
 }

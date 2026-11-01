@@ -61,3 +61,15 @@ test('an answer without data is rejected', async () => {
 
   await assert.rejects(api.get('/me'), OwnerApiError);
 });
+
+test('patch and put send a JSON body with their own method', async () => {
+  const { fetch, calls } = answering(200, { success: true, data: { id: 'b1' } });
+  const api = createOwnerApi({ apiUrl: 'https://api.example.com', getAccessToken: async () => 'tok', fetch });
+
+  assert.deepEqual(await api.patch('/business', { takingRequests: false }), { id: 'b1' });
+  assert.deepEqual(await api.put('/business/prices', { prices: [] }), { id: 'b1' });
+  assert.deepEqual(calls.map(call => [call.url, call.init.method, call.init.body]), [
+    ['https://api.example.com/v1/owner/business', 'PATCH', '{"takingRequests":false}'],
+    ['https://api.example.com/v1/owner/business/prices', 'PUT', '{"prices":[]}'],
+  ]);
+});
