@@ -12,9 +12,12 @@ appId: host.exp.Exponent
     visible: "Create your account"
     timeout: 60000
 - runScript: clear-mailpit.js
+# The form keeps the last owner's name and email: clear each field before typing.
 - tapOn: "Your name"
+- eraseText: 80
 - inputText: "E2E Owner"
 - tapOn: "Email"
+- eraseText: 80
 - inputText: ${NEW_EMAIL}
 - tapOn: "Create your account"
 - tapOn: "I accept the terms and the privacy policy."
@@ -38,8 +41,10 @@ appId: host.exp.Exponent
     visible: "Your business"
     timeout: 30000
 - tapOn: "Business name"
+- eraseText: 80
 - inputText: ${BUSINESS_NAME}
 - tapOn: "Category"
+- eraseText: 40
 - inputText: ${CATEGORY}
 - tapOn: "Your business"
 - takeScreenshot: live-onboarding-business
@@ -52,7 +57,8 @@ appId: host.exp.Exponent
 - extendedWaitUntil:
     visible: "Hours and area"
     timeout: 30000
-- tapOn: "Continue"
+- takeScreenshot: live-onboarding-area
+- tapOn: "Finish"
 - extendedWaitUntil:
     visible: ".*is live on Zukki.*"
     timeout: 30000
