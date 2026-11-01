@@ -60,9 +60,23 @@ export async function handleEvents(deps: InboundDeps, events: WebhookEvent[]): P
 
 // Queues Zukki's answer to a message that was stored for the first time.
 function answer(deps: InboundDeps, event: MessageEvent, stored: Stored, turn: Turn): void {
-  const { respond } = deps;
-  if (!respond) return;
-  deps.enqueue(stored.conversationId, () => respond(turnContext(event, stored), turn));
+  if (!deps.respond) return;
+  deps.enqueue(stored.conversationId, () => runTurn(deps, turnContext(event, stored), turn));
+}
+
+// Zukki's turn, then the handled mark that restart recovery
+// (orchestrator/recover.ts) checks. A turn that throws stays unmarked and
+// is replayed later.
+export async function runTurn(deps: Pick<InboundDeps, "db" | "respond">, ctx: TurnContext, turn: Turn): Promise<void> {
+  if (!deps.respond) return;
+  await deps.respond(ctx, turn);
+  unwrap(
+    await deps.db
+      .from("messages")
+      .update({ zukki_handled_at: new Date().toISOString() })
+      .eq("wa_message_id", ctx.waMessageId)
+      .eq("sender", "customer"),
+  );
 }
 
 function turnContext(event: MessageEvent, stored: Stored): TurnContext {
@@ -197,7 +211,7 @@ async function handleMedia(deps: InboundDeps, event: MessageEvent, content: Medi
       deps.log.error(`whatsapp: download of media ${media.id} (message ${event.waMessageId}) failed: ${errorText(error)}`);
       turn = { kind: "media_failed" };
     }
-    await deps.respond?.(turnContext(event, stored), turn);
+    await runTurn(deps, turnContext(event, stored), turn);
   });
 }
 
