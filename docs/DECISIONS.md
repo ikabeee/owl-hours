@@ -467,3 +467,18 @@ it with a new one.
   objects are retained by job deletion; broader conversation purges, Storage GC,
   backup erasure and recall of downloaded exports are outside this change.
 - See `docs/STORY-PACK-DATA.md` for preflight and exact preservation boundaries.
+
+## D27 — Story Pack write version and deletion notice (2026-10-31)
+
+- Keep the current server pack separate from the version on which dirty edits
+  began. Atomically reject stale saves, and preserve local text on conflict.
+- Do not export dirty copy after remote approval; offer explicit discard to
+  restore the authoritative saved pack. Detect a changed selected version during
+  pending writes without rejecting the ordinary save-then-approve success path.
+- Keep the team's existing component split and source-photo fetch dependency.
+  Enforce exactly two selected photos at the frontend boundary as well.
+- Record the user's Story-only draft deletion choice, but do not invent an owner
+  delete feature. The existing workspace shows a scope notice; any actual future
+  UI or maintenance deletion still needs explicit confirmation. Original photo
+  files and unverified backup retention are separate concerns. See
+  `docs/STORY-PACK-FOLLOWUP.md` for the data-follow-up dependency and scope.

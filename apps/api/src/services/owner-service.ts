@@ -539,19 +539,32 @@ export async function updateContentDraft(
       platforms: input.platforms,
     }).filter(([, value]) => value !== undefined),
   );
-  const row = contentDraftRow.parse(
-    unwrap(
-      await s.db
-        .from("content_drafts")
-        .update(changes)
-        .eq("id", draftId)
-        .eq("source", "story_pack")
-        .eq("status", "draft")
-        .is("deleted_at", null)
-        .select(CONTENT_DRAFT_FIELDS)
-        .single(),
-    ),
+  // Compare and write in one database statement; never retry with a newer version.
+  const updated = unwrap(
+    await s.db
+      .from("content_drafts")
+      .update(changes)
+      .eq("id", draftId)
+      .eq("source", "story_pack")
+      .eq("status", "draft")
+      .is("deleted_at", null)
+      .eq("updated_at", input.expectedUpdatedAt)
+      .select(CONTENT_DRAFT_FIELDS)
+      .maybeSingle(),
   );
+  if (!updated) {
+    // This read only distinguishes unavailable rows from a version conflict.
+    const current = unwrap(
+      await s.db.from("content_drafts").select("id, deleted_at")
+        .eq("id", draftId).eq("source", "story_pack")
+        .is("deleted_at", null).maybeSingle(),
+    );
+    if (!current || current.deleted_at) {
+      throw new HttpError(404, "not_found", "Story Pack not found.");
+    }
+    throw new HttpError(409, "changed_since_read", "The draft changed. Reload it before saving.");
+  }
+  const row = contentDraftRow.parse(updated);
   if (row.deleted_at) {
     throw new HttpError(404, "not_found", "Story Pack not found.");
   }
