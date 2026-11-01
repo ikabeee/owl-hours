@@ -4,11 +4,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import OnboardingLoadError from '../../features/onboarding/components/OnboardingLoadError';
 import SignUpScreen from '../../features/onboarding/components/SignUpScreen';
 import { useSignUp } from '../../features/onboarding/hooks/useSignUp';
+import { useOwnerAuth } from '../../features/auth/hooks/useOwnerAuth';
 import { resolveNext } from '../../features/onboarding/lib/setupSteps';
 
 export default function SignUpRoute() {
   const insets = useSafeAreaInsets();
   const signup = useSignUp();
+  const { configured } = useOwnerAuth();
   const safeInsets = { top: insets.top, bottom: insets.bottom };
 
   if (signup.status === 'failed') {
@@ -25,7 +27,7 @@ export default function SignUpRoute() {
       onSendCode={async (name, email) => {
         if (await view.submit(name, email)) router.push(resolveNext('/onboarding/sign-up', 'next'));
       }}
-      onFacebook={async () => { router.push(resolveNext('/onboarding/sign-up', 'facebook')); }}
+      onFacebook={configured ? undefined : async () => { router.push(resolveNext('/onboarding/sign-up', 'facebook')); }}
       onBack={async () => { router.back(); }}
       dom={domHost}
     />
