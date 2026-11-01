@@ -7,10 +7,10 @@
 
 1. [Accepting an offer opens a job the owner can quote](tasks/live-accept-creates-job.md) — done
 2. [Owner app on the live API: requests, chats, jobs, quote](tasks/live-owner-core.md) — done
-3. [Owner app on the live API: content post review](tasks/live-owner-content.md) — pending
+3. [Owner app on the live API: content post review](tasks/live-owner-content.md) — in-progress
 4. [Live environment: demo owner, owner web deploy, CORS](tasks/live-environment.md) — pending
-5. [Full flow verified: WhatsApp customer to approved visit](tasks/live-e2e.md) — pending
-6. [Demo video and usage README](tasks/live-video-readme.md) — pending
+5. [Full flow verified: WhatsApp customer to approved visit](tasks/live-e2e.md) — in-progress
+6. [Demo video and usage README](tasks/live-video-readme.md) — done
 
 ## Owner UI build (2026-10-28)
 

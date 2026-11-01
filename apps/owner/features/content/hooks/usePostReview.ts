@@ -1,6 +1,5 @@
 // Hook for OwPostReview screen: manages post draft state, targets, caption editing, and approval.
 import { useCallback, useEffect, useState } from "react";
-import { DEMO_NOW } from "../../../shared/data/mock.ts";
 import type { ID, Job, PostDraft } from "../../../shared/data/types.ts";
 import { contentCopys } from "../copys/contentCopys.ts";
 import { resolveJobPhotos } from "../lib/jobPhotos.ts";
@@ -8,11 +7,8 @@ import type { ResolvedJobPhotos } from "../lib/jobPhotos.ts";
 import { canApprovePost } from "../lib/postApproval.ts";
 import { postWhenText } from "../lib/postWhenText.ts";
 import { sourceLine } from "../lib/sourceLine.ts";
-import {
-  createPostsService,
-  defaultFakePostsClient,
-} from "../services/postsService.ts";
 import type { PostsService } from "../services/postsService.ts";
+import { contentRuntime } from "./contentRuntime.ts";
 
 export type PostReviewView = {
   draft: PostDraft;
@@ -162,8 +158,6 @@ export function usePostReview(
 }
 
 function createDefaultDeps(): PostReviewDeps {
-  return {
-    service: createPostsService(defaultFakePostsClient),
-    clock: () => DEMO_NOW,
-  };
+  const root = contentRuntime();
+  return { service: root.postsService, clock: root.now };
 }

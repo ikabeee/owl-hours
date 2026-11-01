@@ -2,6 +2,12 @@
   "name": "Zukki Owner",
   "slug": "zukki-owner",
   "scheme": "zukki-owner",
+  "ios": {
+    "bundleIdentifier": "com.owlhours.zukki.owner"
+  },
+  "android": {
+    "package": "com.owlhours.zukki.owner"
+  },
   "web": {
     "bundler": "metro"
   },
