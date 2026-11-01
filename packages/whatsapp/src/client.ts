@@ -2,6 +2,7 @@
 // then the returned URL to download. Errors carry Meta's code and message,
 // never the access token.
 import { z } from "zod";
+import { typingIndicator } from "./payloads/typing-indicator.ts";
 
 export const DEFAULT_GRAPH_VERSION = "v23.0";
 const GRAPH_HOST = "https://graph.facebook.com";
@@ -76,12 +77,7 @@ export function createWhatsAppClient(config: WhatsAppClientConfig) {
 
     // Blue ticks, plus "typing..." for up to 25 seconds while the models run (payload 03).
     async markRead(messageId: string, options: { typing?: boolean } = {}): Promise<void> {
-      await postMessages({
-        messaging_product: "whatsapp",
-        status: "read",
-        message_id: messageId,
-        ...(options.typing ? { typing_indicator: { type: "text" } } : {}),
-      });
+      await postMessages(typingIndicator({ messageId, typing: options.typing ?? false }));
     },
 
     // The download URL is short-lived and needs the same token.
