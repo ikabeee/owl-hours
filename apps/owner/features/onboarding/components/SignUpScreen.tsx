@@ -96,10 +96,12 @@ function FacebookIcon() {
 const FACEBOOK_BLUE = "#0866ff";
 const FACEBOOK_WHITE = "#ffffff";
 
-const pageStyle = { display: "flex", flexDirection: "column", width: "100%", minHeight: "100dvh" } as const;
+// One viewport tall with a scrolling body, so the footer button stays reachable on short
+// windows: Expo web sets `overflow: hidden` on <body>.
+const pageStyle = { display: "flex", flexDirection: "column", width: "100%", height: "100dvh" } as const;
 
 const backRowStyle = { height: 52, paddingInline: 8, display: "flex", alignItems: "center" } as const;
 
-const bodyStyle = { flex: 1, paddingInline: 24, display: "flex", flexDirection: "column", gap: 18 } as const;
+const bodyStyle = { flex: 1, minHeight: 0, overflowY: "auto", paddingInline: 24, display: "flex", flexDirection: "column", gap: 18 } as const;
 
 const footerStyle = { padding: "12px 24px 16px" } as const;
