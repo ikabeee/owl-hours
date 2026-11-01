@@ -2,10 +2,11 @@ import {
   storyPackDraftSchema,
   storyPackReviewSchema,
   storyPackSourceSchema,
+  storyPackUpdateSchema,
   type StoryPackDraftDto,
   type StoryPackSourceDto,
 } from "@owl-hours/shared";
-import type { OwnerApi } from "../../../shared/infra/ownerApi.ts";
+import type { OwnerEditApi } from "../../../shared/infra/ownerApi.ts";
 import type { ID, PostDraft } from "../../../shared/data/types.ts";
 import { localTimestamp } from "../../../shared/lib/localIsoString.ts";
 import type { JobPhotoSource } from "../lib/jobPhotos.ts";
@@ -14,7 +15,7 @@ import type { PostsClient } from "./postsService.ts";
 // PostsClient over GET /content/drafts and POST /content/drafts/:id/review (S1-S3, S5).
 // Reads come from the drafts list (the API has no single-draft route); saving an approved post
 // calls the review endpoint with the API's approval snapshot and answers the status the API returns.
-export function createLivePostsClient(api: OwnerApi): PostsClient {
+export function createLivePostsClient(api: OwnerEditApi): PostsClient {
   const draftsById = new Map<ID, StoryPackDraftDto>();
 
   async function readDrafts(): Promise<StoryPackDraftDto[]> {
@@ -49,12 +50,23 @@ export function createLivePostsClient(api: OwnerApi): PostsClient {
 
   async function saveReviewedPost(post: PostDraft): Promise<PostDraft> {
     if (post.status === "draft") throw new Error(`Post ${post.id} is still a draft: the live API only reviews approvals.`);
-    const draft = await rememberedDraft(post.id);
-    if (!draft) throw new Error(`Post ${post.id} is not in the owner's drafts.`);
+    const remembered = await rememberedDraft(post.id);
+    if (!remembered) throw new Error(`Post ${post.id} is not in the owner's drafts.`);
+    const draft = post.status === "rejected" ? remembered : await withOwnerEdits(remembered, post);
     const review = post.status === "rejected" ? { approve: false } : await approval(draft);
     const updated = storyPackDraftSchema.parse(await api.post(reviewPath(post.id), storyPackReviewSchema.parse(review)));
     draftsById.set(updated.id, updated);
     return toPostDraft(updated);
+  }
+
+  // The review approves the stored draft, so the owner's caption and platforms are saved first.
+  async function withOwnerEdits(draft: StoryPackDraftDto, post: PostDraft): Promise<StoryPackDraftDto> {
+    const changes = editsOf(draft, post);
+    if (!changes) return draft;
+    const body = storyPackUpdateSchema.parse({ ...changes, expectedUpdatedAt: draft.updatedAt });
+    const updated = storyPackDraftSchema.parse(await api.patch(draftPath(post.id), body));
+    draftsById.set(updated.id, updated);
+    return updated;
   }
 
   async function approval(draft: StoryPackDraftDto) {
@@ -86,8 +98,24 @@ export function createLivePostsClient(api: OwnerApi): PostsClient {
   };
 }
 
+function draftPath(id: ID): string {
+  return `/content/drafts/${encodeURIComponent(id)}`;
+}
+
 function reviewPath(id: ID): string {
-  return `/content/drafts/${encodeURIComponent(id)}/review`;
+  return `${draftPath(id)}/review`;
+}
+
+function editsOf(draft: StoryPackDraftDto, post: PostDraft): { caption?: string; platforms?: StoryPackDraftDto["platforms"] } | null {
+  const platforms = platformsOf(post.targets);
+  const captionChanged = post.caption !== draft.caption;
+  const platformsChanged = platforms.join() !== draft.platforms.join();
+  if (!captionChanged && !platformsChanged) return null;
+  return { ...(captionChanged ? { caption: post.caption } : {}), ...(platformsChanged ? { platforms } : {}) };
+}
+
+function platformsOf(targets: PostDraft["targets"]): StoryPackDraftDto["platforms"] {
+  return [...(targets.facebook ? ["facebook_page" as const] : []), ...(targets.instagram ? ["instagram" as const] : [])];
 }
 
 // A story pack is the API's job-based post. Its status is the API's: approved is not published.
