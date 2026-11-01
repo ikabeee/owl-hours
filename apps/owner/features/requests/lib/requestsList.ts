@@ -12,7 +12,7 @@ export type ListedOffer = Pick<
 export type WaitingRequestCard = {
   id: ID;
   isUrgent: boolean;
-  distanceText: string; // "1.2 km"
+  distanceText: string | null; // "1.2 km"; null when the distance is unknown
   timeLeftText: string; // "4:32 left"
   title: string;
   subtitle: string; // "Ana L. · suggested quote $130–160"
@@ -72,7 +72,7 @@ function earlierRow(offer: ListedOffer): EarlierRequestRow {
   return {
     id: offer.id,
     title: offer.title,
-    subtitle: `${offer.customerName} · ${distanceText(offer.distanceKm)}`,
+    subtitle: [offer.customerName, distanceText(offer.distanceKm)].filter(Boolean).join(" · "),
     statusText: outcomeText(offer.status),
   };
 }
@@ -84,8 +84,8 @@ function outcomeText(status: RequestOffer["status"]): string {
   return requestsListCopys.missed;
 }
 
-function distanceText(distanceKm: number): string {
-  return `${distanceKm.toFixed(1)} km`;
+function distanceText(distanceKm: number | null): string | null {
+  return distanceKm === null ? null : `${distanceKm.toFixed(1)} km`;
 }
 
 function emptyStateOf(isTakingRequests: boolean, offerCount: number): RequestsEmptyState | null {

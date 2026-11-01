@@ -167,9 +167,42 @@ describe("live posts client: S3 approves through the review endpoint", () => {
     });
     storyPackReviewSchema.parse(reviewCall?.body);
 
-    assert.equal(approved?.status, "scheduled");
+    assert.equal(approved?.status, "approved");
     assert.deepEqual((await service.getDrafts()).map((draft) => draft.id), [SECOND_ID]);
-    assert.equal((await service.getPost(DRAFT_ID))?.status, "scheduled");
+    assert.equal((await service.getPost(DRAFT_ID))?.status, "approved");
+  });
+
+  it("shows the API's status after approve: a draft with no time is approved, never published", async () => {
+    const { client } = fakeContentApi({ drafts: [draftRow({ scheduledAt: null })], sources: [sourceRow()] });
+    const service = createPostsService(client, { now: () => "2026-10-28T00:07:00-05:00" });
+
+    const approved = await service.approve(DRAFT_ID);
+
+    assert.equal(approved?.status, "approved");
+    assert.equal(approved?.publishedAt, undefined);
+    assert.deepEqual(await service.getPublished(), []);
+    assert.deepEqual((await service.getScheduled()).map((post) => post.status), ["approved"]);
+  });
+
+  it("shows published only when the API says published", async () => {
+    const { client } = fakeContentApi({
+      drafts: [draftRow({ status: "published", publishedAt: "2026-10-28T23:00:00+00:00" })],
+      sources: [],
+    });
+    const service = createPostsService(client);
+
+    assert.deepEqual((await service.getPublished()).map((post) => post.status), ["published"]);
+  });
+});
+
+describe("live posts client: Regenerate is not offered, the API has no copy generator", () => {
+  it("answers no regenerate and never clones the draft locally", async () => {
+    const { client, calls } = fakeContentApi({ drafts: [draftRow()], sources: [] });
+    const service = createPostsService(client, { canRegenerate: false });
+
+    assert.equal(service.canRegenerate, false);
+    assert.equal(await service.regenerate(DRAFT_ID), null);
+    assert.deepEqual(calls, []);
   });
 });
 
