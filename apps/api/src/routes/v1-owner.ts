@@ -146,6 +146,8 @@ export function ownerRoutes(deps: V1Deps): Hono<OwnerEnv> {
   app.post("/content/drafts/:id/handoff", async (c) =>
     ok(c, await owner.handoffContentDraft(c.get("session"), readId(c))));
 
+  app.get("/linked-accounts", async (c) => ok(c, await owner.listLinkedAccounts(c.get("session"))));
+
   app.post("/test-zukki", async (c) => {
     const body = await readJson(c, testZukkiBody);
     return ok(c, await owner.testZukki(c.get("session"), body, deps));

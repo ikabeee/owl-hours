@@ -651,6 +651,36 @@ export async function handoffContentDraft(s: OwnerSession, draftId: string): Pro
   return { draft: toContentDraft(draft, true), source: toContentSource(current, links) };
 }
 
+// Linked accounts -------------------------------------------------------------
+
+// Column grants keep token_secret_id out of the owner's reach; naming the
+// columns keeps it out of this answer even if a grant ever widens.
+const LINKED_ACCOUNT_FIELDS = "id, platform, display_name, mode";
+
+const linkedAccountRows = z.array(z.object({
+  id: uuid,
+  platform: z.enum(["facebook_page", "instagram"]),
+  display_name: z.string().nullable(),
+  mode: z.enum(["live", "test"]),
+}));
+
+export type LinkedAccountDto = {
+  id: string;
+  platform: "facebook_page" | "instagram";
+  displayName: string | null;
+  mode: "live" | "test";
+};
+
+export async function listLinkedAccounts(s: OwnerSession): Promise<LinkedAccountDto[]> {
+  const rows = await s.db.from("linked_accounts").select(LINKED_ACCOUNT_FIELDS).order("platform").order("created_at");
+  return linkedAccountRows.parse(unwrap(rows)).map((row) => ({
+    id: row.id,
+    platform: row.platform,
+    displayName: row.display_name,
+    mode: row.mode,
+  }));
+}
+
 // Test Zukki ----------------------------------------------------------------
 
 export async function testZukki(

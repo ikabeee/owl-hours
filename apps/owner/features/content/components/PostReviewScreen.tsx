@@ -34,6 +34,7 @@ export default function PostReviewScreen(props: {
   scheduledWhenText: string | null;
   jobPhotos: ResolvedJobPhotos | null;
   canApprove: boolean;
+  canRegenerate: boolean;
   insets: { top: number; bottom: number };
   onBack: () => Promise<void>;
   onEditToggle: () => Promise<void>;
@@ -54,6 +55,7 @@ export default function PostReviewScreen(props: {
     scheduledWhenText,
     jobPhotos,
     canApprove,
+    canRegenerate,
   } = props;
 
   const beforeSrc = photoSource(jobPhotos?.photos.before, contentImages.photoMap, contentImages.bathLeak);
@@ -230,16 +232,19 @@ export default function PostReviewScreen(props: {
             borderTop: '1px solid var(--color-border)',
             padding: '12px 16px',
             display: 'grid',
-            gridTemplateColumns: '1fr 2fr',
+            gridTemplateColumns: canRegenerate ? '1fr 2fr' : '1fr',
             gap: 8,
           }}
         >
-          <Button
-            label={contentCopys.regenerate}
-            variant="secondary"
-            size="lg"
-            onClick={() => void props.onRegenerate()}
-          />
+          {/* Hidden where nothing can write new copy (live API), never a fake redraft */}
+          {canRegenerate && (
+            <Button
+              label={contentCopys.regenerate}
+              variant="secondary"
+              size="lg"
+              onClick={() => void props.onRegenerate()}
+            />
+          )}
           <Button
             label={contentCopys.approveAndPost}
             variant="primary"

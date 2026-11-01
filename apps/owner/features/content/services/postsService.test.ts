@@ -115,6 +115,10 @@ describe("postsService.getPublished seed", () => {
 });
 
 describe("postsService.regenerate", () => {
+  it("offers Regenerate in the demo", () => {
+    assert.equal(buildService().canRegenerate, true);
+  });
+
   it("returns null when regenerating a non-draft (already scheduled)", async () => {
     const service = buildService();
     await service.approve("post_91");
