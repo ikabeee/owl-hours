@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import SettingsScreen from "../features/business/components/SettingsScreen";
 import BusinessLoadError from "../features/business/components/BusinessLoadError";
 import { useSettings } from "../features/business/hooks/useSettings";
+import LoadingSkeleton from '../shared/shell/LoadingSkeleton';
 
 export default function SettingsRoute() {
   const insets = useSafeAreaInsets();
@@ -13,7 +14,7 @@ export default function SettingsRoute() {
   if (settings.status === 'failed') {
     return <BusinessLoadError insets={safeInsets} onRetry={settings.retry} dom={domHost} />;
   }
-  if (settings.status !== 'ready') return null;
+  if (settings.status !== 'ready') return <LoadingSkeleton />;
 
   const { view } = settings;
   return (

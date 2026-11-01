@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import JobsLoadError from '../../features/jobs/components/JobsLoadError';
 import JobsScreen from '../../features/jobs/components/JobsScreen';
 import { useJobs } from '../../features/jobs/hooks/useJobs';
+import LoadingSkeleton from '../../shared/shell/LoadingSkeleton';
 
 export default function JobsRoute() {
   const insets = useSafeAreaInsets();
@@ -13,7 +14,7 @@ export default function JobsRoute() {
   const safeInsets = { top: insets.top, bottom: insets.bottom };
   useFocusEffect(useCallback(() => { reload(); }, [reload]));
   if (jobs.status === 'failed') return <JobsLoadError insets={safeInsets} onRetry={async () => reload()} dom={domHost} />;
-  if (jobs.status !== 'ready') return null;
+  if (jobs.status !== 'ready') return <LoadingSkeleton />;
 
   return (
     <JobsScreen

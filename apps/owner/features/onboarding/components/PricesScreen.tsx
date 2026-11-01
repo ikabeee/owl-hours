@@ -16,6 +16,7 @@ import { TextInput } from '@astryxdesign/core/TextInput';
 import { Check, Pencil } from 'lucide-react';
 import type { ExtraFee, PriceItem } from '../../../shared/data/types';
 import { onboardingCopys } from '../copys/onboardingCopys';
+import { completePrices } from '../lib/priceDraft';
 import { feeAmountText, feeLabelText, priceAmountText } from '../lib/priceText';
 import OnboardingFrame from './OnboardingFrame';
 import SetupStepHeader from './SetupStepHeader';
@@ -41,7 +42,7 @@ export default function PricesScreen(props: {
       insets={insets}
       onBack={() => props.onBack()}
       footerLabel={onboardingCopys.continueButton}
-      onFooter={() => props.onSave(draft)}
+      onFooter={() => saveCompletePrices()}
     >
       <SetupStepHeader step={2} />
       <Heading level={1}>{onboardingCopys.pricesTitle}</Heading>
@@ -99,6 +100,14 @@ export default function PricesScreen(props: {
       </div>
     </OnboardingFrame>
   );
+
+  // The stack keeps this screen mounted behind step 3, so Back must show what was saved.
+  function saveCompletePrices() {
+    const complete = completePrices(draft);
+    setDraft(complete);
+    setEditingId(null);
+    return props.onSave(complete);
+  }
 
   // A new price opens in edit mode, never as a dead "$0" row.
   function addRow() {

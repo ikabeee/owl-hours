@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import ChatLoadError from '../../features/chats/components/ChatLoadError';
 import ChatScreen from '../../features/chats/components/ChatScreen';
 import { useConversation } from '../../features/chats/hooks/useConversation';
+import LoadingSkeleton from '../../shared/shell/LoadingSkeleton';
 
 export default function ChatRoute() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -17,7 +18,7 @@ export default function ChatRoute() {
   if (conversation.status === 'failed') {
     return <ChatLoadError insets={safeInsets} onRetry={conversation.retry} dom={domHost} />;
   }
-  if (conversation.status !== 'ready') return null;
+  if (conversation.status !== 'ready') return <LoadingSkeleton />;
 
   const { view } = conversation;
   return (

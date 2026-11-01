@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import RequestsLoadError from '../../features/requests/components/RequestsLoadError';
 import RequestsScreen from '../../features/requests/components/RequestsScreen';
 import { useRequests } from '../../features/requests/hooks/useRequests';
+import LoadingSkeleton from '../../shared/shell/LoadingSkeleton';
 
 export default function RequestsRoute() {
   const insets = useSafeAreaInsets();
@@ -13,7 +14,7 @@ export default function RequestsRoute() {
   const safeInsets = { top: insets.top, bottom: insets.bottom };
 
   if (requests.status === 'failed') return <RequestsLoadError insets={safeInsets} onRetry={requests.retry} dom={domHost} />;
-  if (requests.status !== 'ready') return null;
+  if (requests.status !== 'ready') return <LoadingSkeleton />;
 
   return (
     <RequestsScreen

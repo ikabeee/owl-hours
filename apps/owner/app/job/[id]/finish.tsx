@@ -3,12 +3,13 @@ import { useLocalSearchParams, router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import FinishScreen from '../../../features/jobs/components/FinishScreen';
 import { useFinishJob } from '../../../features/jobs/hooks/useFinishJob';
+import LoadingSkeleton from '../../../shared/shell/LoadingSkeleton';
 
 export default function JobFinishRoute() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const insets = useSafeAreaInsets();
   const finish = useFinishJob(id);
-  if (!finish) return null;
+  if (!finish) return <LoadingSkeleton />;
 
   return (
     <FinishScreen

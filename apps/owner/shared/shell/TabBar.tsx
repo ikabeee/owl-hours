@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { BottomTabBarProps } from "expo-router/tabs";
 import { Inbox, MessageCircle, Wrench, LayoutGrid, Store } from "lucide-react-native";
 import { native } from "./native-tokens";
-import { conversations, offers } from "../data/mock";
+import type { TabBadges } from "./tabBadges";
 
 type IconProps = { size?: number | string; color?: string };
 
@@ -18,7 +18,7 @@ export const TABS: { name: string; label: string; Icon: ComponentType<IconProps>
   { name: "business/index", label: "Business", Icon: Store },
 ];
 
-export function TabBar({ state, emitter, navigateToTab }: BottomTabBarProps) {
+export function TabBar({ state, emitter, navigateToTab, badges }: BottomTabBarProps & { badges: TabBadges }) {
   const insets = useSafeAreaInsets();
   const ordered = TABS.filter((tab) => state.routes.some((route) => route.name === tab.name));
   return (
@@ -26,7 +26,7 @@ export function TabBar({ state, emitter, navigateToTab }: BottomTabBarProps) {
       {ordered.map((tab) => {
         const route = state.routes.find((candidate) => candidate.name === tab.name)!;
         const focused = state.index === state.routes.indexOf(route);
-        const badge = badgeFor(tab.name);
+        const badge = badgeFor(tab.name, badges);
         const color = focused ? native.color.accent : native.color.iconSecondary;
         return (
           <Pressable
@@ -55,9 +55,9 @@ export function TabBar({ state, emitter, navigateToTab }: BottomTabBarProps) {
   );
 }
 
-function badgeFor(name: string): number {
-  if (name === "requests") return offers.filter((offer) => offer.status === "offered").length;
-  if (name === "chats") return conversations.reduce((sum, conversation) => sum + conversation.unread, 0);
+function badgeFor(name: string, badges: TabBadges): number {
+  if (name === "requests") return badges.requests;
+  if (name === "chats") return badges.chats;
   return 0;
 }
 

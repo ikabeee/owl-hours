@@ -34,9 +34,13 @@ export default function ContentLoadError(props: {
   );
 }
 
+// The DOM host shrinks the root to its content width, so the root claims the full width
+// to center the error state (same cause as ChatScreen's pageStyle).
 const pageStyle = {
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
+  width: '100%',
   height: '100dvh',
+  boxSizing: 'border-box',
 } as const;

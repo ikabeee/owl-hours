@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import PricesScreen from "../../features/business/components/PricesScreen";
 import BusinessLoadError from "../../features/business/components/BusinessLoadError";
 import { usePrices } from "../../features/business/hooks/usePrices";
+import LoadingSkeleton from '../../shared/shell/LoadingSkeleton';
 
 export default function PricesRoute() {
   const insets = useSafeAreaInsets();
@@ -13,7 +14,7 @@ export default function PricesRoute() {
   if (prices.status === 'failed') {
     return <BusinessLoadError insets={safeInsets} onRetry={prices.retry} dom={domHost} />;
   }
-  if (prices.status !== 'ready') return null;
+  if (prices.status !== 'ready') return <LoadingSkeleton />;
 
   const { view } = prices;
   return (
