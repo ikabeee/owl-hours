@@ -1,10 +1,9 @@
 import { useEffect, useState } from "react";
-import { business } from "../../../shared/data/mock.ts";
 import { afterFailedLoad } from "../../../shared/lib/loadState.ts";
 import type { LoadState } from "../../../shared/lib/loadState.ts";
 import type { DeclineReason, ID, OfferStatus, PossibleFault } from "../../../shared/data/types.ts";
 import type { AcceptOutcome } from "../lib/acceptOutcome.ts";
-import { acceptWindowSeconds, formatCountdown, secondsLeft } from "../lib/countdown.ts";
+import { formatCountdown, offerWindowSeconds, secondsLeft } from "../lib/countdown.ts";
 import { requestFaults } from "../lib/requestFaults.ts";
 import type { Offer, OffersService } from "../services/offersService.ts";
 import { createRequestsRuntime } from "./requestsRuntime.ts";
@@ -14,7 +13,6 @@ const TICK_MS = 1000;
 export type RequestOfferDeps = {
   service: OffersService;
   clock: () => string; // current instant as an ISO date
-  acceptWindowMin: { urgent: number; other: number };
 };
 
 export type RequestOfferDetails = Pick<
@@ -46,7 +44,6 @@ export function useRequestOffer(id: ID, deps?: Partial<RequestOfferDeps>): Reque
   const [defaults] = useState(createDefaultDeps);
   const service = deps?.service ?? defaults.service;
   const clock = deps?.clock ?? defaults.clock;
-  const acceptWindowMin = deps?.acceptWindowMin ?? defaults.acceptWindowMin;
 
   const [offer, setOffer] = useState<LoadState<Offer | null>>("loading");
   const [attempt, setAttempt] = useState(0);
@@ -101,7 +98,7 @@ export function useRequestOffer(id: ID, deps?: Partial<RequestOfferDeps>): Reque
     status: offer.status,
     countdownText: formatCountdown(remaining),
     secondsLeft: remaining,
-    maxSeconds: acceptWindowSeconds(offer.urgent, acceptWindowMin),
+    maxSeconds: offerWindowSeconds(offer),
     isExpired: remaining === 0 || offer.status === "expired",
     accept: acceptAndFindChat,
     decline: (reason) => answer(() => service.decline(id, reason)),
@@ -115,5 +112,5 @@ export function useRequestOffer(id: ID, deps?: Partial<RequestOfferDeps>): Reque
 }
 
 function createDefaultDeps(): RequestOfferDeps {
-  return { ...createRequestsRuntime(), acceptWindowMin: business.acceptWindowMin };
+  return createRequestsRuntime();
 }

@@ -29,11 +29,12 @@ import './requestScreen.css';
 // Until the backend serves real URLs, the demo media ids resolve to the embedded frames.
 const demoFrames: Record<string, string> = { 'bath-leak': bathLeak };
 
-// OwRequests. The "Taking requests" switch only shows the business setting for now.
+// OwRequests. The "Taking requests" switch saves the business setting.
 export default function RequestsScreen(props: {
   requests: RequestsListView;
   insets: { top: number; bottom: number };
   onOpenRequest: (id: string) => Promise<void>;
+  onToggleTakingRequests: (takingRequests: boolean) => Promise<void>;
   refreshFailed: boolean;
   onRetry: () => Promise<void>;
   dom?: DOMProps;
@@ -46,7 +47,11 @@ export default function RequestsScreen(props: {
         <VStack gap={3} padding={4}>
           <HStack justify="between" align="center">
             <Heading level={1}>{requestsListCopys.title}</Heading>
-            <Switch label={requestsListCopys.takingRequests} value={requests.isTakingRequests} isDisabled />
+            <Switch
+              label={requestsListCopys.takingRequests}
+              value={requests.isTakingRequests}
+              changeAction={(checked) => props.onToggleTakingRequests(checked)}
+            />
           </HStack>
           {props.refreshFailed && <RefreshNotice onRetry={props.onRetry} />}
           {requests.emptyState ? (
