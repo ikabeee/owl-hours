@@ -103,6 +103,17 @@ describe("postsService.approve with edits", () => {
   });
 });
 
+describe("postsService.getScheduled", () => {
+  it("lists an approved post with the scheduled ones until the API marks it published", async () => {
+    const approved = { ...mockDrafts[0]!, id: "post_approved", status: "approved" as const };
+    const client = { ...createFakePostsClient(), listPosts: async () => [approved] };
+
+    const scheduled = await createPostsService(client, { now: () => DEMO_NOW }).getScheduled();
+
+    assert.deepEqual(scheduled.map((p) => p.id), ["post_approved"]);
+  });
+});
+
 describe("postsService.getPublished seed", () => {
   it("starts with the demo published post from the OwContent design", async () => {
     const published = await buildService().getPublished();

@@ -181,7 +181,7 @@ describe("live posts client: S3 approves through the review endpoint", () => {
     assert.equal(approved?.status, "approved");
     assert.equal(approved?.publishedAt, undefined);
     assert.deepEqual(await service.getPublished(), []);
-    assert.deepEqual(await service.getScheduled(), []);
+    assert.deepEqual((await service.getScheduled()).map((post) => post.status), ["approved"]);
   });
 
   it("shows published only when the API says published", async () => {

@@ -69,7 +69,8 @@ export function createPostsService(
     getPost: (id) => client.findPost(id),
     getScheduled: async () => {
       const posts = await client.listPosts();
-      return posts.filter((p) => p.status === "scheduled");
+      // Live approval waits for posting; it is listed with the scheduled posts, never as published.
+      return posts.filter((p) => p.status === "scheduled" || p.status === "approved");
     },
     getPublished: async () => {
       const posts = await client.listPosts();
