@@ -1,2 +1,47 @@
-<h2>Your Zukki sign-in code</h2>
-<p>Enter this code in the Zukki owner app: <strong>{{ .Token }}</strong></p>
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light" />
+    <title>Your Zukki sign-in code</title>
+  </head>
+  <!-- Owner sign-in code (Magic Link and Confirm signup templates). Email-safe: tables and inline
+       styles only, no images, so it reads the same in Gmail, Outlook and Apple Mail. -->
+  <body style="margin:0;padding:0;background-color:#f4f5f7;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f5f7;">
+      <tr>
+        <td align="center" style="padding:32px 16px;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;background-color:#ffffff;border-radius:16px;">
+            <tr>
+              <td style="padding:32px 32px 8px 32px;font-family:Figtree,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+                <p style="margin:0;font-size:20px;font-weight:700;color:#0074e2;">Zukki</p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:16px 32px 0 32px;font-family:Figtree,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#1f2328;">
+                <h1 style="margin:0 0 8px 0;font-size:24px;line-height:32px;font-weight:700;">Enter the code</h1>
+                <p style="margin:0;font-size:16px;line-height:24px;color:#4b5563;">We sent this 6-digit code to {{ .Email }}. Type it in the Zukki owner app to sign in.</p>
+              </td>
+            </tr>
+            <tr>
+              <td align="center" style="padding:24px 32px;">
+                <table role="presentation" cellpadding="0" cellspacing="0">
+                  <tr>
+                    <td style="background-color:#eef5fd;border-radius:12px;padding:16px 24px;font-family:'SF Mono',Menlo,Consolas,monospace;font-size:32px;line-height:40px;font-weight:700;letter-spacing:8px;color:#1f2328;">{{ .Token }}</td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:0 32px 32px 32px;font-family:Figtree,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:16px;line-height:24px;color:#4b5563;">
+                <p style="margin:0;">If you didn't ask for this code, you can ignore this email. Nobody can sign in without it.</p>
+              </td>
+            </tr>
+          </table>
+          <p style="margin:16px 0 0 0;font-family:Figtree,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:13px;line-height:20px;color:#4b5563;">Zukki connects customers with local businesses on WhatsApp.</p>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>
