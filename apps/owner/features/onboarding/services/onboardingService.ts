@@ -11,6 +11,7 @@ import {
 } from "../../../shared/data/mock.ts";
 import type { ExtraFee, PriceItem } from "../../../shared/data/types.ts";
 import type { OwnerEditApi } from "../../../shared/infra/ownerApi.ts";
+import type { GeoPoint, LocationStatus } from "../lib/areaLocation.ts";
 import { createApiOnboardingClient } from "./onboardingApiClient.ts";
 
 // Typed as string (not the literal): callers compare it against arbitrary user input,
@@ -42,6 +43,8 @@ export type OnboardingService = {
   getFees(): Promise<ExtraFee[]>;
   getArea(): Promise<OnboardingArea>;
   saveArea(area: OnboardingArea): Promise<void>;
+  getLocationStatus(): Promise<LocationStatus>;
+  saveLocation(point: GeoPoint, radiusKm: number): Promise<void>;
   getHoursSummary(): Promise<string>;
   getNightUrgent(): Promise<boolean>;
   setNightUrgent(nightUrgent: boolean): Promise<void>;
@@ -71,6 +74,8 @@ export type OnboardingClient = {
   savePrices(prices: PriceItem[]): Promise<void>;
   findArea(): Promise<{ radiusKm: number; nightUrgent: boolean } | null>;
   saveArea(area: { radiusKm: number; nightUrgent: boolean }): Promise<void>;
+  findLocationStatus(): Promise<LocationStatus>;
+  saveLocation(point: GeoPoint, radiusKm: number): Promise<void>;
   findFees(): Promise<ExtraFee[]>;
   findHoursSummary(): Promise<string>;
 };
@@ -95,6 +100,8 @@ export function createOnboardingService(
     getFees: () => client.findFees(),
     getArea: () => currentArea(client),
     saveArea: (area) => keepNightUrgent(client, area),
+    getLocationStatus: () => client.findLocationStatus(),
+    saveLocation: (point, radiusKm) => client.saveLocation(point, radiusKm),
     getHoursSummary: () => client.findHoursSummary(),
     getNightUrgent: async () => (await storedArea(client)).nightUrgent,
     setNightUrgent: (nightUrgent) => storeNightUrgent(client, nightUrgent),
@@ -136,6 +143,9 @@ export function createFakeOnboardingClient(): OnboardingClient {
     saveArea: async (next) => {
       area = structuredClone(next);
     },
+    // The demo business has its location preset, so the area step never asks for one.
+    findLocationStatus: async () => "preset",
+    saveLocation: async () => {},
     findFees: async () => structuredClone(seedBusiness.fees),
     findHoursSummary: async () => seedBusiness.hours.summary,
   };
