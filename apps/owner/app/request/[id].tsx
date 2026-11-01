@@ -7,6 +7,7 @@ import RequestsLoadError from '../../features/requests/components/RequestsLoadEr
 import { destinationAfterAccept } from '../../features/requests/lib/acceptOutcome';
 import { shouldOpenDeclineSheet } from '../../features/requests/lib/declineSheet';
 import { useRequestOffer } from '../../features/requests/hooks/useRequestOffer';
+import LoadingSkeleton from '../../shared/shell/LoadingSkeleton';
 
 export default function RequestRoute() {
   const { id, decline } = useLocalSearchParams<{ id: string; decline?: string | string[] }>();
@@ -14,7 +15,7 @@ export default function RequestRoute() {
   const screen = useRequestOffer(id);
   const safeInsets = { top: insets.top, bottom: insets.bottom };
   if (screen.status === 'failed') return <RequestsLoadError insets={safeInsets} onRetry={screen.retry} dom={domHost} />;
-  if (screen.status !== 'ready') return null;
+  if (screen.status !== 'ready') return <LoadingSkeleton />;
 
   const request = screen.view;
 

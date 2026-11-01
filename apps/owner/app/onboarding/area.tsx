@@ -5,6 +5,7 @@ import AreaScreen from '../../features/onboarding/components/AreaScreen';
 import OnboardingLoadError from '../../features/onboarding/components/OnboardingLoadError';
 import { useArea } from '../../features/onboarding/hooks/useArea';
 import { resolveNext } from '../../features/onboarding/lib/setupSteps';
+import LoadingSkeleton from '../../shared/shell/LoadingSkeleton';
 
 export default function AreaRoute() {
   const insets = useSafeAreaInsets();
@@ -14,7 +15,7 @@ export default function AreaRoute() {
   if (area.status === 'failed') {
     return <OnboardingLoadError insets={safeInsets} onRetry={area.retry} dom={domHost} />;
   }
-  if (area.status !== 'ready') return null;
+  if (area.status !== 'ready') return <LoadingSkeleton />;
 
   const { view } = area;
   return (

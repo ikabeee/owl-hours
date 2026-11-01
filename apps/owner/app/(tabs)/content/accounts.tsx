@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import ContentLoadError from '../../../features/content/components/ContentLoadError';
 import AccountsScreen from '../../../features/content/components/AccountsScreen';
 import { useLinkedAccounts } from '../../../features/content/hooks/useLinkedAccounts';
+import LoadingSkeleton from '../../../shared/shell/LoadingSkeleton';
 
 export default function AccountsRoute() {
   const insets = useSafeAreaInsets();
@@ -15,7 +16,7 @@ export default function AccountsRoute() {
   }
 
   if (linked.status !== 'ready') {
-    return null;
+    return <LoadingSkeleton />;
   }
 
   const { view } = linked;
