@@ -142,29 +142,31 @@ export default function ContentScreen(props: {
             </VStack>
           </Card>
 
-          {/* Published card */}
-          <Card padding={4}>
-            <VStack gap={2}>
-              <Text type="large" style={{ fontWeight: 700 }}>
-                {contentCopys.published}
-              </Text>
-              {published.map((item) => (
-                <div
-                  key={item.id}
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    padding: '12px 0',
-                    borderTop: '1px solid var(--color-border)',
-                    fontSize: 15,
-                  }}
-                >
-                  <Text>{item.title}</Text>
-                  <Text type="supporting">{item.publishedDateText}</Text>
-                </div>
-              ))}
-            </VStack>
-          </Card>
+          {/* Published card: hidden until something is published, never a heading over nothing */}
+          {published.length > 0 && (
+            <Card padding={4}>
+              <VStack gap={2}>
+                <Text type="large" style={{ fontWeight: 700 }}>
+                  {contentCopys.published}
+                </Text>
+                {published.map((item) => (
+                  <div
+                    key={item.id}
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      padding: '12px 0',
+                      borderTop: '1px solid var(--color-border)',
+                      fontSize: 15,
+                    }}
+                  >
+                    <Text>{item.title}</Text>
+                    <Text type="supporting">{item.publishedDateText}</Text>
+                  </div>
+                ))}
+              </VStack>
+            </Card>
+          )}
         </VStack>
       </div>
     </Theme>
