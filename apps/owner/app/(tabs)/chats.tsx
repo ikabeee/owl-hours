@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import ChatLoadError from '../../features/chats/components/ChatLoadError';
 import ChatsScreen from '../../features/chats/components/ChatsScreen';
 import { useChats } from '../../features/chats/hooks/useChats';
+import LoadingSkeleton from '../../shared/shell/LoadingSkeleton';
 
 export default function ChatsRoute() {
   const insets = useSafeAreaInsets();
@@ -13,7 +14,7 @@ export default function ChatsRoute() {
   const safeInsets = { top: insets.top, bottom: insets.bottom };
 
   if (chats.status === 'failed') return <ChatLoadError insets={safeInsets} onRetry={chats.retry} dom={domHost} />;
-  if (chats.status !== 'ready') return null;
+  if (chats.status !== 'ready') return <LoadingSkeleton />;
 
   return (
     <ChatsScreen

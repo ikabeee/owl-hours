@@ -6,6 +6,7 @@ import SignUpScreen from '../../features/onboarding/components/SignUpScreen';
 import { useSignUp } from '../../features/onboarding/hooks/useSignUp';
 import { useOwnerAuth } from '../../features/auth/hooks/useOwnerAuth';
 import { resolveNext } from '../../features/onboarding/lib/setupSteps';
+import LoadingSkeleton from '../../shared/shell/LoadingSkeleton';
 
 export default function SignUpRoute() {
   const insets = useSafeAreaInsets();
@@ -16,7 +17,7 @@ export default function SignUpRoute() {
   if (signup.status === 'failed') {
     return <OnboardingLoadError insets={safeInsets} onRetry={signup.retry} dom={domHost} />;
   }
-  if (signup.status !== 'ready') return null;
+  if (signup.status !== 'ready') return <LoadingSkeleton />;
 
   const { view } = signup;
   return (

@@ -4,12 +4,13 @@ import { router, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import JobsScreen from '../../features/jobs/components/JobsScreen';
 import { useJobs } from '../../features/jobs/hooks/useJobs';
+import LoadingSkeleton from '../../shared/shell/LoadingSkeleton';
 
 export default function JobsRoute() {
   const insets = useSafeAreaInsets();
   const { jobs, reload } = useJobs();
   useFocusEffect(useCallback(() => { reload(); }, [reload]));
-  if (!jobs) return null;
+  if (!jobs) return <LoadingSkeleton />;
 
   return (
     <JobsScreen

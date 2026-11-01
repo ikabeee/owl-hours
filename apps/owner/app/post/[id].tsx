@@ -5,6 +5,7 @@ import * as Haptics from 'expo-haptics';
 import ContentLoadError from '../../features/content/components/ContentLoadError';
 import PostReviewScreen from '../../features/content/components/PostReviewScreen';
 import { usePostReview } from '../../features/content/hooks/usePostReview';
+import LoadingSkeleton from '../../shared/shell/LoadingSkeleton';
 
 export default function PostReviewRoute() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -17,7 +18,7 @@ export default function PostReviewRoute() {
   }
 
   if (postReview.status !== 'ready') {
-    return null;
+    return <LoadingSkeleton />;
   }
 
   const { view } = postReview;
