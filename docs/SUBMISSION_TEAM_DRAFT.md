@@ -12,6 +12,10 @@ The owner experience also includes a Story Pack concept: with customer consent, 
 
 The demo combines distinct materials: an actual WhatsApp conversation recorded on a teammate's test account, a local end-to-end flow using a simulated WhatsApp customer and recorded model responses, and an owner-side preview with fictional data. These are separate demonstration cases, not one continuous live transaction.
 
+Owner-side live preview: https://zukki-community-vote-demo.onrender.com/requests
+
+This preview uses fictional data; it does not send customer messages or publish social posts. It is a separate demonstration from the local judge flow.
+
 ## 2. Describe your use of Meta products to build the submitted project
 
 Zukki is designed around WhatsApp Cloud API for customer communication. The backend implements WhatsApp webhook handling and message delivery. The owner app is separate from the customer's WhatsApp conversation.
