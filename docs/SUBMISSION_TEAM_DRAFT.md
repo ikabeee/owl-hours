@@ -37,7 +37,7 @@ This makes it easier to give a business owner useful context before they decide 
 
 Carlos found that Muse gave noticeably better customer-facing responses than Gemini 3 Flash, which he uses at work for similar customer-service tasks. This was his informal assessment, not a formal benchmark. He saw that conversational quality as a practical strength for a WhatsApp agent like Zukki.
 
-Future vision: Meta's ecosystem of WhatsApp, Facebook and Instagram offers potential to connect customers with local businesses. As personal agents such as Muse develop, Zukki's business agent could collaborate with them to help customers and businesses coordinate. Any such collaboration would depend on capabilities Meta makes available and is not implemented in Zukki today.
+Future vision: Meta's ecosystem could connect content creation for Instagram and Facebook with real-time messaging across WhatsApp, Instagram and Facebook, helping customers and local businesses coordinate. As personal agents such as Muse develop, we see potential for Zukki's business agent to collaborate with them, depending on capabilities Meta makes available. Our current demo shows the WhatsApp workflow and an owner preview. Facebook/Instagram messaging and live social publishing are not demonstrated, and Muse collaboration is not implemented.
 
 ## Team verification before submission
 
