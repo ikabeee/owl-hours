@@ -35,6 +35,8 @@ When water is leaking, a customer may not know the technical name of a part or h
 
 This makes it easier to give a business owner useful context before they decide whether to accept the job. The application uses ordinary code and the owner's saved rules for suggested pricing; the model does not set the price. The owner reviews the request and quote, and the customer approves the visit. Model guidance can be wrong, so original evidence and human review matter.
 
+Carlos found that Muse gave noticeably better customer-facing responses than Gemini 3 Flash, which he uses at work for similar customer-service tasks. This was his informal assessment, not a formal benchmark. He saw that conversational quality as a practical strength for a WhatsApp agent like Zukki.
+
 ## Team verification before submission
 
 - Confirm which exact Meta model names and features are in the submitted version, and distinguish implemented integrations from what the video actually shows.
