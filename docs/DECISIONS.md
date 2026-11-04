@@ -587,3 +587,8 @@ it with a new one.
 - **Tokens stay safe:** `WHATSAPP_GRAPH_HOST` and `META_MODEL_BASE_URL` accept loopback URLs only, and production is unchanged when they are unset.
 - **Limits:** recordings cover the sample video and the demo script. With no key, a message the owner types in the chat went out as written; polishing with Zukki's version was not tried.
 
+## D40 — Muse-generated Facebook Page posts (2026-11-03)
+
+- **Decision:** the owner may ask Muse for text-only Facebook post copy, choose one of their connected Pages, edit the draft, and explicitly approve it before immediate publication. The selected linked-account id and Page name are stored on the draft; the Page token remains in Supabase Vault. Draft creation and account lookup use the signed-in owner's business, with tenant RLS and a composite tenant/account foreign key. Instagram and TikTok targets, generated images, and scheduling are out of scope for this first slice.
+- **Why:** Page posting must remain owner-controlled and tenant-isolated. Facebook supports text-only Page feed posts, so an image-generation workflow is not required to test the first end-to-end path.
+- **Consequences:** live testing requires a publicly reachable HTTPS Meta callback, approved Pages permissions, and server-side Meta/Muse configuration; the no-keys judge demo cannot publish to Facebook. The connected Page is selected per draft, and unlinking it prevents a pending draft from publishing.

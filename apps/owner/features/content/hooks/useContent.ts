@@ -31,6 +31,7 @@ export type ContentAccountsSummary = {
 
 export type ContentView = {
   accountsSummary: ContentAccountsSummary;
+  canCreateAiDraft: boolean;
   draftsCount: number;
   drafts: ContentDraftRow[];
   published: ContentPublishedRow[];
@@ -113,6 +114,7 @@ export function useContent(deps?: Partial<ContentDeps>): ContentState {
         status: "ready",
         view: {
           accountsSummary,
+          canCreateAiDraft: postsService.canCreateAiDraft,
           draftsCount: drafts.length,
           drafts: draftRows,
           published: publishedRows,

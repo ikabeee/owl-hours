@@ -24,11 +24,15 @@ export default function ContentRoute() {
   return (
     <ContentScreen
       accountsSummary={view.accountsSummary}
+      canCreateAiDraft={view.canCreateAiDraft}
       drafts={view.drafts}
       published={view.published}
       insets={safeInsets}
       onManageAccounts={async () => {
         router.push('/(tabs)/content/accounts');
+      }}
+      onCreatePost={async () => {
+        router.push('/post/create');
       }}
       onReviewDraft={async (id: string) => {
         router.push({ pathname: '/post/[id]', params: { id } });

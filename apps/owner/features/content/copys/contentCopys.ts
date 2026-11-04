@@ -16,6 +16,21 @@ export const contentCopys = {
 
   // Content screen (OwContent)
   contentTitle: "Content",
+  createFacebookPost: "Create a Facebook post with Muse",
+  createFacebookPostTitle: "Create a Facebook post",
+  createFacebookPostSubtitle: "Tell Muse what you want to share. Review every post before it goes live.",
+  museReviewNotice: "Muse can make mistakes. Check the post before approving it.",
+  postPromptLabel: "What should the post say?",
+  postPromptHint: "For example: Write a friendly post letting customers know we offer weekend leak repairs.",
+  facebookPageLabel: "Facebook Page",
+  chooseFacebookPage: "Choose a Facebook Page",
+  noFacebookPages: "Connect a Facebook Page before creating a post.",
+  connectFacebookPage: "Connect a Facebook Page",
+  generatePost: "Generate draft with Muse",
+  generatingPost: "Writing your draft…",
+  createPostUnavailable: "Creating Muse posts needs the live owner API.",
+  postPromptRequired: "Tell Muse what you want the post to say.",
+  createPostFailed: "Muse could not create the post. Try again.",
   accountsCardTitle: "Facebook Page and Instagram",
   connected: "Connected",
   manage: "Manage",
@@ -75,5 +90,6 @@ export const contentCopys = {
     job: "made from last night's job",
     prices: "From your price list",
     reminder: "Reminder of your night service and fee",
+    aiPost: "Created with Muse · Facebook Page",
   },
 };

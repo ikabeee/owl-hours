@@ -14,6 +14,7 @@ export type PostsClient = {
   publishPost?(id: ID): Promise<PostDraft>;
   findJob(id: ID): Promise<JobPhotoSource | null>;
   getBusinessName?(): Promise<string>;
+  createAiDraft?(prompt: string, facebookAccountId: ID): Promise<PostDraft>;
 };
 
 export type PostsServiceDeps = {
@@ -24,6 +25,7 @@ export type PostsServiceDeps = {
 
 export type PostsService = {
   canRegenerate: boolean;
+  canCreateAiDraft: boolean;
   getDrafts(): Promise<PostDraft[]>;
   getDraft(id: ID): Promise<PostDraft | null>;
   getPost(id: ID): Promise<PostDraft | null>;
@@ -31,6 +33,7 @@ export type PostsService = {
   getPublished(): Promise<PostDraft[]>;
   getJob(id: ID): Promise<JobPhotoSource | null>;
   getBusinessName(): Promise<string>;
+  createAiDraft(prompt: string, facebookAccountId: ID): Promise<PostDraft>;
   approve(
     id: ID,
     options?: {
@@ -57,6 +60,7 @@ export function createPostsService(
 ): PostsService {
   const clock = deps?.now ?? (() => DEMO_NOW);
   const canRegenerate = deps?.canRegenerate ?? true;
+  const canCreateAiDraft = Boolean(client.createAiDraft);
   const regeneratedIds = new Set<ID>();
 
   // Only the demo can regenerate. Each tap swaps between the draft's caption and its other one.
@@ -71,6 +75,7 @@ export function createPostsService(
 
   return {
     canRegenerate,
+    canCreateAiDraft,
     getDrafts: async () => {
       const posts = await client.listPosts();
       return posts.filter((p) => p.status === "draft");
@@ -96,6 +101,10 @@ export function createPostsService(
         return client.getBusinessName();
       }
       return business.name;
+    },
+    createAiDraft: async (prompt, facebookAccountId) => {
+      if (!client.createAiDraft) throw new Error("Creating a Muse post needs the live owner API.");
+      return client.createAiDraft(prompt, facebookAccountId);
     },
     approve: async (id, options) => {
       const post = await client.findPost(id);

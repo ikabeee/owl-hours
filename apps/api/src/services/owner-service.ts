@@ -6,6 +6,7 @@ import {
   storySlidesSchema,
   storyPackMediaRevisionSchema,
   type StoryPackReview,
+  type AiPostReview,
   type StoryPackCreate,
   type StoryPackUpdate,
   type StoryPackDraftDto,
@@ -19,6 +20,7 @@ import { HttpError } from "../http/respond.ts";
 import { askTestZukki } from "../agent/test-zukki.ts";
 import { unwrap } from "./db-result.ts";
 import { polishOwnerMessage } from "./polish.ts";
+import { generateFacebookPostCopy } from "./content-generation.ts";
 
 export const SIGNED_MEDIA_SECONDS = 600;
 
@@ -438,8 +440,10 @@ const contentSourceRows = z.array(z.object({
 
 const contentDraftRow = z.object({
   id: uuid,
-  source: z.enum(["job", "story_pack", "prices", "reminder"]),
+  source: z.enum(["job", "story_pack", "prices", "reminder", "ai_post"]),
   source_job_id: uuid.nullable(),
+  facebook_account_id: uuid.nullable().optional(),
+  facebook_account_name: z.string().nullable().optional(),
   source_media_ids: z.array(uuid),
   title: z.string().nullable(),
   caption: z.string(),
@@ -469,6 +473,8 @@ const CONTENT_DRAFT_FIELDS = [
   "id",
   "source",
   "source_job_id",
+  "facebook_account_id",
+  "facebook_account_name",
   "source_media_ids",
   "title",
   "caption",
@@ -494,6 +500,8 @@ function toContentDraft(row: ContentDraftRow, canHandoff = false): StoryPackDraf
     id: row.id,
     source: row.source,
     sourceJobId: row.source_job_id,
+    facebookAccountId: row.facebook_account_id ?? null,
+    facebookAccountName: row.facebook_account_name ?? null,
     sourceMediaIds: row.source_media_ids,
     title: row.title,
     caption: row.caption,
@@ -595,7 +603,7 @@ export async function listContentDrafts(s: OwnerSession): Promise<StoryPackDraft
   const rows = await s.db
     .from("content_drafts")
     .select(CONTENT_DRAFT_FIELDS)
-    .eq("source", "story_pack")
+    .in("source", ["story_pack", "ai_post"])
     .is("deleted_at", null)
     .order("created_at", { ascending: false })
     .limit(100);
@@ -604,6 +612,48 @@ export async function listContentDrafts(s: OwnerSession): Promise<StoryPackDraft
   const jobIds = [...new Set(activeDrafts.flatMap((row) => (row.source_job_id ? [row.source_job_id] : [])))];
   const sources = await listContentSourceRows(s, jobIds);
   return activeDrafts.map((row) => toContentDraft(row, canHandoff(row, sources)));
+}
+
+export async function createAiContentDraft(
+  s: OwnerSession,
+  input: { prompt: string; facebookAccountId: string },
+  deps: { chat?: (request: ChatRequest) => Promise<ChatChoice> },
+): Promise<StoryPackDraftDto> {
+  if (!deps.chat) throw new HttpError(503, "model_unavailable", "Muse is not available right now.");
+
+  const tenantId = uuid.parse(unwrap(await s.db.rpc("caller_owned_business_id")));
+  const business = z.object({
+    name: z.string().min(1),
+    category: z.string().min(1),
+    website: z.string().nullable(),
+    prices: z.array(z.object({ label: z.string(), amount: z.number() })),
+  }).parse(unwrap(await s.db.rpc("owner_business")));
+  const account = z.object({ id: uuid, display_name: z.string().nullable() })
+    .nullable()
+    .parse(unwrap(await s.db.from("linked_accounts")
+      .select("id, display_name")
+      .eq("id", input.facebookAccountId)
+      .eq("tenant_id", tenantId)
+      .eq("platform", "facebook_page")
+      .maybeSingle()));
+  if (!account) throw new HttpError(422, "facebook_page_not_linked", "Choose a Facebook Page connected to this business.");
+
+  const copy = await generateFacebookPostCopy(deps.chat, {
+    name: business.name,
+    category: business.category,
+    website: business.website,
+    prices: business.prices,
+  }, input.prompt);
+  const row = contentDraftRow.parse(unwrap(await s.db.from("content_drafts").insert({
+    tenant_id: tenantId,
+    source: "ai_post",
+    facebook_account_id: account.id,
+    facebook_account_name: account.display_name ?? business.name,
+    title: copy.title,
+    caption: copy.caption,
+    platforms: ["facebook_page"],
+  }).select(CONTENT_DRAFT_FIELDS).single()));
+  return toContentDraft(row);
 }
 
 export async function createContentDraft(s: OwnerSession, input: StoryPackCreate): Promise<StoryPackDraftDto> {
@@ -645,7 +695,7 @@ export async function updateContentDraft(
       .from("content_drafts")
       .update(changes)
       .eq("id", draftId)
-      .eq("source", "story_pack")
+      .in("source", ["story_pack", "ai_post"])
       .eq("status", "draft")
       .is("deleted_at", null)
       .eq("updated_at", input.expectedUpdatedAt)
@@ -656,17 +706,17 @@ export async function updateContentDraft(
     // This read only distinguishes unavailable rows from a version conflict.
     const current = unwrap(
       await s.db.from("content_drafts").select("id, deleted_at")
-        .eq("id", draftId).eq("source", "story_pack")
+        .eq("id", draftId).in("source", ["story_pack", "ai_post"])
         .is("deleted_at", null).maybeSingle(),
     );
     if (!current || current.deleted_at) {
-      throw new HttpError(404, "not_found", "Story Pack not found.");
+      throw new HttpError(404, "not_found", "Content draft not found.");
     }
     throw new HttpError(409, "changed_since_read", "The draft changed. Reload it before saving.");
   }
   const row = contentDraftRow.parse(updated);
   if (row.deleted_at) {
-    throw new HttpError(404, "not_found", "Story Pack not found.");
+    throw new HttpError(404, "not_found", "Content draft not found.");
   }
   return toContentDraft(row);
 }
@@ -696,25 +746,50 @@ async function getStoryDraft(s: OwnerSession, draftId: string): Promise<StoryDra
 export async function reviewContentDraft(
   s: OwnerSession,
   draftId: string,
-  input: StoryPackReview,
+  input: StoryPackReview | AiPostReview,
 ): Promise<StoryPackDraftDto> {
-  const { approve, expectedUpdatedAt, expectedMedia } = input;
-  // Keep this route scoped to Story Packs. The locked database transition
-  // owns version, consent, completion, exact-media and copy validation.
-  await getStoryDraft(s, draftId);
-  const row = contentDraftRow.parse(
-    unwrap(
-      await s.db.rpc("review_content_draft", {
+  const { approve, expectedUpdatedAt } = input;
+  const expectedMedia = "expectedMedia" in input ? input.expectedMedia : undefined;
+  const draft = await getReviewableDraft(s, draftId);
+  const review = draft.source === "ai_post"
+    ? await s.db.rpc("review_ai_content_draft", {
+        p_draft_id: draftId,
+        p_approve: approve,
+        p_expected_updated_at: expectedUpdatedAt ?? null,
+      })
+    : await s.db.rpc("review_content_draft", {
         p_draft_id: draftId,
         p_approve: approve,
         ...(expectedUpdatedAt ? { p_expected_updated_at: expectedUpdatedAt } : {}),
         ...(expectedMedia ? { p_expected_media: expectedMedia } : {}),
-      }),
-    ),
+      });
+  const row = contentDraftRow.parse(
+    unwrap(review),
   );
   // A review receipt does not promise current export eligibility. The UI
   // refresh and every handoff request obtain that independently.
   return toContentDraft(row);
+}
+
+async function getReviewableDraft(s: OwnerSession, draftId: string): Promise<ContentDraftRow> {
+  const result = unwrap(await s.db.from("content_drafts")
+    .select(CONTENT_DRAFT_FIELDS)
+    .eq("id", draftId)
+    .in("source", ["story_pack", "ai_post"])
+    .is("deleted_at", null)
+    .maybeSingle());
+  if (!result) throw new HttpError(404, "not_found", "Content draft not found.");
+  const row = contentDraftRow.parse(result);
+  if (row.source !== "story_pack" && row.source !== "ai_post") {
+    throw new HttpError(404, "not_found", "Content draft not found.");
+  }
+  if (row.source === "story_pack" && !row.source_job_id) {
+    throw new HttpError(404, "not_found", "Content draft not found.");
+  }
+  if (row.source === "ai_post" && !row.facebook_account_id) {
+    throw new HttpError(422, "facebook_page_not_linked", "Connect a Facebook Page before reviewing this post.");
+  }
+  return row;
 }
 
 // Manual delivery only. Every request obtains current server approval and

@@ -21,5 +21,9 @@ export function sourceLine(draft: PostDraft, job?: JobPhotoSource | null): strin
     return contentCopys.sourceLine.prices;
   }
 
+  if (draft.source === "ai_post") {
+    return contentCopys.sourceLine.aiPost;
+  }
+
   return contentCopys.madeFromJobsAndPrices;
 }

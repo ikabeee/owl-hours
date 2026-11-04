@@ -21,6 +21,7 @@ const REVISION_BEFORE = "a".repeat(64);
 const REVISION_AFTER = "b".repeat(64);
 const UPDATED_AT = "2026-10-28T05:06:00+00:00";
 const EDITED_AT = "2026-10-28T05:07:30+00:00";
+const PAGE_ID = "66666666-6666-4666-8666-666666666666";
 
 function draftRow(overrides: Record<string, unknown> = {}) {
   return {
@@ -37,6 +38,29 @@ function draftRow(overrides: Record<string, unknown> = {}) {
     reviewedAt: null,
     publishedAt: null,
     createdAt: "2026-10-28T05:05:00+00:00",
+    updatedAt: UPDATED_AT,
+    canHandoff: false,
+    ...overrides,
+  };
+}
+
+function aiDraftRow(overrides: Record<string, unknown> = {}) {
+  return {
+    id: DRAFT_ID,
+    source: "ai_post",
+    sourceJobId: null,
+    facebookAccountId: PAGE_ID,
+    facebookAccountName: "Northside Page",
+    sourceMediaIds: [],
+    title: "Weekend leak repairs",
+    caption: "Northside Plumbing can help this weekend.",
+    slides: null,
+    platforms: ["facebook_page"],
+    scheduledAt: null,
+    status: "draft",
+    reviewedAt: null,
+    publishedAt: null,
+    createdAt: UPDATED_AT,
     updatedAt: UPDATED_AT,
     canHandoff: false,
     ...overrides,
@@ -79,6 +103,11 @@ function fakeContentApi(state: FakeState) {
     }
     if (method === "GET" && path === "/content/sources") {
       return Response.json({ success: true, data: state.sources });
+    }
+    if (method === "POST" && path === "/content/ai-drafts") {
+      const draft = aiDraftRow();
+      state.drafts.push(draft);
+      return Response.json({ success: true, data: draft }, { status: 201 });
     }
     if (method === "GET" && path === "/me") {
       return Response.json({ success: true, data: { businesses: [{ name: "Northside Plumbing" }] } });
@@ -126,6 +155,36 @@ describe("live posts client: S1 lists drafts from the live API", () => {
         draftRow({ id: SECOND_ID, title: null, caption: "Night caption", scheduledAt: null, platforms: ["instagram"] }),
       ],
       sources: [],
+    });
+
+    describe("live posts client: Muse Facebook drafts", () => {
+      it("creates a Facebook-only draft for the selected Page and approves without a job-photo snapshot", async () => {
+        const state: FakeState = { drafts: [], sources: [] };
+        const { client, calls } = fakeContentApi(state);
+        const createAiDraft = client.createAiDraft;
+        assert.ok(createAiDraft);
+
+        const draft = await createAiDraft("Write about weekend leak repairs.", PAGE_ID);
+
+        assert.equal(draft.source, "ai_post");
+        assert.equal(draft.facebookAccountId, PAGE_ID);
+        assert.equal(draft.facebookAccountName, "Northside Page");
+        assert.deepEqual(draft.targets, { facebook: true, instagram: false });
+        const service = createPostsService(client, { canRegenerate: false });
+        const published = await service.approve(DRAFT_ID, {
+          caption: "Edited weekend repair post.",
+          targets: { facebook: true, instagram: false },
+        });
+
+        assert.equal(published?.status, "published");
+        assert.deepEqual(calls.find((call) => call.url.endsWith("/content/ai-drafts"))?.body, {
+          prompt: "Write about weekend leak repairs.",
+          facebookAccountId: PAGE_ID,
+        });
+        const review = calls.find((call) => call.url.endsWith("/review"));
+        assert.deepEqual(review?.body, { approve: true, expectedUpdatedAt: EDITED_AT });
+        assert.equal(calls.some((call) => call.url.endsWith("/content/sources")), false);
+      });
     });
 
     assert.deepEqual(await client.listPosts(), [

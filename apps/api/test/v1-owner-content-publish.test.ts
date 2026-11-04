@@ -15,6 +15,8 @@ const DRAFT = "d0000000-0000-4000-8000-000000000001";
 const BEFORE = "60000000-0000-4000-8000-000000000011";
 const AFTER = "60000000-0000-4000-8000-000000000012";
 const PAGE_ID = "555000111";
+const SELECTED_PAGE_ID = "555000222";
+const SELECTED_ACCOUNT_ID = "a0000000-0000-4000-8000-000000000003";
 const IG_ID = "17841400000000001";
 
 const assets = [
@@ -48,13 +50,26 @@ const approvedRow = {
   updated_at: "2026-10-30T00:00:00.000Z",
 };
 const publishedRow = { ...approvedRow, status: "published", published_at: "2026-11-01T12:00:00.000Z" };
+const aiApprovedRow = {
+  ...approvedRow,
+  source: "ai_post",
+  source_job_id: null,
+  source_media_ids: [],
+  facebook_account_id: SELECTED_ACCOUNT_ID,
+  facebook_account_name: "Eastside Repairs",
+  slides: null,
+  approved_media: null,
+  platforms: ["facebook_page"],
+};
+const aiPublishedRow = { ...aiApprovedRow, status: "published", published_at: "2026-11-01T12:00:00.000Z" };
 const tokens = [
   { id: "a0000000-0000-4000-8000-000000000001", platform: "facebook_page", external_id: PAGE_ID, access_token: PAGE_TOKEN },
   { id: "a0000000-0000-4000-8000-000000000002", platform: "instagram", external_id: IG_ID, access_token: PAGE_TOKEN },
+  { id: SELECTED_ACCOUNT_ID, platform: "facebook_page", external_id: SELECTED_PAGE_ID, access_token: "selected-page-token-0123456789" },
 ];
 const signedUrl = (id: string) => `https://example.supabase.co/storage/v1/object/sign/media/${id}?token=fresh`;
 
-function ownerDb(row: typeof approvedRow, posted: string[] = []) {
+function ownerDb(row: Record<string, unknown>, posted: string[] = []) {
   return (call: FakeCall): FakeReply => {
     if (call.path === "/rest/v1/content_drafts") return { body: row };
     if (call.path === "/rest/v1/content_publications") return { body: posted.map((platform) => ({ platform })) };
@@ -127,7 +142,13 @@ function sharedDatabase({ readersToHoldBack = 0 } = {}) {
   return { owner, service };
 }
 
-type Options = { owner?: FakeResponder; service?: FakeResponder; graph?: (call: GraphCall) => GraphReply; noMeta?: boolean };
+type Options = {
+  owner?: FakeResponder;
+  service?: FakeResponder;
+  graph?: (call: GraphCall) => GraphReply;
+  noMeta?: boolean;
+  chat?: V1Deps["chat"];
+};
 
 function setup(options: Options = {}) {
   const owner = fakeSupabase(options.owner ?? ownerDb(approvedRow));
@@ -138,11 +159,16 @@ function setup(options: Options = {}) {
     serviceDb: service.client,
     serverKey: SERVER_KEY,
     ...(options.noMeta ? {} : { meta: { config: meta, fetch: graph.fetch, sleep: async () => {} } }),
+    ...(options.chat ? { chat: options.chat } : {}),
   };
   const { app } = createApp({ v1: deps });
   const publish = (headers: Record<string, string> = { authorization: `Bearer ${TOKEN}` }) =>
     app.request(`/v1/owner/content/drafts/${DRAFT}/publish`, { method: "POST", headers });
-  return { publish, ownerCalls: owner.calls, serviceCalls: service.calls, graphCalls: graph.calls };
+  const ownerHeaders = new Headers();
+  ownerHeaders.set("authorization", ["Bearer", TOKEN].join(" "));
+  const ownerCall = (path: string, init: RequestInit = {}) =>
+    app.request(`/v1/owner${path}`, { ...init, headers: { ...Object.fromEntries(ownerHeaders), ...init.headers } });
+  return { app, publish, ownerCall, ownerCalls: owner.calls, serviceCalls: service.calls, graphCalls: graph.calls };
 }
 
 const proof = createHmac("sha256", APP_SECRET).update(PAGE_TOKEN).digest("hex");
@@ -178,6 +204,40 @@ describe("POST /v1/owner/content/drafts/:id/publish", () => {
       "attached_media[1]": JSON.stringify({ media_fbid: "photo-2" }),
       access_token: PAGE_TOKEN,
       appsecret_proof: proof,
+    });
+
+    it("publishes an approved Muse draft as text only to its selected tenant Page", async () => {
+      const service = (call: FakeCall): FakeReply => {
+        if (call.path === "/rest/v1/rpc/linked_account_tokens") return { body: tokens };
+        if (call.path === "/rest/v1/rpc/claim_content_publication") return { body: true };
+        if (call.path === "/rest/v1/rpc/record_content_publication") return { body: aiPublishedRow };
+        if (call.path === "/rest/v1/rpc/release_content_publication") return { body: null };
+        return { status: 500, body: {} };
+      };
+      const { publish, graphCalls, serviceCalls } = setup({
+        owner: ownerDb(aiApprovedRow),
+        service,
+        graph: (call) => call.path === `/v26.0/${SELECTED_PAGE_ID}/feed`
+          ? { body: { id: `${SELECTED_PAGE_ID}_9002` } }
+          : graphError(`unexpected ${call.path}`),
+      });
+
+      const response = await publish();
+
+      assert.equal(response.status, 200);
+      const body = (await response.json()) as { data: { status: string } };
+      assert.equal(body.data.status, "published");
+      assert.deepEqual(graphCalls.map((call) => `${call.method} ${call.path}`), [
+        `POST /v26.0/${SELECTED_PAGE_ID}/feed`,
+      ]);
+      assert.deepEqual(Object.fromEntries(graphCalls[0]!.params), {
+        message: aiApprovedRow.caption,
+        access_token: "selected-page-token-0123456789",
+        appsecret_proof: createHmac("sha256", APP_SECRET).update("selected-page-token-0123456789").digest("hex"),
+      });
+      assert.deepEqual(recorded(serviceCalls), [
+        { p_draft_id: DRAFT, p_platform: "facebook_page", p_external_id: `${SELECTED_PAGE_ID}_9002` },
+      ]);
     });
     assert.deepEqual(Object.fromEntries(beforeItem!.params),
       { image_url: signedUrl(BEFORE), is_carousel_item: "true", access_token: PAGE_TOKEN, appsecret_proof: proof });
@@ -285,5 +345,134 @@ describe("POST /v1/owner/content/drafts/:id/publish", () => {
 
     assert.equal((await publish({})).status, 401);
     assert.equal(ownerCalls.length, 0);
+  });
+});
+
+describe("POST /v1/owner/content/ai-drafts", () => {
+  const pageAccount = tokens[0]!;
+  const generatedRow = {
+    id: DRAFT,
+    source: "ai_post",
+    source_job_id: null,
+    facebook_account_id: pageAccount.id,
+    facebook_account_name: "Northside Page",
+    source_media_ids: [],
+    title: "Weekend leak repairs",
+    caption: "Northside Plumbing is here for weekend leak repairs. Visit https://northside.example.",
+    slides: null,
+    approved_media: null,
+    platforms: ["facebook_page"],
+    scheduled_at: null,
+    status: "draft",
+    reviewed_at: null,
+    published_at: null,
+    created_at: "2026-11-01T12:00:00.000Z",
+    updated_at: "2026-11-01T12:00:00.000Z",
+  };
+
+  it("uses the signed-in owner's business and a Page linked to that tenant, then saves a Facebook-only draft", async () => {
+    let chatCalls = 0;
+    const owner = (call: FakeCall): FakeReply => {
+      if (call.path === "/rest/v1/rpc/caller_owned_business_id") return { body: NORTHSIDE };
+      if (call.path === "/rest/v1/rpc/owner_business") {
+        return { body: { name: "Northside Plumbing", category: "plumbing", website: "https://northside.example", prices: [{ label: "Leak repair", amount: 85 }] } };
+      }
+      if (call.path === "/rest/v1/linked_accounts") {
+        assert.equal(call.query.get("id"), `eq.${pageAccount.id}`);
+        assert.equal(call.query.get("tenant_id"), `eq.${NORTHSIDE}`);
+        assert.equal(call.query.get("platform"), "eq.facebook_page");
+        return { body: { id: pageAccount.id, display_name: "Northside Page" } };
+      }
+      if (call.path === "/rest/v1/content_drafts" && call.method === "POST") {
+        assert.equal((call.body as Record<string, unknown>).tenant_id, NORTHSIDE);
+        assert.equal((call.body as Record<string, unknown>).facebook_account_id, pageAccount.id);
+        assert.deepEqual((call.body as Record<string, unknown>).platforms, ["facebook_page"]);
+        return { body: generatedRow };
+      }
+      return { status: 500, body: {} };
+    };
+    const { ownerCall, ownerCalls } = setup({
+      owner,
+      chat: async (request) => {
+        chatCalls += 1;
+        assert.match(JSON.stringify(request.messages), /Northside Plumbing/);
+        assert.match(JSON.stringify(request.messages), /weekend leak repairs/);
+        return {
+          finishReason: "stop",
+          message: { role: "assistant", content: JSON.stringify({ title: "Weekend leak repairs", caption: generatedRow.caption }) },
+        };
+      },
+    });
+
+    const response = await ownerCall("/content/ai-drafts", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ prompt: "Write about weekend leak repairs.", facebookAccountId: pageAccount.id }),
+    });
+
+    assert.equal(response.status, 201);
+    const body = (await response.json()) as { data: { source: string; status: string; facebookAccountName: string | null; platforms: string[] } };
+    assert.equal(body.data.source, "ai_post");
+    assert.equal(body.data.status, "draft");
+    assert.equal(body.data.facebookAccountName, "Northside Page");
+    assert.deepEqual(body.data.platforms, ["facebook_page"]);
+    assert.equal(chatCalls, 1);
+    assert.equal(ownerCalls.some((call) => call.path === "/rest/v1/rpc/caller_owned_business_id"), true);
+  });
+
+  it("does not call Muse or save a draft for a Facebook Page not linked to this tenant", async () => {
+    let chatCalls = 0;
+    const { ownerCall } = setup({
+      owner: (call) => {
+        if (call.path === "/rest/v1/rpc/caller_owned_business_id") return { body: NORTHSIDE };
+        if (call.path === "/rest/v1/rpc/owner_business") {
+          return { body: { name: "Northside Plumbing", category: "plumbing", website: null, prices: [] } };
+        }
+        if (call.path === "/rest/v1/linked_accounts") return { body: null };
+        return { status: 500, body: {} };
+      },
+      chat: async () => {
+        chatCalls += 1;
+        return { finishReason: "stop", message: { role: "assistant", content: "{}" } };
+      },
+    });
+
+    const response = await ownerCall("/content/ai-drafts", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ prompt: "Write something.", facebookAccountId: pageAccount.id }),
+    });
+
+    assert.equal(response.status, 422);
+    assert.equal(chatCalls, 0);
+  });
+});
+
+describe("POST /v1/owner/content/drafts/:id/review for Muse posts", () => {
+  it("uses the displayed draft version and records explicit owner approval", async () => {
+    const aiDraft = { ...aiApprovedRow, status: "draft", reviewed_at: null };
+    const approved = { ...aiApprovedRow, status: "approved" };
+    const { ownerCall, ownerCalls } = setup({
+      owner: (call) => {
+        if (call.path === "/rest/v1/content_drafts") return { body: aiDraft };
+        if (call.path === "/rest/v1/rpc/review_ai_content_draft") return { body: approved };
+        return { status: 500, body: {} };
+      },
+    });
+
+    const response = await ownerCall(`/content/drafts/${DRAFT}/review`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ approve: true, expectedUpdatedAt: approved.updated_at }),
+    });
+
+    assert.equal(response.status, 200);
+    assert.equal(((await response.json()) as { data: { status: string } }).data.status, "approved");
+    const review = ownerCalls.find((call) => call.path === "/rest/v1/rpc/review_ai_content_draft");
+    assert.deepEqual(review?.body, {
+      p_draft_id: DRAFT,
+      p_approve: true,
+      p_expected_updated_at: approved.updated_at,
+    });
   });
 });

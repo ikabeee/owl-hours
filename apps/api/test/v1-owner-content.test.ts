@@ -173,7 +173,7 @@ describe("/v1/owner Story Pack drafts", () => {
     const update = calls.find((request) => request.path === "/rest/v1/content_drafts");
     assert.deepEqual(update?.body, { caption: "Edited repair story." });
     assert.equal(calls.some(request => request.path === "/rest/v1/rpc/owner_content_sources"), false);
-    assert.equal(update?.query.get("source"), "eq.story_pack");
+    assert.equal(update?.query.get("source"), "in.(story_pack,ai_post)");
     assert.equal(update?.query.get("status"), "eq.draft");
     assert.equal(((await response.json()) as { data: { canHandoff: boolean } }).data.canHandoff, false);
   });
@@ -714,7 +714,7 @@ describe("Story Pack optimistic updates", () => {
     const first = await call(`/content/drafts/${DRAFT}`, patchDraft({ caption: "First writer", expectedUpdatedAt: draftRow.updated_at }));
     assert.equal(first.status, 200);
     assert.deepEqual(calls[0]?.body, { caption: "First writer" });
-    assert.equal(calls[0]?.query.get("source"), "eq.story_pack");
+    assert.equal(calls[0]?.query.get("source"), "in.(story_pack,ai_post)");
     assert.equal(calls[0]?.query.get("status"), "eq.draft");
     assert.equal(calls[0]?.query.get("deleted_at"), "is.null");
     const stale = await call(`/content/drafts/${DRAFT}`, patchDraft({ caption: "Stale writer", expectedUpdatedAt: draftRow.updated_at }));
@@ -734,7 +734,7 @@ describe("Story Pack optimistic updates", () => {
     const response = await call(`/content/drafts/${DRAFT}`, patchDraft({ caption: "Must not resurrect", expectedUpdatedAt: draftRow.updated_at }));
     assert.equal(response.status, 404);
     assert.equal((await response.json() as { error: { code: string } }).error.code, "not_found");
-    assert.ok(calls.every((request) => request.query.get("source") === "eq.story_pack"));
+    assert.ok(calls.every((request) => request.query.get("source") === "in.(story_pack,ai_post)"));
     assert.ok(calls.every((request) => request.query.get("deleted_at") === "is.null"));
   });
 });

@@ -125,8 +125,10 @@ export type PostDraft = {
   title: string;                    // internal label: "Fixed in 91 minutes"
   caption: string;
   imageUrl?: string;
-  source: "job" | "prices" | "reminder";
+  source: "job" | "prices" | "reminder" | "ai_post";
   sourceJobId?: ID;                 // job photos are used only when shareConsent = "yes"
+  facebookAccountId?: ID;
+  facebookAccountName?: string;
   targets: { facebook: boolean; instagram: boolean };
   scheduledFor?: ISODate;
   status: PostStatus;

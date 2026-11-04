@@ -16,7 +16,7 @@ import { requireMeta } from "./owner-meta.ts";
 import { handoffContentDraft, readContentDraft } from "./owner-service.ts";
 
 type Platform = "facebook_page" | "instagram";
-type Account = { platform: Platform; externalId: string; token: string };
+type Account = { id: string; platform: Platform; externalId: string; token: string };
 type Post = { caption: string; imageUrls: string[] };
 type Outcome =
   | { platform: Platform; error: string }
@@ -27,18 +27,36 @@ export type PublishDeps = { meta?: MetaDeps | Unavailable | undefined; serviceDb
 
 const PLATFORM_NAMES: Record<Platform, string> = { facebook_page: "Facebook", instagram: "Instagram" };
 const platform = z.enum(["facebook_page", "instagram"]);
-const draftStatusRow = z.object({ tenant_id: z.string().uuid(), status: z.enum(["draft", "approved", "published", "rejected"]) });
-const tokenRows = z.array(z.object({ platform, external_id: z.string(), access_token: z.string().min(1) }));
+const draftStatusRow = z.object({
+  tenant_id: z.string().uuid(),
+  source: z.enum(["job", "story_pack", "prices", "reminder", "ai_post"]),
+  facebook_account_id: z.string().uuid().nullable().optional(),
+  status: z.enum(["draft", "approved", "published", "rejected"]),
+});
+const tokenRows = z.array(z.object({
+  id: z.string().uuid(),
+  platform,
+  external_id: z.string(),
+  access_token: z.string().min(1),
+}));
 
 export async function publishContentDraft(s: OwnerSession, draftId: string, deps: PublishDeps): Promise<StoryPackDraftDto> {
   const graph = createMetaGraph(requireMeta(deps.meta));
-  const tenantId = await approvedDraftTenant(s, draftId);
-  // The handoff rechecks approval, consent and the exact photos, and signs short-lived links Meta downloads.
-  const { draft, source } = await handoffContentDraft(s, draftId);
+  const approval = await approvedDraftTenant(s, draftId);
+  const { draft, source } = approval.source === "ai_post"
+    ? { draft: await ownerAiDraft(s, draftId), source: null }
+    // The handoff rechecks approval, consent and the exact photos, and signs short-lived links Meta downloads.
+    : await handoffContentDraft(s, draftId);
   const targets = await unpostedPlatforms(s, draft);
-  const accounts = await accountsFor(deps.serviceDb, tenantId, s.userId, targets);
+  const accounts = await accountsFor(
+    deps.serviceDb,
+    approval.tenantId,
+    s.userId,
+    targets,
+    approval.source === "ai_post" ? approval.facebookAccountId ?? undefined : undefined,
+  );
   await claimPlatforms(deps.serviceDb, draftId, accounts);
-  const post = { caption: draft.caption, imageUrls: source.assets.map((asset) => asset.imageUrl) };
+  const post = { caption: draft.caption, imageUrls: source?.assets.map((asset) => asset.imageUrl) ?? [] };
   const outcomes = await postToEach(graph, deps.serviceDb, draftId, accounts, post);
   if (outcomes.some((outcome) => outcome.error)) {
     throw new HttpError(502, "publish_failed", describeFailure(outcomes));
@@ -48,14 +66,23 @@ export async function publishContentDraft(s: OwnerSession, draftId: string, deps
 }
 
 // The draft is read as the owner, so RLS decides the business; the client never sends one.
-async function approvedDraftTenant(s: OwnerSession, draftId: string): Promise<string> {
-  const row = unwrap(await s.db.from("content_drafts").select("tenant_id, status")
-    .eq("id", draftId).is("deleted_at", null).maybeSingle());
-  if (!row) throw new HttpError(404, "not_found", "Story Pack not found.");
+async function approvedDraftTenant(
+  s: OwnerSession,
+  draftId: string,
+): Promise<{ tenantId: string; source: z.infer<typeof draftStatusRow>["source"]; facebookAccountId: string | null }> {
+  const row = unwrap(await s.db.from("content_drafts")
+    .select("tenant_id, source, facebook_account_id, status")
+    .eq("id", draftId)
+    .is("deleted_at", null)
+    .maybeSingle());
+  if (!row) throw new HttpError(404, "not_found", "Content draft not found.");
   const draft = draftStatusRow.parse(row);
   if (draft.status === "published") throw new HttpError(409, "already_published", "This post is already published.");
   if (draft.status !== "approved") throw new HttpError(422, "not_approved", "Approve this post before posting it.");
-  return draft.tenant_id;
+  if (draft.source === "ai_post" && !draft.facebook_account_id) {
+    throw new HttpError(422, "account_not_linked", "Connect a Facebook Page before posting.");
+  }
+  return { tenantId: draft.tenant_id, source: draft.source, facebookAccountId: draft.facebook_account_id ?? null };
 }
 
 async function unpostedPlatforms(s: OwnerSession, draft: StoryPackDraftDto): Promise<Platform[]> {
@@ -66,16 +93,36 @@ async function unpostedPlatforms(s: OwnerSession, draft: StoryPackDraftDto): Pro
 }
 
 // One account per platform: the earliest linked. Nothing is posted unless every target is linked.
-async function accountsFor(db: SupabaseClient, tenantId: string, userId: string, targets: Platform[]): Promise<Account[]> {
+async function accountsFor(
+  db: SupabaseClient,
+  tenantId: string,
+  userId: string,
+  targets: Platform[],
+  selectedFacebookAccountId?: string,
+): Promise<Account[]> {
   const rows = tokenRows.parse(unwrap(await db.rpc("linked_account_tokens", { p_tenant_id: tenantId, p_user_id: userId })));
   return targets.map((target) => {
-    const row = rows.find((candidate) => candidate.platform === target);
+    const row = rows.find((candidate) => candidate.platform === target
+      && (target !== "facebook_page" || !selectedFacebookAccountId || candidate.id === selectedFacebookAccountId));
     if (!row) {
       throw new HttpError(422, "account_not_linked",
-        `Connect ${PLATFORM_NAMES[target]} in Content > Linked accounts before posting.`);
+        target === "facebook_page" && selectedFacebookAccountId
+          ? "The selected Facebook Page is no longer connected. Choose another Page and review this post again."
+          : `Connect ${PLATFORM_NAMES[target]} in Content > Linked accounts before posting.`);
     }
-    return { platform: target, externalId: row.external_id, token: row.access_token };
+    return { id: row.id, platform: target, externalId: row.external_id, token: row.access_token };
   });
+}
+
+async function ownerAiDraft(s: OwnerSession, draftId: string): Promise<StoryPackDraftDto> {
+  const row = unwrap(await s.db.from("content_drafts")
+    .select("id, source, source_job_id, facebook_account_id, facebook_account_name, source_media_ids, title, caption, slides, platforms, scheduled_at, status, reviewed_at, published_at, created_at, updated_at, deleted_at")
+    .eq("id", draftId)
+    .eq("source", "ai_post")
+    .is("deleted_at", null)
+    .maybeSingle());
+  if (!row) throw new HttpError(404, "not_found", "Content draft not found.");
+  return readContentDraft(row);
 }
 
 // All or nothing: when another request holds a platform, release the ones taken and post none.

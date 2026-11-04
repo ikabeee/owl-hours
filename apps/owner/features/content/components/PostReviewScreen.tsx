@@ -101,7 +101,9 @@ export default function PostReviewScreen(props: {
               <VStack gap={0}>
                 <Text style={{ fontSize: 15, fontWeight: 700 }}>{businessName}</Text>
                 <Text type="supporting" style={{ fontSize: 13 }}>
-                  {contentCopys.preview}
+                  {draft.source === 'ai_post'
+                    ? `${contentCopys.preview} · ${draft.facebookAccountName ?? contentCopys.facebookPage}`
+                    : contentCopys.preview}
                 </Text>
               </VStack>
             </div>
@@ -188,7 +190,7 @@ export default function PostReviewScreen(props: {
           {/* Targets and timing card */}
           <Card padding={4}>
             <VStack gap={0}>
-              {TARGET_ITEMS.map((item) => (
+              {(draft.source === 'ai_post' ? TARGET_ITEMS.slice(0, 1) : TARGET_ITEMS).map((item) => (
                 <label
                   key={item.key}
                   style={{
@@ -202,12 +204,16 @@ export default function PostReviewScreen(props: {
                   }}
                 >
                   <span>{item.label}</span>
-                  <input
-                    type="checkbox"
-                    checked={targets[item.key]}
-                    onChange={() => void props.onTargetToggle(item.key)}
-                    style={{ width: 22, height: 22, margin: 0, accentColor: 'var(--color-accent)' }}
-                  />
+                  {draft.source === 'ai_post' ? (
+                    <span style={{ fontWeight: 600, color: 'var(--color-success)' }}>{contentCopys.connected}</span>
+                  ) : (
+                    <input
+                      type="checkbox"
+                      checked={targets[item.key]}
+                      onChange={() => void props.onTargetToggle(item.key)}
+                      style={{ width: 22, height: 22, margin: 0, accentColor: 'var(--color-accent)' }}
+                    />
+                  )}
                 </label>
               ))}
 

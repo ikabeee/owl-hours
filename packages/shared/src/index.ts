@@ -17,8 +17,8 @@ export type { Category } from "./categories.ts";
 export {
   storySlideSchema, storySlidesSchema, storyPlatformsSchema,
   storyPackCreateSchema, storyPackUpdateSchema,
-  storyPackDraftSchema, storyPackSourceSchema, storyPackHandoffSchema,
+  storyPackDraftSchema, storyPackSourceSchema, storyPackHandoffSchema, aiPostReviewSchema,
 } from "./story-pack.ts";
-export type { StorySlide, StoryPackCreate, StoryPackUpdate, StoryPackDraftDto, StoryPackSourceDto, StoryPackHandoffDto } from "./story-pack.ts";
+export type { StorySlide, StoryPackCreate, StoryPackUpdate, StoryPackDraftDto, StoryPackSourceDto, StoryPackHandoffDto, AiPostReview } from "./story-pack.ts";
 export { STORY_PACK_LIMITS, storyPackMediaRevisionSchema, storyPackReviewSchema } from "./story-pack.ts";
 export type { StoryPackMediaRevision, StoryPackApprovalSnapshot, StoryPackReview } from "./story-pack.ts";

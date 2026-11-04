@@ -39,8 +39,10 @@ export const storyPackUpdateSchema = storyPackCreateSchema
 
 export const storyPackDraftSchema = z.object({
   id: z.string().uuid(),
-  source: z.enum(["job", "story_pack", "prices", "reminder"]),
+  source: z.enum(["job", "story_pack", "prices", "reminder", "ai_post"]),
   sourceJobId: z.string().uuid().nullable(),
+  facebookAccountId: z.string().uuid().nullable().optional(),
+  facebookAccountName: z.string().nullable().optional(),
   sourceMediaIds: z.array(z.string().uuid()),
   title: z.string().nullable(),
   caption: z.string(),
@@ -114,9 +116,22 @@ export const storyPackReviewSchema = z.object({
   }
 });
 
+export const aiPostReviewSchema = z.object({
+  approve: z.boolean(),
+  expectedUpdatedAt: z.string().datetime({ offset: true }).optional(),
+}).strict().superRefine((input, ctx) => {
+  if (input.approve && !input.expectedUpdatedAt) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Approval requires the displayed draft version.",
+    });
+  }
+});
+
 export type StoryPackMediaRevision = z.infer<typeof storyPackMediaRevisionSchema>;
 export type StoryPackApprovalSnapshot = {
   expectedUpdatedAt: string;
   expectedMedia: StoryPackMediaRevision[];
 };
 export type StoryPackReview = z.infer<typeof storyPackReviewSchema>;
+export type AiPostReview = z.infer<typeof aiPostReviewSchema>;

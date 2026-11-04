@@ -1,6 +1,7 @@
 import {
   storyPackDraftSchema,
   storyPackReviewSchema,
+  aiPostReviewSchema,
   storyPackSourceSchema,
   storyPackUpdateSchema,
   type StoryPackDraftDto,
@@ -55,7 +56,8 @@ export function createLivePostsClient(api: OwnerEditApi): PostsClient {
     if (!remembered) throw new Error(`Post ${post.id} is not in the owner's drafts.`);
     const draft = post.status === "rejected" ? remembered : await withOwnerEdits(remembered, post);
     const review = post.status === "rejected" ? { approve: false } : await approval(draft);
-    const updated = storyPackDraftSchema.parse(await api.post(reviewPath(post.id), storyPackReviewSchema.parse(review)));
+    const body = draft.source === "ai_post" ? aiPostReviewSchema.parse(review) : storyPackReviewSchema.parse(review);
+    const updated = storyPackDraftSchema.parse(await api.post(reviewPath(post.id), body));
     draftsById.set(updated.id, updated);
     return updated.status === "approved" ? publishPost(updated.id) : toPostDraft(updated);
   }
@@ -78,6 +80,9 @@ export function createLivePostsClient(api: OwnerEditApi): PostsClient {
   }
 
   async function approval(draft: StoryPackDraftDto) {
+    if (draft.source === "ai_post") {
+      return { approve: true, expectedUpdatedAt: draft.updatedAt };
+    }
     return { approve: true, expectedUpdatedAt: draft.updatedAt, expectedMedia: await approvalMedia(draft) };
   }
 
@@ -92,6 +97,12 @@ export function createLivePostsClient(api: OwnerEditApi): PostsClient {
     savePost: (post) => saveReviewedPost(post),
 
     publishPost,
+
+    createAiDraft: async (prompt, facebookAccountId) => {
+      const draft = storyPackDraftSchema.parse(await api.post("/content/ai-drafts", { prompt, facebookAccountId }));
+      draftsById.set(draft.id, draft);
+      return toPostDraft(draft);
+    },
 
     // A content source is a finished, consented job: its signed before/after photos feed the review screen.
     findJob: async (id) => {
@@ -136,6 +147,8 @@ function toPostDraft(draft: StoryPackDraftDto): PostDraft {
     caption: draft.caption,
     source: draft.source === "story_pack" || draft.source === "job" ? "job" : draft.source,
     ...(draft.sourceJobId ? { sourceJobId: draft.sourceJobId } : {}),
+    ...(draft.facebookAccountId ? { facebookAccountId: draft.facebookAccountId } : {}),
+    ...(draft.facebookAccountName ? { facebookAccountName: draft.facebookAccountName } : {}),
     targets: {
       facebook: draft.platforms.includes("facebook_page"),
       instagram: draft.platforms.includes("instagram"),

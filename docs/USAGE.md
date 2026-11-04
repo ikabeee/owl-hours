@@ -111,6 +111,38 @@ npm run dev:owner
 ```
 Open `http://localhost:8081` in your browser.
 
+### Facebook Page posts written with Muse
+
+The Content screen can generate an editable, text-only Facebook post with
+Muse and publish it to the connected Page after the owner reviews and approves
+it. Each draft is tied to one Page connected to that owner's business. Page
+access tokens stay on the server in Supabase Vault; they are not entered into
+the app or shared between businesses.
+
+To try real Facebook posting, configure the API's server environment with
+`META_APP_ID`, `META_APP_SECRET`, `API_PUBLIC_URL`, and `OWNER_WEB_URL`.
+`API_PUBLIC_URL` and `OWNER_WEB_URL` must be the public HTTPS origins that
+Meta can reach. In the Meta app dashboard, add
+`<API_PUBLIC_URL>/v1/meta/callback` as the Facebook Login redirect URI. Add
+the app's required Pages permissions (`pages_show_list`,
+`pages_manage_posts`, and `pages_read_engagement`), and ensure the Facebook
+user can create Page content. Meta may require app review/advanced access
+before people outside the app's developer or tester roles can connect Pages.
+
+After the backend is configured and the database migrations are applied:
+
+1. Sign in to the owner app and open **Content → Manage** to connect Facebook.
+2. Select the business Page, describe the post, and generate a draft with Muse.
+3. Check/edit the copy and Page on the review screen, then choose **Approve
+   and post**. The first release posts text immediately; it does not generate
+   images or schedule posts.
+
+The no-keys `scripts/local/judge.sh` demo cannot publish to a real Facebook
+Page. Real posting needs a reachable HTTPS callback, a configured Meta app,
+and valid server-side Meta and Muse credentials. Keep those credentials in
+the API host's secret settings or a gitignored `apps/api/.env`; never commit
+them.
+
 ---
 
 ## 5. Sign In as the Demo Owner

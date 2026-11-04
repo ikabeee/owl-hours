@@ -11,6 +11,7 @@ import { Theme } from '@astryxdesign/core/theme';
 import { neutralTheme } from '@astryxdesign/theme-neutral/built';
 import { VStack, HStack } from '@astryxdesign/core/Layout';
 import { Card } from '@astryxdesign/core/Card';
+import { Button } from '@astryxdesign/core/Button';
 import { Heading, Text } from '@astryxdesign/core/Text';
 import { EmptyState } from '@astryxdesign/core/EmptyState';
 import { Owl } from '../../../shared/mascot/Owl';
@@ -26,10 +27,12 @@ import { contentImages } from './contentImages';
 
 export default function ContentScreen(props: {
   accountsSummary: ContentAccountsSummary;
+  canCreateAiDraft: boolean;
   drafts: ContentDraftRow[];
   published: ContentPublishedRow[];
   insets: { top: number; bottom: number };
   onManageAccounts: () => Promise<void>;
+  onCreatePost: () => Promise<void>;
   onReviewDraft: (id: string) => Promise<void>;
   dom?: DOMProps;
 }) {
@@ -52,6 +55,17 @@ export default function ContentScreen(props: {
         </div>
 
         <VStack gap={3} padding={4}>
+          <Button
+            label={contentCopys.createFacebookPost}
+            variant="primary"
+            size="lg"
+            isDisabled={!props.canCreateAiDraft}
+            onClick={() => void props.onCreatePost()}
+          />
+          {!props.canCreateAiDraft && (
+            <Text type="supporting">{contentCopys.createPostUnavailable}</Text>
+          )}
+
           {/* Accounts summary card */}
           <Card padding={4}>
             <button

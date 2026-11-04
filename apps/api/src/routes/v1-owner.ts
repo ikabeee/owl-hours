@@ -2,7 +2,7 @@
 // as that user, so each business only ever reaches its own data.
 import { Hono } from "hono";
 import { z } from "zod";
-import { storyPackCreateSchema, storyPackUpdateSchema, storyPackReviewSchema } from "@owl-hours/shared";
+import { storyPackCreateSchema, storyPackUpdateSchema, storyPackReviewSchema, aiPostReviewSchema } from "@owl-hours/shared";
 import { ownerContentPhotoRoutes } from "./owner-content-photos.ts";
 import { requireOwner, type OwnerEnv } from "../http/auth.ts";
 import { rateLimit } from "../http/rate-limit.ts";
@@ -26,6 +26,10 @@ const declineBody = z
   .strict();
 // The native app asks for its own deep link back; anything else returns to the owner web app.
 const connectUrlQuery = z.object({ return: z.enum(["web", "app"]).default("web") });
+const aiPostBody = z.object({
+  prompt: z.string().trim().min(1).max(1000),
+  facebookAccountId: z.string().uuid(),
+}).strict();
 const messagesQuery = z.object({ before: isoTime.optional(), limit: z.coerce.number().int().min(1).max(200).optional() });
 const quoteBody = z
   .object({
@@ -239,6 +243,10 @@ export function ownerRoutes(deps: V1Deps): Hono<OwnerEnv> {
 
   app.get("/content/sources", async (c) => ok(c, await owner.listContentSources(c.get("session"))));
   app.get("/content/drafts", async (c) => ok(c, await owner.listContentDrafts(c.get("session"))));
+  app.post("/content/ai-drafts", async (c) => {
+    const body = await readJson(c, aiPostBody);
+    return ok(c, await owner.createAiContentDraft(c.get("session"), body, deps), 201);
+  });
   app.post("/content/drafts", async (c) => {
     const body = await readJson(c, storyPackCreateSchema);
     return ok(c, await owner.createContentDraft(c.get("session"), body), 201);
@@ -250,7 +258,7 @@ export function ownerRoutes(deps: V1Deps): Hono<OwnerEnv> {
   });
   app.post("/content/drafts/:id/review", async (c) => {
     const id = readId(c);
-    const body = await readJson(c, storyPackReviewSchema);
+    const body = await readJson(c, z.union([storyPackReviewSchema, aiPostReviewSchema]));
     return ok(c, await owner.reviewContentDraft(c.get("session"), id, body));
   });
 
