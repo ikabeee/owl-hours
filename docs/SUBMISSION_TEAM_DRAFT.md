@@ -12,6 +12,8 @@ The owner experience also includes a Story Pack concept: with customer consent, 
 
 The demo combines distinct materials: an actual WhatsApp conversation recorded on a teammate's test account, a local end-to-end flow using a simulated WhatsApp customer and recorded model responses, and an owner-side preview with fictional data. These are separate demonstration cases, not one continuous live transaction.
 
+Additional technical evidence: [Carlos's supplementary video](https://drive.google.com/file/d/1AHzuZmqLtdfAhoD8BrWxeSd-vDLIKlDP/view) at **1:50–2:07** presents the recorded **November 3 live-model run with a Meta key**. Waiting is sped up **25×**, and the segment shows **PASS** results for video reading, photo reading and sending a marked frame. This is separate from the **November 2 replay footage** and the no-key judge demo, which replay recorded model answers. WhatsApp is a local simulator in these runs.
+
 Demo video:
 
 - [Loom (recommended)](https://www.loom.com/share/61230607e154471ab9fb758fcb73b38d)
