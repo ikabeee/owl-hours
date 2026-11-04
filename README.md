@@ -62,6 +62,8 @@ Every model runs on Meta's hosted Model API (`https://api.meta.ai/v1`), called f
 
 ### Provenance
 
+Additional technical evidence: [Carlos's supplementary video](https://drive.google.com/file/d/1AHzuZmqLtdfAhoD8BrWxeSd-vDLIKlDP/view) at **1:50–2:07** presents the recorded **November 3 live-model run with a Meta key**. Waiting is sped up **25×**, and the segment shows **PASS** results for video reading, photo reading and sending a marked frame. This is separate from the **November 2 replay footage** and the no-key judge demo, which replay recorded model answers. WhatsApp is a local simulator in these runs.
+
 | Evidence | Link |
 |---|---|
 | Screen recording with live models | [`both-sides.mp4`](docs/evidence/judge-run-20261103/live/both-sides.mp4) |
